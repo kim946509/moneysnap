@@ -11,6 +11,7 @@ enum VisualDiffError: LocalizedError {
     case unreadableImage(String)
     case dimensionMismatch(reference: String, actual: String)
     case imageCreationFailed(String)
+    case thresholdExceeded(meanAbsoluteError: Double, mismatchedPixelRatio: Double)
 
     var errorDescription: String? {
         switch self {
@@ -19,6 +20,8 @@ enum VisualDiffError: LocalizedError {
         case let .dimensionMismatch(reference, actual):
             "Image dimensions differ. Reference: \(reference), actual: \(actual)"
         case let .imageCreationFailed(path): "Unable to write image: \(path)"
+        case let .thresholdExceeded(meanAbsoluteError, mismatchedPixelRatio):
+            "Visual thresholds exceeded. MAE: \(meanAbsoluteError), mismatched pixel ratio: \(mismatchedPixelRatio)"
         }
     }
 }
@@ -27,6 +30,8 @@ struct Configuration {
     let referenceURL: URL
     let actualURL: URL
     let outputDirectoryURL: URL
+    let maximumMeanAbsoluteError: Double
+    let maximumMismatchedPixelRatio: Double
 
     static func parse(arguments: [String]) throws -> Configuration {
         var values: [String: String] = [:]
@@ -36,7 +41,7 @@ struct Configuration {
             let key = arguments[index]
             guard key.hasPrefix("--"), index + 1 < arguments.count else {
                 throw VisualDiffError.invalidArguments(
-                    "Usage: visual-diff.swift --reference <png> --actual <png> --output-dir <directory>"
+                    Configuration.usage
                 )
             }
             values[key] = arguments[index + 1]
@@ -46,19 +51,27 @@ struct Configuration {
         guard
             let reference = values["--reference"],
             let actual = values["--actual"],
-            let outputDirectory = values["--output-dir"]
+            let outputDirectory = values["--output-dir"],
+            let maximumMeanAbsoluteErrorValue = values["--maximum-mean-absolute-error"],
+            let maximumMeanAbsoluteError = Double(maximumMeanAbsoluteErrorValue),
+            let maximumMismatchedPixelRatioValue = values["--maximum-mismatched-pixel-ratio"],
+            let maximumMismatchedPixelRatio = Double(maximumMismatchedPixelRatioValue),
+            (0...1).contains(maximumMeanAbsoluteError),
+            (0...1).contains(maximumMismatchedPixelRatio)
         else {
-            throw VisualDiffError.invalidArguments(
-                "Usage: visual-diff.swift --reference <png> --actual <png> --output-dir <directory>"
-            )
+            throw VisualDiffError.invalidArguments(Configuration.usage)
         }
 
         return Configuration(
             referenceURL: URL(fileURLWithPath: reference),
             actualURL: URL(fileURLWithPath: actual),
-            outputDirectoryURL: URL(fileURLWithPath: outputDirectory, isDirectory: true)
+            outputDirectoryURL: URL(fileURLWithPath: outputDirectory, isDirectory: true),
+            maximumMeanAbsoluteError: maximumMeanAbsoluteError,
+            maximumMismatchedPixelRatio: maximumMismatchedPixelRatio
         )
     }
+
+    private static let usage = "Usage: visual-diff.swift --reference <png> --actual <png> --output-dir <directory> --maximum-mean-absolute-error <0...1> --maximum-mismatched-pixel-ratio <0...1>"
 }
 
 func loadImage(at url: URL) throws -> CGImage {
@@ -193,13 +206,20 @@ func run() throws {
     )
 
     let pixelCount = UInt64(referenceImage.width * referenceImage.height)
+    let meanAbsoluteError = Double(totalAbsoluteError) / Double(pixelCount * 3 * 255)
+    let mismatchedPixelRatio = Double(mismatchedPixels) / Double(pixelCount)
+    let passed = meanAbsoluteError <= configuration.maximumMeanAbsoluteError &&
+        mismatchedPixelRatio <= configuration.maximumMismatchedPixelRatio
     let report: [String: Any] = [
-        "mode": "report-only",
+        "mode": "threshold",
+        "passed": passed,
         "width": referenceImage.width,
         "height": referenceImage.height,
         "mismatchedPixels": mismatchedPixels,
-        "mismatchedPixelRatio": Double(mismatchedPixels) / Double(pixelCount),
-        "meanAbsoluteError": Double(totalAbsoluteError) / Double(pixelCount * 3 * 255),
+        "mismatchedPixelRatio": mismatchedPixelRatio,
+        "maximumMismatchedPixelRatio": configuration.maximumMismatchedPixelRatio,
+        "meanAbsoluteError": meanAbsoluteError,
+        "maximumMeanAbsoluteError": configuration.maximumMeanAbsoluteError,
         "maximumChannelError": maximumChannelError,
         "reference": configuration.referenceURL.lastPathComponent,
         "actual": configuration.actualURL.lastPathComponent
@@ -209,6 +229,13 @@ func run() throws {
         to: configuration.outputDirectoryURL.appendingPathComponent("report.json"),
         options: .atomic
     )
+
+    guard passed else {
+        throw VisualDiffError.thresholdExceeded(
+            meanAbsoluteError: meanAbsoluteError,
+            mismatchedPixelRatio: mismatchedPixelRatio
+        )
+    }
 }
 
 do {

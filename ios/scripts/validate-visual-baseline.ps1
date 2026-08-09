@@ -28,7 +28,9 @@ Assert-True ($manifest.bundleIdentifier -eq 'com.ansandy.moneysnap') 'Unexpected
 Assert-True ($manifest.simulator.xcode -eq '16.4') 'Visual Xcode baseline must be 16.4.'
 Assert-True ($manifest.simulator.device -eq 'iPhone 16') 'Visual device baseline must be iPhone 16.'
 Assert-True ($manifest.simulator.os -eq '18.5') 'Visual OS baseline must be iOS 18.5.'
-Assert-True ($manifest.comparison.mode -eq 'report-only') 'Visual diff must remain report-only before Home parity work.'
+Assert-True ($manifest.comparison.mode -eq 'threshold') 'Visual diff must fail CI when Home parity regresses.'
+Assert-True ($manifest.comparison.maximumMeanAbsoluteError -gt 0 -and $manifest.comparison.maximumMeanAbsoluteError -le 0.05) 'Visual MAE threshold must be reviewed and no greater than 0.05.'
+Assert-True ($manifest.comparison.maximumMismatchedPixelRatio -gt 0 -and $manifest.comparison.maximumMismatchedPixelRatio -le 0.43) 'Visual mismatched-pixel threshold must be reviewed and no greater than 0.43.'
 
 $referencePath = Join-Path $iosRoot $manifest.figma.reference
 Assert-True (Test-Path -LiteralPath $referencePath) 'Figma reference image is missing.'
@@ -64,6 +66,11 @@ Assert-True ($resolver -match 'MONEYSNAP_SIMULATOR_OS') 'Simulator resolver must
 $capture = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'scripts\capture-visual-baseline.sh')
 Assert-True ($capture -match 'simctl\s+io') 'Visual capture must use the iOS Simulator screenshot API.'
 Assert-True ($capture -match 'visual-diff\.swift') 'Visual capture must create overlay and diff evidence.'
+Assert-True ($capture -match '--maximum-mean-absolute-error') 'Visual capture must enforce the reviewed MAE threshold.'
+Assert-True ($capture -match '--maximum-mismatched-pixel-ratio') 'Visual capture must enforce the reviewed mismatched-pixel threshold.'
+
+$todayView = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift')
+Assert-True ($todayView -match 'HStack\(spacing:\s*0\)\s*\{\s*ForEach\(summary\.recentEntries\)') 'Recent Snap rows must use the Figma zero-gap two-column layout.'
 
 $workflow = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot '.github\workflows\ios-ci.yml')
 Assert-True ($workflow -match 'DEVELOPER_DIR:\s*/Applications/Xcode_16\.4\.app/Contents/Developer') 'iOS CI must pin Xcode 16.4.'

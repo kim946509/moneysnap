@@ -30,7 +30,9 @@
     "os": "18.5"
   },
   "comparison": {
-    "mode": "report-only",
-    "reason": "Home 9:2 has not been implemented yet. Enable a reviewed threshold in the Home feature work item."
+    "mode": "threshold",
+    "maximumMeanAbsoluteError": 0.05,
+    "maximumMismatchedPixelRatio": 0.43,
+    "basis": "Reviewed against Figma node 9:2 after WORK-010 layout parity. The full-frame comparison includes deterministic Simulator and Figma device-chrome differences."
   }
 }
