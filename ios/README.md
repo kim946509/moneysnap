@@ -29,7 +29,7 @@ bash ios/scripts/test.sh
 bash ios/scripts/capture-visual-baseline.sh
 ```
 
-첫 명령은 Swift native test, 두 번째 명령은 앱 screenshot과 Figma 홈 `9:2`의 overlay/diff를 생성한다. `VisualReferences/manifest.json`이 393x852 reference의 node, checksum, Simulator 계약을 고정한다. 홈 화면이 구현되기 전까지 diff는 `report-only`이며 parity 통과 증거가 아니다.
+첫 명령은 Swift native test, 두 번째 명령은 앱 screenshot과 Figma 홈 `9:2`의 overlay/diff를 생성한다. `VisualReferences/manifest.json`이 393x852 reference의 node, checksum, Simulator 계약을 고정한다. `WORK-010` 완료 기준으로 diff는 MAE `0.05`, mismatched pixel ratio `0.43` threshold를 강제하며 초과 시 CI가 실패한다.
 
 ## CI/CD
 
