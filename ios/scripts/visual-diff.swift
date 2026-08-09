@@ -91,8 +91,6 @@ func rgbaBytes(from image: CGImage) throws -> [UInt8] {
         throw VisualDiffError.imageCreationFailed("in-memory RGBA buffer")
     }
 
-    context.translateBy(x: 0, y: CGFloat(height))
-    context.scaleBy(x: 1, y: -1)
     context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
     return bytes
 }

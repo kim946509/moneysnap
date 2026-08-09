@@ -70,7 +70,9 @@ GitHub PR checks
 - 외부 상태:
   - Figma design context와 export에서 홈 `9:2`가 393x852임을 확인하고 SHA-256 `4e821694...491d75`로 고정
   - GitHub run inventory에서 Xcode 16.4, iPhone 16, iOS 18.5를 확인
-  - 수정 뒤 native build·test와 visual artifact 재실행 대기
+  - GitHub iOS run `31289000087`에서 native test, app capture, Swift diff와 artifact upload가 성공
+  - 내려받은 artifact는 app/reference/overlay/diff가 모두 393x852이고 reference SHA-256이 manifest와 일치
+  - artifact 육안 검토에서 overlay/diff의 CoreGraphics 수직 좌표가 뒤집힌 문제를 발견해 불필요한 flip transform을 제거하고 재실행 대기
 - 리뷰:
   - Code Review Graph는 Swift diff helper를 test gap으로 표시했다. macOS CI가 helper를 실제 reference/Simulator screenshot으로 실행하는 integration seam이며 별도 unit target은 추가하지 않는다.
 
