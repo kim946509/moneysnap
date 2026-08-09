@@ -15,6 +15,10 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Features\Home\SnapJournalClient.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapViewModel.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\TodayCanvasLayout.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapCardViews.swift'),
+    (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapVisualSystem.swift'),
+    (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapTabBar.swift'),
     (Join-Path $iosRoot 'MoneySnap\Info.plist'),
     (Join-Path $iosRoot 'MoneySnap\Resources\Fonts\NotoSansKR-VariableFont_wght.ttf'),
     (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\FoodSnap.imageset\food-snap.png'),
@@ -45,6 +49,9 @@ if ($project -notmatch 'productType = "com\.apple\.product-type\.application";' 
 if ($project -match 'DEVELOPMENT_TEAM = [A-Z0-9]+;') {
     throw 'A signing team must not be committed before Apple setup.'
 }
+if ($project -notmatch 'ENABLE_TESTABILITY = YES;') {
+    throw 'The Debug app target must support @testable integration tests.'
+}
 
 $definitionMatches = [regex]::Matches(
     $project,
@@ -73,6 +80,10 @@ $expectedSourceNames = @(
     'SnapJournalClient.swift',
     'TodaySnapViewModel.swift',
     'TodaySnapView.swift',
+    'TodayCanvasLayout.swift',
+    'TodaySnapCardViews.swift',
+    'MoneySnapVisualSystem.swift',
+    'MoneySnapTabBar.swift',
     'AppShellTests.swift',
     'TodaySnapViewModelTests.swift'
 )

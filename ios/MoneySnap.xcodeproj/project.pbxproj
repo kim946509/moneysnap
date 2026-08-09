@@ -20,6 +20,10 @@
 		B00000000000000000000011 /* TodaySnapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* TodaySnapViewModel.swift */; };
 		B00000000000000000000012 /* TodaySnapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* TodaySnapView.swift */; };
 		B00000000000000000000013 /* NotoSansKR-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* NotoSansKR-VariableFont_wght.ttf */; };
+		B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* TodayCanvasLayout.swift */; };
+		B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000018 /* TodaySnapCardViews.swift */; };
+		B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000019 /* MoneySnapVisualSystem.swift */; };
+		B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000020 /* MoneySnapTabBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +53,10 @@
 		F00000000000000000000014 /* TodaySnapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapView.swift; sourceTree = "<group>"; };
 		F00000000000000000000015 /* NotoSansKR-VariableFont_wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSansKR-VariableFont_wght.ttf"; sourceTree = "<group>"; };
 		F00000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F00000000000000000000017 /* TodayCanvasLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasLayout.swift; sourceTree = "<group>"; };
+		F00000000000000000000018 /* TodaySnapCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapCardViews.swift; sourceTree = "<group>"; };
+		F00000000000000000000019 /* MoneySnapVisualSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapVisualSystem.swift; sourceTree = "<group>"; };
+		F00000000000000000000020 /* MoneySnapTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapTabBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +100,7 @@
 			children = (
 				A00000000000000000000005 /* App */,
 				A00000000000000000000006 /* Features */,
+				A00000000000000000000012 /* VisualSystem */,
 				A00000000000000000000010 /* Resources */,
 				F00000000000000000000006 /* Assets.xcassets */,
 				F00000000000000000000016 /* Info.plist */,
@@ -143,6 +152,8 @@
 				F00000000000000000000012 /* SnapJournalClient.swift */,
 				F00000000000000000000013 /* TodaySnapViewModel.swift */,
 				F00000000000000000000014 /* TodaySnapView.swift */,
+				F00000000000000000000017 /* TodayCanvasLayout.swift */,
+				F00000000000000000000018 /* TodaySnapCardViews.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -161,6 +172,15 @@
 				F00000000000000000000015 /* NotoSansKR-VariableFont_wght.ttf */,
 			);
 			path = Fonts;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000012 /* VisualSystem */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000019 /* MoneySnapVisualSystem.swift */,
+				F00000000000000000000020 /* MoneySnapTabBar.swift */,
+			);
+			path = VisualSystem;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -272,6 +292,10 @@
 				B00000000000000000000010 /* SnapJournalClient.swift in Sources */,
 				B00000000000000000000011 /* TodaySnapViewModel.swift in Sources */,
 				B00000000000000000000012 /* TodaySnapView.swift in Sources */,
+				B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */,
+				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
+				B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */,
+				B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +354,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MoneySnap/Info.plist;

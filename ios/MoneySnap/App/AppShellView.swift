@@ -42,76 +42,22 @@ struct AppShellView: View {
         switch tab {
         case .home:
             TodaySnapView(
-                client: snapJournalClient,
-                onRecord: { selectedTab = .add },
-                onMenu: { selectedTab = .profile }
+                client: snapJournalClient
             )
         default:
             PlaceholderView(
-                title: tab.presentation.title,
-                systemImage: tab.presentation.systemImage
+                title: tab.title,
+                systemImage: tab.systemImage
             )
         }
-    }
-}
-
-private struct MoneySnapTabBar: View {
-    @Binding var selectedTab: AppTab
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(AppTab.allCases) { tab in
-                Button {
-                    selectedTab = tab
-                } label: {
-                    VStack(spacing: 1) {
-                        Image(systemName: tab.presentation.systemImage)
-                            .font(.system(size: 24, weight: .medium))
-                            .frame(height: 27)
-                        Text(tab.presentation.title)
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundStyle(selectedTab == tab ? Color.blue : Color.black)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background {
-                        if selectedTab == tab {
-                            Circle()
-                                .fill(Color.blue.opacity(0.09))
-                                .frame(width: 51, height: 51)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 5)
-        .frame(height: 58)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.75), lineWidth: 1))
-        .shadow(color: .black.opacity(0.11), radius: 14, y: 5)
     }
 }
 
 private extension AppTab {
-    var presentation: AppTabPresentation {
-        switch self {
-        case .home: AppTabPresentation(title: "홈", systemImage: "house")
-        case .group: AppTabPresentation(title: "그룹", systemImage: "person")
-        case .add: AppTabPresentation(title: "추가", systemImage: "plus")
-        case .archive: AppTabPresentation(title: "보관함", systemImage: "folder")
-        case .profile: AppTabPresentation(title: "마이", systemImage: "person.crop.circle")
-        }
-    }
-
     @ViewBuilder
     var label: some View {
-        Label(presentation.title, systemImage: presentation.systemImage)
+        Label(title, systemImage: systemImage)
     }
-}
-
-private struct AppTabPresentation {
-    let title: String
-    let systemImage: String
 }
 
 private struct RoutePlaceholderView: View {

@@ -23,13 +23,13 @@ extension TodaySnapSummary {
         let transportationID = UUID(uuidString: "B0000000-0000-4000-8000-000000000003")!
         let livingID = UUID(uuidString: "B0000000-0000-4000-8000-000000000004")!
 
-        return TodaySnapSummary(
-            dateLabel: "6월 3일 수요일",
+        return try! TodaySnapSummary(
+            day: .figmaReference,
             entries: [
-                TodaySnapEntry(id: foodID, category: .food, amount: 18_900, imageName: "FoodSnap"),
-                TodaySnapEntry(id: cafeID, category: .cafe, amount: 5_200, imageName: "CafeSnap"),
-                TodaySnapEntry(id: transportationID, category: .transportation, amount: 2_800, imageName: nil),
-                TodaySnapEntry(id: livingID, category: .living, amount: 16_300, imageName: nil)
+                TodaySnapEntry(id: foodID, category: .food, amount: try KrwAmount(18_900), artwork: .food),
+                TodaySnapEntry(id: cafeID, category: .cafe, amount: try KrwAmount(5_200), artwork: .cafe),
+                TodaySnapEntry(id: transportationID, category: .transportation, amount: try KrwAmount(2_800), artwork: nil),
+                TodaySnapEntry(id: livingID, category: .living, amount: try KrwAmount(16_300), artwork: nil)
             ],
             featuredEntryIDs: [foodID, cafeID, transportationID],
             recentEntryIDs: [foodID, cafeID]
