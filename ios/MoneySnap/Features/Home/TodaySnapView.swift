@@ -46,15 +46,15 @@ private struct TodaySnapContent: View {
 
     private func header(availableWidth: CGFloat) -> some View {
         Group {
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: -2) {
                 Text("Today Snap")
-                    .font(.moneySnap(size: 24, weight: .bold))
+                    .font(.moneySnap(size: 22, weight: .bold))
                     .foregroundStyle(MoneySnapVisualSystem.ink)
                 Text(summary.day.displayLabel)
                     .font(.moneySnap(size: 14, weight: .regular))
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
             }
-            .offset(x: 28, y: 13)
+            .offset(x: 28, y: 7)
 
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 25, weight: .medium))
@@ -77,7 +77,7 @@ private struct TodaySnapContent: View {
                     imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
                 )
                 .rotationEffect(.degrees(7))
-                .position(x: availableWidth * 0.371, y: 262)
+                .position(x: availableWidth * 0.371, y: 267)
             }
             if let entry = summary.featuredEntries[safe: 1], let maximumAmount {
                 FeaturedSnapCard(
@@ -85,12 +85,12 @@ private struct TodaySnapContent: View {
                     imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
                 )
                 .rotationEffect(.degrees(-7))
-                .position(x: availableWidth * 0.761, y: 295)
+                .position(x: availableWidth * 0.743, y: 295)
             }
             if let entry = summary.featuredEntries[safe: 2] {
                 PriceTicket(entry: entry)
                     .rotationEffect(.degrees(-3))
-                    .position(x: availableWidth * 0.254, y: 355)
+                    .position(x: availableWidth * 0.254, y: 353)
             }
         }
     }
@@ -125,31 +125,32 @@ private struct TodaySnapContent: View {
     }
 
     private var totalSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        Group {
             Text("오늘 총 소비")
                 .font(.moneySnap(size: 17, weight: .regular))
                 .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                .offset(x: 28, y: 521)
             Text(summary.totalAmount.wonText)
                 .font(.moneySnap(size: 64, weight: .black))
-                .tracking(-4.5)
                 .foregroundStyle(.black)
                 .frame(height: 78, alignment: .topLeading)
+                .offset(x: 24, y: 533)
         }
-        .offset(x: 28, y: 526)
     }
 
     private var recentSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        Group {
             Text("오늘 소비")
                 .font(.moneySnap(size: 18, weight: .bold))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
+                .offset(x: 26, y: 612)
             HStack(spacing: 52) {
                 ForEach(summary.recentEntries) { entry in
                     RecentSnapRow(entry: entry)
                 }
             }
+            .offset(x: 26, y: 650)
         }
-        .offset(x: 26, y: 616)
     }
 }
 
