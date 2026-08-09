@@ -1,0 +1,68 @@
+$ErrorActionPreference = 'Stop'
+
+function Assert-True {
+    param(
+        [Parameter(Mandatory)]
+        [bool] $Condition,
+
+        [Parameter(Mandatory)]
+        [string] $Message
+    )
+
+    if (-not $Condition) {
+        throw $Message
+    }
+}
+
+$iosRoot = Split-Path -Parent $PSScriptRoot
+$repositoryRoot = Split-Path -Parent $iosRoot
+$manifestPath = Join-Path $iosRoot 'VisualReferences\manifest.json'
+
+Assert-True (Test-Path -LiteralPath $manifestPath) 'Visual baseline manifest is missing.'
+
+$manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+Assert-True ($manifest.figma.fileKey -eq 'IDNeYlc3584NY9YhsyUQYE') 'Unexpected Figma file key.'
+Assert-True ($manifest.figma.nodeId -eq '9:2') 'Unexpected Figma node ID.'
+Assert-True ($manifest.viewport.width -eq 393 -and $manifest.viewport.height -eq 852) 'Visual viewport must be 393x852.'
+Assert-True ($manifest.bundleIdentifier -eq 'com.ansandy.moneysnap') 'Unexpected Bundle ID.'
+Assert-True ($manifest.simulator.xcode -eq '16.4') 'Visual Xcode baseline must be 16.4.'
+Assert-True ($manifest.simulator.device -eq 'iPhone 16') 'Visual device baseline must be iPhone 16.'
+Assert-True ($manifest.simulator.os -eq '18.5') 'Visual OS baseline must be iOS 18.5.'
+Assert-True ($manifest.comparison.mode -eq 'report-only') 'Visual diff must remain report-only before Home parity work.'
+
+$referencePath = Join-Path $iosRoot $manifest.figma.reference
+Assert-True (Test-Path -LiteralPath $referencePath) 'Figma reference image is missing.'
+$referenceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $referencePath).Hash.ToLowerInvariant()
+Assert-True ($referenceHash -eq $manifest.figma.sha256) 'Figma reference checksum does not match the manifest.'
+
+Add-Type -AssemblyName System.Drawing
+$referenceImage = [System.Drawing.Image]::FromFile($referencePath)
+try {
+    Assert-True ($referenceImage.Width -eq 393 -and $referenceImage.Height -eq 852) 'Figma reference image must be 393x852.'
+}
+finally {
+    $referenceImage.Dispose()
+}
+
+$appTab = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\App\AppTab.swift')
+Assert-True ($appTab -match 'enum\s+AppTab\s*:\s*[^\r\n{]*\bSendable\b') 'AppTab must conform to Sendable for Swift 6.'
+
+$project = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap.xcodeproj\project.pbxproj')
+Assert-True ($project -match 'PRODUCT_BUNDLE_IDENTIFIER = com\.ansandy\.moneysnap;') 'Final Bundle ID is missing from the app target.'
+
+$resolver = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'scripts\resolve-simulator.sh')
+Assert-True ($resolver -match 'MONEYSNAP_SIMULATOR_DEVICE') 'Simulator resolver must use the fixed device contract.'
+Assert-True ($resolver -match 'MONEYSNAP_SIMULATOR_OS') 'Simulator resolver must use the fixed OS contract.'
+
+$capture = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'scripts\capture-visual-baseline.sh')
+Assert-True ($capture -match 'simctl\s+io') 'Visual capture must use the iOS Simulator screenshot API.'
+Assert-True ($capture -match 'visual-diff\.swift') 'Visual capture must create overlay and diff evidence.'
+
+$workflow = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot '.github\workflows\ios-ci.yml')
+Assert-True ($workflow -match 'DEVELOPER_DIR:\s*/Applications/Xcode_16\.4\.app/Contents/Developer') 'iOS CI must pin Xcode 16.4.'
+Assert-True ($workflow -match 'MONEYSNAP_SIMULATOR_DEVICE:\s*"?iPhone 16"?') 'iOS CI must pin iPhone 16.'
+Assert-True ($workflow -match 'MONEYSNAP_SIMULATOR_OS:\s*"?18\.5"?') 'iOS CI must pin iOS 18.5.'
+Assert-True ($workflow -match 'capture-visual-baseline\.sh') 'iOS CI must capture visual baseline evidence.'
+Assert-True ($workflow -match 'ios-visual-evidence-') 'iOS CI must upload named visual evidence.'
+
+Write-Output 'MoneySnap iOS visual baseline contract: OK'

@@ -1,8 +1,8 @@
 # Money Snap CI/CD 운영 계약
 
-> 상태: repository configuration ready, external activation pending
+> 상태: remote CI active, deployment·Apple activation pending
 >
-> 기준일: 2026-08-08
+> 기준일: 2026-08-09
 
 ## 배포 lane
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | server CI | GitHub-hosted `ubuntu-latest` + `windows-latest` | server·API contract 관련 pull request, `main` push, manual | Java 21 test, canonical JAR와 SHA-256 artifact, Windows deployment behavior test |
 | server development CD | 전용 Windows self-hosted runner | server CI가 성공한 `main` push만 | loopback origin 교체, health smoke, 실패 시 이전 JAR 복구 |
-| iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | signing 없는 Simulator build/test, 실패 `.xcresult` |
+| iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | signing 없는 고정 Simulator build/test, 393x852 visual evidence, 실패 `.xcresult` |
 | iOS CD | Xcode Cloud | Apple workflow에서 승인한 branch/release condition | Apple-managed signing, archive, internal TestFlight |
 | Tunnel/DNS | 승인된 infrastructure 작업 | hostname·외부 노출 AC 승인 | named Tunnel, DNS, `cloudflared` service |
 
@@ -60,14 +60,14 @@ repository 파일을 push한 뒤 GitHub에서 다음 상태가 필요하다.
   - `NEON_MIGRATION_DATABASE_USERNAME`
   - `NEON_MIGRATION_DATABASE_PASSWORD`
 - Self-hosted runner labels: `self-hosted`, `Windows`, `X64`, `moneysnap-dev`
-- runner access: 이 private repository의 deployment job에만 허용
+- runner access: public repository의 검증된 `main` deployment job에만 허용하며 PR·임의 branch code는 실행하지 않음
 - branch protection: `main`에 server CI와 iOS CI가 적용되면 성공 check를 merge 조건으로 추가
 
-현재 private repository의 무료 플랜에서는 environment required reviewer를 사용할 수 있다고 가정하지 않는다. 따라서 자동 CD는 폐쇄형 development origin만 대상으로 하며 production/public 배포 workflow는 만들지 않는다.
+repository는 public이며 `server-development` environment의 custom deployment branch policy는 `main` 하나로 제한한다. persistent Windows runner는 공개 repository 공격면을 가지므로 branch protection과 workflow 검증이 완료되기 전 등록하지 않는다. 자동 CD는 폐쇄형 development origin만 대상으로 하며 production/public 배포 workflow는 만들지 않는다.
 
 ## iOS CI와 Xcode Cloud
 
-GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple credential 없이 `macos-15`에서 `bash ios/scripts/test.sh`를 실행한다. 특정 Simulator UDID를 고정하지 않고 현재 runner에서 사용 가능한 destination을 선택한다. 실패할 때만 `.xcresult`를 3일 보관한다.
+GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple credential 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 `bash ios/scripts/test.sh`를 실행한다. UDID는 runner마다 달라 device·runtime으로 해석한다. 이어서 앱을 393x852로 캡처해 Figma 홈 `9:2` reference, overlay, diff와 수치 report를 7일 보관한다. 홈 기능 구현 전 diff는 report-only다. 실패할 때는 `.xcresult`도 3일 보관한다.
 
 TestFlight CD는 Xcode Cloud가 소유한다. `ios/ci_scripts/ci_post_clone.sh`는 Xcode와 project/scheme을 post-clone 단계에서 검증한다. 최초 Mac/Xcode activation 때 다음 두 workflow를 만든다.
 
@@ -76,7 +76,7 @@ TestFlight CD는 Xcode Cloud가 소유한다. `ios/ci_scripts/ci_post_clone.sh`�
 
 Xcode Cloud activation 전에 다음 Apple gate가 필요하다.
 
-- `com.ansandy.moneysnap`을 최종 Bundle ID로 사용할지 재확인
+- 확정된 Bundle ID `com.ansandy.moneysnap`으로 explicit App ID 생성
 - Apple Team 연결, explicit App ID와 App Store Connect app record 생성
 - Mac/Xcode에서 첫 Xcode Cloud workflow와 첫 build 시작
 - internal TestFlight tester group과 release start condition 확인
@@ -90,11 +90,11 @@ Xcode Cloud 기본 배포에는 GitHub-held `.p12`, provisioning profile 또는 
 | server workflow source와 정적 검증 | 준비 완료 |
 | iOS workflow source와 Xcode Cloud hook | 준비 완료 |
 | local Gradle test·canonical bootJar | 검증 완료 |
-| GitHub `server-development` environment | 생성 완료, secret 0개 |
-| GitHub remote workflow run | local commit 완료, remote push 전이라 미실행 |
+| GitHub `server-development` environment | 생성 완료, `main` 전용 branch policy, secret 0개 |
+| GitHub remote workflow run | public draft PR #1에서 활성화, server CI 통과 |
 | Windows self-hosted runner와 Scheduled Task | 미등록 |
 | GitHub `server-development` secret | 6개 모두 미등록 |
-| GitHub-hosted macOS native test | workflow push 전이라 미실행 |
+| GitHub-hosted macOS native test | 첫 run에서 Swift 6 `AppTab` Sendable finding 확인, 수정 run 대기 |
 | Xcode Cloud/TestFlight | Apple gate와 Mac/Xcode activation 대기 |
 | Cloudflare named Tunnel/DNS | 별도 infrastructure 승인 작업 대기 |
 

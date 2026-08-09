@@ -9,7 +9,7 @@ iOS 17+, Swift 6, SwiftUI와 Swift Testing 기반의 native app scaffold다.
 - `MoneySnapTests`: public app-shell behavior를 검증하는 Swift Testing target
 - `MoneySnap.xcodeproj`: app·unit test target과 shared `MoneySnap` scheme
 
-repository의 project identifier는 `com.ansandy.moneysnap`이다. Apple Developer의 App ID나 signing team은 아직 등록하지 않았으며 외부 등록 전에 이 값을 최종 Bundle ID로 사용할지 재확인한다.
+최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple Developer의 explicit App ID와 signing team 연결은 아직 등록하지 않았으며 별도 Apple activation 작업에서 진행한다.
 
 ## Windows 검증
 
@@ -17,23 +17,26 @@ Windows에는 SwiftUI SDK와 Xcode가 없으므로 project reference, target, de
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-project.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\validate-visual-baseline.ps1
 ```
 
 ## macOS 검증
 
-Xcode 16 이상과 사용 가능한 iOS Simulator가 있는 Mac에서 실행한다.
+고정 기준선인 Xcode 16.4, iPhone 16, iOS 18.5 Simulator가 있는 Mac에서 실행한다.
 
 ```bash
 bash ios/scripts/test.sh
+bash ios/scripts/capture-visual-baseline.sh
 ```
 
-이 명령이 통과하기 전에는 iOS scaffold의 native compile/test를 완료로 간주하지 않는다. Figma 화면 구현은 frame node와 393x852 snapshot AC를 가진 별도 작업에서 시작한다.
+첫 명령은 Swift native test, 두 번째 명령은 앱 screenshot과 Figma 홈 `9:2`의 overlay/diff를 생성한다. `VisualReferences/manifest.json`이 393x852 reference의 node, checksum, Simulator 계약을 고정한다. 홈 화면이 구현되기 전까지 diff는 `report-only`이며 parity 통과 증거가 아니다.
 
 ## CI/CD
 
-- `.github/workflows/ios-ci.yml`: iOS 또는 OpenAPI contract 변경 시 GitHub-hosted `macos-15`에서 signing 없는 native test를 실행한다.
+- `.github/workflows/ios-ci.yml`: iOS 또는 OpenAPI contract 변경 시 GitHub-hosted `macos-15`에서 signing 없는 native test와 visual evidence 생성을 실행한다.
 - 실패한 GitHub run만 `.xcresult`를 3일 artifact로 보관한다.
+- 모든 성공한 visual lane은 app/reference/overlay/diff/report를 7일 artifact로 보관한다.
 - `ci_scripts/ci_post_clone.sh`: Xcode Cloud post-clone project/toolchain 검증이다.
 - archive, Apple-managed signing과 internal TestFlight 배포는 Xcode Cloud가 소유한다.
 
-GitHub Actions에는 Apple signing credential을 넣지 않는다. 첫 Xcode Cloud workflow는 최종 Bundle ID/App Store Connect app record를 확정한 뒤 Mac/Xcode에서 활성화한다. 전체 계약은 `docs/CI_CD.md`를 따른다.
+GitHub Actions에는 Apple signing credential을 넣지 않는다. 첫 Xcode Cloud workflow는 explicit App ID와 App Store Connect app record를 만든 뒤 Mac/Xcode에서 활성화한다. 전체 계약은 `docs/CI_CD.md`를 따른다.

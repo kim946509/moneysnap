@@ -4,15 +4,10 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ios_dir="$(cd "${script_dir}/.." && pwd)"
 
-destination_id="$({
-  xcodebuild \
-    -project "${ios_dir}/MoneySnap.xcodeproj" \
-    -scheme MoneySnap \
-    -showdestinations
-} | grep "platform:iOS Simulator" | grep -v "Any iOS Simulator Device" | sed -n 's/.*id:\([^,}]*\).*/\1/p' | head -n 1 | xargs)"
+destination_id="$(bash "${script_dir}/resolve-simulator.sh")"
 
 if [[ -z "${destination_id}" ]]; then
-  echo "No available iOS Simulator destination was found." >&2
+  echo "No fixed iOS Simulator destination was found." >&2
   exit 1
 fi
 

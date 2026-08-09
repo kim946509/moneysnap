@@ -18,6 +18,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 | ADR-006 | rejected | D1을 Spring Boot 주 데이터베이스로 사용하지 않음 |
 | ADR-007 | accepted | 개발·운영 PostgreSQL은 분리된 Neon Free 프로젝트 사용 |
 | ADR-008 | accepted | 서버는 GitHub Actions CI/CD, iOS는 GitHub Simulator CI와 Xcode Cloud CD 사용 |
+| ADR-009 | accepted | Bundle ID와 iOS visual verification toolchain 고정 |
 
 ## ADR-001: native iOS 전용 MVP
 
@@ -47,7 +48,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-004: Figma source of truth와 visual regression
 
-**결정**: [Money Snap - Product Design](https://www.figma.com/design/IDNeYlc3584NY9YhsyUQYE/Money-Snap---Product-Design?node-id=0-1&t=lW8FBJFfcXo3cHEC-1)을 시각적 source of truth로 사용한다. 화면 작업은 실제 frame node ID, 393x852 reference screenshot, 추출 asset과 token을 고정한 뒤 SwiftUI snapshot과 overlay/diff를 통과해야 완료된다.
+**결정**: [Money Snap - Product Design](https://www.figma.com/design/IDNeYlc3584NY9YhsyUQYE/Money-Snap---Product-Design?node-id=0-1&t=lW8FBJFfcXo3cHEC-1)을 시각적 source of truth로 사용한다. 화면 작업은 실제 frame node ID, 393x852 reference screenshot, 추출 asset과 token을 고정한 뒤 SwiftUI snapshot과 overlay/diff를 통과해야 완료된다. 첫 기준선은 홈 `9:2`이며 구현 전에는 차이를 report-only로 기록한다.
 
 **이유**: 사용자는 Figma와 거의 동일한 결과를 요구한다. 화면 이름만 참조하면 디자인 변경과 구현 오차를 추적할 수 없지만 node ID와 고정 fixture는 차이를 반복 검증할 수 있다.
 
@@ -85,12 +86,19 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 **이유**: 서버는 Windows origin에서 실행되므로 외부 SSH surface 없이 같은 host의 전용 runner가 local JAR을 교체하는 경로가 가장 작다. iOS는 Windows에서 검증할 수 없지만 GitHub macOS runner가 PR compile/test feedback을 제공하고, Apple-managed signing과 포함된 Xcode Cloud quota가 TestFlight credential surface를 줄인다. Tunnel과 app release를 분리하면 JAR rollback이 connector·DNS 상태를 건드리지 않는다.
 
-**트레이드오프**: self-hosted runner와 Windows host는 persistent 공격·장애 영역이므로 PR code를 절대 실행하지 않고 repository 접근을 제한해야 한다. private repository의 macOS Actions는 포함량을 소비한다. Xcode Cloud 첫 workflow, Apple App record, Windows runner와 GitHub environment secret은 repository 파일만으로 활성화할 수 없어 외부 gate가 남는다. 자동 JAR rollback과 양방향 DB migration을 결합하지 않으며 schema는 expand-first 호환성을 별도 AC로 요구한다.
+**트레이드오프**: self-hosted runner와 Windows host는 persistent 공격·장애 영역이므로 PR code를 절대 실행하지 않고 repository 접근을 제한해야 한다. public repository의 standard GitHub-hosted Actions는 무료지만 persistent self-hosted runner의 공격면은 더 엄격하게 다뤄야 한다. Xcode Cloud 첫 workflow, Apple App record, Windows runner와 GitHub environment secret은 repository 파일만으로 활성화할 수 없어 외부 gate가 남는다. 자동 JAR rollback과 양방향 DB migration을 결합하지 않으며 schema는 expand-first 호환성을 별도 AC로 요구한다.
+
+## ADR-009: Bundle ID와 iOS visual verification 기준선
+
+**결정**: Money Snap의 최종 Bundle ID는 `com.ansandy.moneysnap`이다. GitHub iOS CI의 visual verification 기준선은 Xcode 16.4, iPhone 16, iOS 18.5, 393x852 points로 고정한다. Simulator UDID는 runner마다 달라지므로 device·runtime으로 찾고, app screenshot, Figma reference, overlay, diff와 수치 report를 artifact로 남긴다. iOS deployment target은 17 이상을 유지한다.
+
+**이유**: 공개 GitHub PR #1의 실제 `macos-15` inventory에서 Xcode 16.4와 iPhone 16/iOS 18.5 조합을 확인했다. iPhone 16의 393x852 viewport는 Figma source와 일치하며, toolchain을 고정해야 글꼴·safe area·system chrome 변경을 기능 회귀와 구분할 수 있다.
+
+**트레이드오프**: runner image에서 이 Xcode 또는 runtime이 제거되면 CI가 의도적으로 실패한다. 기준선 변경은 자동 fallback하지 않고 Figma reference 재검토와 ADR 갱신을 요구한다. 현재 홈은 placeholder이므로 visual report는 parity gate가 아니며 홈 기능 작업에서 사람이 승인한 threshold를 활성화한다.
 
 ## 아직 확정하지 않은 결정
 
 - 첫 macOS interactive 환경을 로컬 Mac, 원격 Mac 중 무엇으로 확보할지
 - Sign in with Apple만 사용할지와 계정·초대 정책
 - 사진 최대 변·압축 품질·파일 크기·사용자별 일일 quota
-- snapshot과 XCUITest에 사용할 고정 Simulator 기종·iOS 17.x patch baseline
 - public App Store 전환 시 Cloudflare Containers 월 5 USD를 승인할지 또는 다른 JVM origin을 사용할지

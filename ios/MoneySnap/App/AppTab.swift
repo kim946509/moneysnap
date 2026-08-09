@@ -1,4 +1,4 @@
-public enum AppTab: String, CaseIterable, Identifiable, Hashable {
+public enum AppTab: String, CaseIterable, Identifiable, Hashable, Sendable {
     case home
     case group
     case add

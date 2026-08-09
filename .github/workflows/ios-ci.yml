@@ -26,6 +26,10 @@ jobs:
     name: Build and test without signing
     runs-on: macos-15
     timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      MONEYSNAP_SIMULATOR_DEVICE: "iPhone 16"
+      MONEYSNAP_SIMULATOR_OS: "18.5"
 
     steps:
       - name: Check out exact revision
@@ -42,6 +46,20 @@ jobs:
         env:
           RESULT_BUNDLE_PATH: ${{ runner.temp }}/MoneySnap.xcresult
         run: bash ios/scripts/test.sh
+
+      - name: Capture Figma visual evidence
+        env:
+          VISUAL_OUTPUT_DIR: ${{ runner.temp }}/MoneySnapVisual
+        run: bash ios/scripts/capture-visual-baseline.sh
+
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-visual-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/MoneySnapVisual
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload failed test diagnostics
         if: failure()

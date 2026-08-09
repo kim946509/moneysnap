@@ -1,0 +1,22 @@
+{
+  "bundleIdentifier": "com.ansandy.moneysnap",
+  "figma": {
+    "fileKey": "IDNeYlc3584NY9YhsyUQYE",
+    "nodeId": "9:2",
+    "reference": "VisualReferences/Figma/home-9-2-393x852.png",
+    "sha256": "4e821694ff75903e028a3e06208cf5123c7f7fc86c97e8bf9189b7d810491d75"
+  },
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "simulator": {
+    "xcode": "16.4",
+    "device": "iPhone 16",
+    "os": "18.5"
+  },
+  "comparison": {
+    "mode": "report-only",
+    "reason": "Home 9:2 has not been implemented yet. Enable a reviewed threshold in the Home feature work item."
+  }
+}

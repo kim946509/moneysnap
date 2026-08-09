@@ -12,15 +12,15 @@
 - CRITICAL: 외부 시스템 변경, 배포, 삭제, 비용 발생 작업은 실행 전에 승인 경계를 확인할 것
 
 ## 현재 프로젝트 단계
-- 현재 단계는 **애플리케이션 scaffold와 CI/CD repository 설정 완료, 원격·Apple activation 검증 전**이다.
+- 현재 단계는 **public repository remote CI와 iOS visual baseline 활성화, development CD·Apple activation 전**이다.
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
 - SwiftUI + Spring Boot + PostgreSQL + Cloudflare Tunnel/R2 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
-- `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 Windows에서 test·bootJar를 통과했고 iOS는 정적 project 검증을 통과했지만 macOS/Xcode native build·test는 아직 남아 있다.
-- `.github/workflows/`에 server CI/CD와 signing 없는 iOS Simulator CI가 있고, Xcode Cloud post-clone hook과 checksum·ACL·rollback 동작을 검증하는 Windows deployment test가 있다. 작업별 local commit은 완료됐고 `server-development` environment는 생성됐지만 secret은 비어 있다. remote push 전이라 실제 GitHub run, self-hosted deployment와 TestFlight는 미활성 상태다.
+- `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native CI를 사용한다.
+- repository는 public이고 draft PR #1이 remote CI 기준점이다. `server-development` environment는 `main` 전용 branch policy가 있지만 secret은 비어 있고 self-hosted deployment와 TestFlight는 미활성 상태다.
 - Neon Free에 `moneysnap-dev`와 `moneysnap-prod`가 생성되어 있다. 개발·운영 DB를 공유하지 않는다.
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - Cloudflare named Tunnel과 DNS route는 아직 만들지 않았다. Spring Boot origin은 `127.0.0.1:8080`을 기본으로 하며 hostname과 외부 노출 작업 AC를 확정한 뒤 dev Tunnel부터 생성한다.
-- 다음 기술 게이트는 remote push 후 GitHub-hosted CI 확인, Windows runner·`server-development` secret activation, Mac/Xcode native 검증과 Xcode Cloud 첫 workflow다. Apple App ID 등록 전 Bundle ID를 재확인하고 인증 정책·사진 quota를 결정한 뒤 첫 개인 Snap vertical slice를 시작한다.
+- 다음 기술 게이트는 GitHub iOS visual artifact 확인, public repository branch protection, Windows runner·`server-development` secret activation, Apple explicit App ID와 Xcode Cloud 첫 workflow다. 인증 정책·사진 quota를 결정한 뒤 첫 개인 Snap vertical slice를 시작한다.
 - 그룹 생성·초대, 그룹 공개 설정 변경, 저장 후 공유 진입처럼 미결정인 제품 정책은 관련 기능의 작업 항목을 `ready`로 바꾸기 전에 확정한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 
@@ -51,7 +51,7 @@
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned URL
 - 무료 폐쇄형 배포: Cloudflare named Tunnel 뒤의 stateless Spring Boot origin
 - 서버 CI/CD: GitHub-hosted Ubuntu test/package → 전용 Windows self-hosted runner development deploy
-- iOS 검증·배포: path-scoped GitHub-hosted `macos-15` Simulator CI → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
+- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 test/393x852 visual evidence → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
 - CRITICAL: 표준 Workers는 Spring Boot runtime이 아니며 D1은 JPA datasource로 사용하지 않는다.
 - CRITICAL: Cloudflare Containers는 무료가 아니므로 월 최소 5 USD와 초과 과금 승인 전에는 활성화하거나 배포하지 않는다.
 - CRITICAL: 상시 Docker Compose PostgreSQL을 추가하지 않는다. 개발은 Neon dev, 운영은 Neon prod를 사용하며 테스트만 일회성 Testcontainers로 격리한다.
@@ -69,7 +69,7 @@
 - Spring runtime은 Neon pooled endpoint와 `moneysnap_app`을 사용하고, Flyway·dump/restore만 direct endpoint와 owner credential을 사용한다.
 - 서버 설정의 `NEON_RUNTIME_DATABASE_*`와 `NEON_MIGRATION_DATABASE_*`는 서로 독립된 필수 변수다. 테스트는 두 auto-configuration을 끄거나 Testcontainers를 사용하며 실제 Neon에 접속하지 않는다.
 - 인증 기능 전까지 `/actuator/health`만 익명 접근을 허용하고 나머지 route는 기본 거부한다. public API hostname에서는 actuator path 자체를 노출하지 않는다.
-- Apple App ID와 App Store Connect app record는 최종 Bundle ID가 확정되기 전 생성하지 않는다. Apple private key·certificate·2FA code를 저장소에 넣지 않는다.
+- 최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple explicit App ID와 App Store Connect app record 생성은 별도 Apple activation 작업에서 수행하며 private key·certificate·2FA code를 저장소에 넣지 않는다.
 - GitHub workflow action은 full commit SHA로 고정하고 Dependabot PR로 갱신한다. workflow 기본 권한은 `contents: read`다.
 - secret이 있는 persistent Windows runner에서는 PR·임의 branch code를 실행하지 않는다. development CD는 성공한 `main` push artifact와 `[self-hosted, Windows, X64, moneysnap-dev]` label을 모두 요구한다.
 - GitHub-hosted CI에는 Neon/R2/Tunnel/Apple secret을 주입하지 않는다. server environment secret은 deployment step과 Windows ACL secret files에만 전달한다.
@@ -107,6 +107,7 @@
 - 서버 전체 테스트: `cd server; .\gradlew.bat test --no-daemon --console=plain`
 - 서버 production JAR 생성: `cd server; .\gradlew.bat bootJar --no-daemon --console=plain`
 - Windows iOS project 정적 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
+- Windows iOS visual baseline 계약 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
 - CI/CD repository 계약 검증: `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
 - Windows deployment 동작 검증: `powershell -ExecutionPolicy Bypass -File server\scripts\test-deployment-support.ps1`
 - macOS native iOS 검증 명령은 `bash ios/scripts/test.sh`이지만 Mac/Xcode에서 통과하기 전에는 검증된 명령으로 간주하지 않는다.

@@ -48,11 +48,11 @@ Gradle 공식 action인 `setup-gradle`은 Gradle User Home의 distribution, reso
 - cache는 다음 build가 다시 사용할 dependency/build state용이고, artifact는 run 종료 뒤 보관하거나 job 사이에 전달할 JAR, test report, result bundle용이다. [GitHub dependency caching](https://docs.github.com/en/actions/concepts/workflows-and-actions/dependency-caching), [workflow artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)
 - PR run은 기본 branch의 cache를 복원할 수 있다. 따라서 fork 또는 신뢰하지 않는 branch에서 self-hosted deployment runner나 production secret을 사용하지 않는다. [GitHub dependency caching reference](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching), [GitHub Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use)
 - artifact attestation은 build provenance를 commit, workflow, repository, environment와 연결하지만 artifact 자체가 안전하다는 보증은 아니다. [GitHub artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations)
-- 현재 repository는 private이다. GitHub Free/Pro/Team의 private repository에서는 artifact attestation을 사용할 수 없고 GitHub Enterprise Cloud가 필요하므로 무료 단계 workflow에는 넣지 않는다. repository가 public으로 전환되거나 Enterprise Cloud를 사용하게 되면 release JAR에만 `actions/attest`를 추가하고 빈번한 test artifact에는 추가하지 않는다. [GitHub artifact attestation availability](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)
+- repository는 public으로 전환되어 artifact attestation을 사용할 수 있다. 다만 현재 개발 JAR은 public release artifact가 아니므로 기본 workflow에는 추가하지 않고, 공개 release provenance가 필요해질 때 release JAR에만 `actions/attest`를 추가한다. [GitHub artifact attestation availability](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)
 
 ### environment와 concurrency
 
-GitHub environment는 branch 제한, required reviewer, secret 접근 지연을 제공한다. job은 protection rule을 통과한 뒤에만 environment secret에 접근한다. 다만 GitHub Free/Pro/Team에서 required reviewer는 public repository에만 제공되므로 현재 private repository의 무료 구성이 production 승인 gate를 제공한다고 가정하면 안 된다. [GitHub deployment environments](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments), [deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
+GitHub environment는 branch 제한, required reviewer, secret 접근 지연을 제공한다. job은 protection rule을 통과한 뒤에만 environment secret에 접근한다. public repository에서는 무료 플랜도 protection rule을 사용할 수 있지만 현재 `server-development`는 custom branch policy로 `main`만 허용하고 required reviewer는 아직 구성하지 않았다. [GitHub deployment environments](https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments), [deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
 
 따라서 무료 private 단계에서는 다음 경계를 사용한다.
 
@@ -64,13 +64,13 @@ GitHub environment는 branch 제한, required reviewer, secret 접근 지연을 
 
 ## 2. GitHub-hosted macOS에서 iOS build/test
 
-현재 private repository에서 사용할 수 있는 standard Apple Silicon label은 `macos-latest`, `macos-14`, `macos-15`, `macos-26`이고 Intel label은 `macos-15-intel`, `macos-26-intel`이다. `-latest`는 GitHub가 제공하는 최신 stable image일 뿐 운영체제 공급자의 최신 버전과 같다는 보장이 없으므로 Money Snap은 `macos-latest` 대신 `macos-15`를 명시한다. [GitHub-hosted runners reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+standard Apple Silicon label은 `macos-latest`, `macos-14`, `macos-15`, `macos-26`이고 Intel label은 `macos-15-intel`, `macos-26-intel`이다. `-latest`는 GitHub가 제공하는 최신 stable image일 뿐 운영체제 공급자의 최신 버전과 같다는 보장이 없으므로 Money Snap은 `macos-latest` 대신 `macos-15`를 명시한다. [GitHub-hosted runners reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 
 runner image는 지원하는 Xcode와 Simulator runtime을 계속 갱신한다. 공식 runner-images 정책상 macOS image당 지원 Xcode major와 platform tool/runtime 범위가 제한되고, 새 patch가 나오면 이전 patch가 교체될 수 있다. 따라서 설치돼 있다고 가정한 특정 simulator UDID를 workflow에 하드코딩하면 안 된다. run 시작 시 `xcodebuild -version`, `xcrun simctl list devices available`을 evidence로 남기고, repository의 `ios/scripts/test.sh`처럼 available destination을 발견해 test해야 한다. [GitHub runner-images](https://github.com/actions/runner-images), [macOS 15 installed software](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md)
 
 Apple Silicon macOS runner에는 static UDID가 없고 nested virtualization도 지원하지 않는다. 이 lane은 iOS Simulator build/test에만 쓰며 development provisioning profile로 실제 device에 설치하는 용도로 사용하지 않는다. signing 없이 `xcodebuild test`가 성공하는지를 CI gate로 삼는다. [GitHub-hosted macOS limitations](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#limitations-for-arm64-macos-runners)
 
-private repository의 GitHub-hosted macOS 사용량은 계정의 포함량을 소모하고 초과분은 Linux보다 높은 macOS 분당 단가가 적용된다. 무료 우선 원칙상 `ios/**` 또는 shared contract가 바뀐 PR/main에서만 native lane을 실행하고, 문서-only 변경에는 실행하지 않는다. [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+public repository의 standard GitHub-hosted runner 사용은 무료다. 그래도 실행 시간과 피드백 지연을 줄이기 위해 `ios/**` 또는 shared contract가 바뀐 PR/main에서만 native lane을 실행하고, 문서-only 변경에는 실행하지 않는다. [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 
 권장 iOS CI job은 다음만 수행한다.
 
