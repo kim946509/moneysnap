@@ -1,0 +1,92 @@
+version: 1
+profile: generic-software-project
+
+entrypoints:
+  agent_rules: AGENTS.md
+  shared_language: CONTEXT.md
+  environment_guide: docs/AI_ENVIRONMENT.md
+  work_graph: .ai/GRAPHS.md
+  loop_catalog: .ai/LOOPS.md
+
+local_skills:
+  root: .agents/skills
+  lock: .ai/skills.lock.json
+
+anchors:
+  frozen:
+    - user_explicit_decisions
+    - product_scope
+    - security_and_privacy_rules
+    - acceptance_criteria
+    - held_out_evaluations
+  human_approval_required:
+    - production_deployment
+    - external_side_effects
+    - destructive_operations
+    - secrets_or_credentials
+    - harness_anchor_changes
+
+work_item:
+  states: [proposed, ready, active, verify, blocked, done, rejected]
+  template: .ai/templates/work-item.md
+
+verification:
+  source_of_commands: AGENTS.md
+  evidence_required: true
+  model_self_judgment_is_sufficient: false
+
+agent_rules_sync:
+  file: AGENTS.md
+  source_of_work_state: .ai/work
+  check_on_changes:
+    - source_document_paths
+    - product_or_security_invariants
+    - approval_boundaries
+    - technology_stack
+    - architecture_rules
+    - development_process
+    - verification_commands
+  work_item_field_required: Agent rules impact
+  evidence_required: true
+  automatic_hooks_enabled: false
+  hook_promotion_requires:
+    - proven_manual_check
+    - deterministic_behavior
+    - separate_harness_work_item
+    - human_approval
+
+code_review_graph:
+  runtime_dir: .code-review-graph
+  committed: false
+  entry_tool: get_minimal_context_tool
+  initialize_with: build_or_update_graph_tool
+  full_rebuild_when:
+    - graph_missing
+    - graph_corrupt
+    - parsable_source_exists_but_graph_empty
+    - parser_or_graph_schema_changed
+  incremental_update_when:
+    - coherent_source_or_test_change_batch_completed
+    - before_code_review
+    - before_handoff
+    - before_merge_or_release_readiness
+  skip_when:
+    - documentation_only_change
+  review:
+    low_risk_detail_level: minimal
+    medium_or_high_risk_detail_level: standard
+    findings_require_tdd_and_reupdate: true
+  work_item_field_required: Code Review Graph
+  evidence_required: true
+  automatic_watch_enabled: false
+  watch_promotion_requires:
+    - proven_manual_cadence
+    - deterministic_behavior
+    - separate_harness_work_item
+    - human_approval
+
+improvement:
+  minimum_repeated_failures: 3
+  max_changes_per_iteration: 1
+  rollback_required: true
+  human_approval_required: true

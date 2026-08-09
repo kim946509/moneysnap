@@ -1,4 +1,0 @@
-[features]
-# Enables project-level hooks for Codex CLI versions that gate hooks behind a feature flag.
-codex_hooks = true
-hooks = true

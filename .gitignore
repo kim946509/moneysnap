@@ -8,6 +8,8 @@ node_modules/
 out/
 dist/
 build/
+.build/
+DerivedData/
 .vercel/
 .netlify/
 
@@ -41,6 +43,9 @@ lerna-debug.log*
 # Local editor and OS files
 .vscode/
 .idea/
+xcuserdata/
+*.xcuserstate
+.swiftpm/
 *.swp
 *.swo
 .DS_Store
@@ -77,7 +82,31 @@ env/
 *.pem
 *.key
 *.cert
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.jks
+*.keystore
+*.backup
+*.dump
+GoogleService-Info.plist
+.dev.vars
+.dev.vars.*
+.cloudflared/
+**/resources.local.yaml
+**/resources.local.yml
+**/*credentials.local.json
 
-# Phase execution outputs
-phases/**/phase*-output.json
-phases/**/step*-output.json
+# Local GitHub Actions runner identity
+.runner
+.credentials
+.credentials_rsaparams
+_diag/
+
+# Local AI tool state
+.code-review-graph/
+/.acl-probe/
+
+# Local Cloudflare CLI state
+.wrangler/
