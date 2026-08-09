@@ -11,7 +11,16 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\App\AppTab.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\RouterPath.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Placeholder\PlaceholderView.swift'),
-    (Join-Path $iosRoot 'MoneySnapTests\AppShellTests.swift')
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapModels.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\SnapJournalClient.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapViewModel.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Info.plist'),
+    (Join-Path $iosRoot 'MoneySnap\Resources\Fonts\NotoSansKR-VariableFont_wght.ttf'),
+    (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\FoodSnap.imageset\food-snap.png'),
+    (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\CafeSnap.imageset\cafe-snap.png'),
+    (Join-Path $iosRoot 'MoneySnapTests\AppShellTests.swift'),
+    (Join-Path $iosRoot 'MoneySnapTests\TodaySnapViewModelTests.swift')
 )
 
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_) }
@@ -60,7 +69,12 @@ $expectedSourceNames = @(
     'AppTab.swift',
     'RouterPath.swift',
     'PlaceholderView.swift',
-    'AppShellTests.swift'
+    'TodaySnapModels.swift',
+    'SnapJournalClient.swift',
+    'TodaySnapViewModel.swift',
+    'TodaySnapView.swift',
+    'AppShellTests.swift',
+    'TodaySnapViewModelTests.swift'
 )
 foreach ($sourceName in $expectedSourceNames) {
     if ($project -notmatch [regex]::Escape("path = $sourceName;")) {
@@ -73,6 +87,11 @@ if ($scheme.Scheme.BuildAction.BuildActionEntries.BuildActionEntry.Count -ne 2) 
 }
 if ($assets.info.author -ne 'xcode' -or $assets.info.version -ne 1) {
     throw 'Asset catalog metadata is invalid.'
+}
+
+$infoPlist = [xml](Get-Content -LiteralPath (Join-Path $iosRoot 'MoneySnap\Info.plist') -Raw)
+if ($infoPlist.plist.dict.array.string -notcontains 'NotoSansKR-VariableFont_wght.ttf') {
+    throw 'Noto Sans KR must be registered in UIAppFonts.'
 }
 
 Write-Output 'MoneySnap iOS project static validation: OK'

@@ -35,6 +35,13 @@ Assert-True (Test-Path -LiteralPath $referencePath) 'Figma reference image is mi
 $referenceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $referencePath).Hash.ToLowerInvariant()
 Assert-True ($referenceHash -eq $manifest.figma.sha256) 'Figma reference checksum does not match the manifest.'
 
+$foodAsset = Join-Path $iosRoot 'MoneySnap\Assets.xcassets\FoodSnap.imageset\food-snap.png'
+$cafeAsset = Join-Path $iosRoot 'MoneySnap\Assets.xcassets\CafeSnap.imageset\cafe-snap.png'
+$fontAsset = Join-Path $iosRoot 'MoneySnap\Resources\Fonts\NotoSansKR-VariableFont_wght.ttf'
+Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $foodAsset).Hash.ToLowerInvariant() -eq $manifest.assets.foodSnap.sha256) 'Food Figma asset checksum mismatch.'
+Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $cafeAsset).Hash.ToLowerInvariant() -eq $manifest.assets.cafeSnap.sha256) 'Cafe Figma asset checksum mismatch.'
+Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $fontAsset).Hash.ToLowerInvariant() -eq $manifest.assets.notoSansKr.sha256) 'Noto Sans KR checksum mismatch.'
+
 Add-Type -AssemblyName System.Drawing
 $referenceImage = [System.Drawing.Image]::FromFile($referencePath)
 try {
