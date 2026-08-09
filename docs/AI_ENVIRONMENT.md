@@ -47,6 +47,16 @@ Matt Pocock의 engineering 스킬 중 범용 개발에 필요한 조합만 `.age
 
 사용자 명시 호출형 스킬인 `grill-with-docs`, `to-spec`, `to-tickets`, `implement`는 Claude 전용 frontmatter를 제거하고 Codex의 `agents/openai.yaml`에서 `allow_implicit_invocation: false`를 유지하도록 로컬 정규화했다.
 
+## Codex 플러그인
+
+Ponytail은 프로젝트 로컬 스킬이 아니라 Codex에서 호출하는 횡단 플러그인이다.
+
+| 플러그인 | 호출 스킬 | 역할 | 적용 범위 |
+|---|---|---|---|
+| `plugin://ponytail@ponytail` | `ponytail:ponytail` | YAGNI, 기존 코드·표준 라이브러리·네이티브 기능 우선, 최소 변경 검증 | 코드·구조·의존성·하네스 변경 |
+
+기본 intensity는 `full`이다. 작업 시작 전에 필요성, 기존 구현, 표준·네이티브 대체 가능성, 새 의존성·추상화 필요성을 확인한다. 단순화는 제품 범위, 보안, 입력 검증, 접근성, Acceptance Criteria와 테스트를 약화할 수 없다. Ponytail은 `.agents/skills/`에 복사하지 않으며 `.ai/skills.lock.json`에도 로컬 스킬로 기록하지 않는다.
+
 ## 하네스, 루프, 그래프의 경계
 
 - **하네스**: 에이전트가 볼 문맥, 사용할 스킬, 변경 권한, 상태와 검증 방식을 제공한다.
@@ -64,6 +74,10 @@ Matt Pocock의 engineering 스킬 중 범용 개발에 필요한 조합만 `.age
 ```
 
 작업을 시작하기 전에 `.ai/templates/work-item.md`로 범위와 AC를 고정한다. 코드가 만들어진 뒤에는 테스트·린트·빌드처럼 저장소의 실제 명령을 실행하고 결과를 Evidence에 남긴다.
+
+### Ponytail 단순성 게이트
+
+기획·명세·설계·구현·리팩터링·리뷰 루프에서 `ponytail:ponytail`을 횡단 게이트로 사용한다. 요구사항을 이해한 뒤 “이것이 필요한가 → 이미 있는가 → 표준 라이브러리인가 → 플랫폼 기능인가 → 기존 의존성으로 가능한가 → 최소 변경은 무엇인가” 순서로 판단한다. 비자명한 변경에는 가장 작은 실행 가능한 검증을 남긴다. 비용·보안·정확성·접근성·실제 사용자 결과가 걸린 변경은 단순성을 이유로 생략하지 않는다.
 
 ### 하네스 개선
 

@@ -2,6 +2,18 @@
 
 모든 루프는 `trigger → goal → inputs → actions → verification → stop → memory`를 명시한다.
 
+## 0. Ponytail 단순성·범위 절제 게이트
+
+- Trigger: 코드·구조·의존성·하네스 변경을 계획하거나 구현·리팩터링·리뷰할 때
+- Goal: 요구사항을 만족하는 가장 작은 검증 가능한 변경을 선택하고 과잉 설계를 차단
+- Inputs: 사용자 요청, 현재 코드와 문서, 기존 의존성·플랫폼 기능, 작업 항목의 AC
+- Skills/tools: `ponytail:ponytail` (`plugin://ponytail@ponytail`), 기본 intensity `full`
+- Actions: 필요성 확인 → 기존 코드 재사용 → 표준 라이브러리·플랫폼 기능 우선 → 설치된 의존성 확인 → 최소 변경 선택 → 새 추상화·의존성·scaffolding의 필요 근거 기록
+- Verification: 비자명한 코드 변경에는 가장 작은 실행 가능한 검증을 남기고, 보안·입력 검증·접근성·AC를 단순화하지 않았으며, 작업 항목에 생략·추가 판단을 기록
+- Stop: 최소 변경이 실제 검증을 통과하거나, 더 완전한 설계가 필요한 근거와 추가 시점을 명시함
+- Memory: 작업 항목의 Decisions/Evidence, 필요 시 의도적인 절충의 `ponytail:` 주석
+- Boundary: 제품 범위·보안 규칙·AC·테스트를 약화하거나 하네스 고정 앵커를 변경할 권한은 없다
+
 ## 1. 기획·도메인 루프
 
 - Trigger: 새 프로젝트, 새 기능, 범위가 불명확한 요청

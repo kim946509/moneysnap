@@ -7,6 +7,7 @@
 - 기획, 구현, 리뷰, 문서, 릴리스 루프: `.ai/LOOPS.md`
 - AI 환경 구성과 이식 방법: `docs/AI_ENVIRONMENT.md`
 - 프로젝트 로컬 스킬: `.agents/skills/`
+- 횡단 단순성 게이트: Codex `ponytail:ponytail` 플러그인 (`plugin://ponytail@ponytail`)
 - CRITICAL: 기능 작업 중 편의를 위해 제품 범위, Acceptance Criteria, 테스트, 보안 규칙을 완화하지 말 것
 - CRITICAL: 하네스와 고정 앵커 변경은 기능 작업과 분리하고 사용자의 명시적 승인을 받을 것
 - CRITICAL: 외부 시스템 변경, 배포, 삭제, 비용 발생 작업은 실행 전에 승인 경계를 확인할 것

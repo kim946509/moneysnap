@@ -12,6 +12,14 @@ local_skills:
   root: .agents/skills
   lock: .ai/skills.lock.json
 
+external_plugins:
+  ponytail:
+    source: plugin://ponytail@ponytail
+    entrypoint: ponytail:ponytail
+    scope: cross_cutting_simplicity_gate
+    intensity: full
+    local_install: false
+
 anchors:
   frozen:
     - user_explicit_decisions
