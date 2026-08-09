@@ -9,7 +9,7 @@ enum TodayCanvasLayout {
 
         let amountRatio = CGFloat(entry.amount.value) / CGFloat(maximumAmount.value)
         let readableScale = max(CGFloat(0.72), amountRatio.squareRoot())
-        let longestSide = CGFloat(150) * readableScale
+        let longestSide = artwork.canvasLongestSide * readableScale
 
         if artwork.canvasAspectRatio >= 1 {
             return CGSize(

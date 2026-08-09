@@ -14,7 +14,7 @@ struct MoneySnapTabBar: View {
                             .font(.system(size: 24, weight: .medium))
                             .frame(height: 27)
                         Text(tab.title)
-                            .font(.moneySnap(size: 10, weight: .bold))
+                            .font(.system(size: 10, weight: .semibold))
                     }
                     .foregroundStyle(selectedTab == tab ? Color.blue : Color.black)
                     .frame(maxWidth: .infinity, minHeight: 50)

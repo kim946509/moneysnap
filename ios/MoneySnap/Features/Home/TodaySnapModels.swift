@@ -67,8 +67,15 @@ enum SnapArtwork: String, Equatable, Sendable {
 
     var canvasAspectRatio: CGFloat {
         switch self {
-        case .food: 150 / 109
-        case .cafe: 82 / 108
+        case .food: 4 / 3
+        case .cafe: 81 / 108
+        }
+    }
+
+    var canvasLongestSide: CGFloat {
+        switch self {
+        case .food: 144
+        case .cafe: 150
         }
     }
 }

@@ -50,7 +50,7 @@ struct TodaySnapViewModelTests {
             maximumAmount: summary.featuredEntries[0].amount
         )
 
-        #expect(largest.width == 150)
+        #expect(largest.width == 144)
         #expect(smaller.width < largest.width)
     }
 

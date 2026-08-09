@@ -51,7 +51,7 @@ private struct TodaySnapContent: View {
                     .font(.moneySnap(size: 22, weight: .bold))
                     .foregroundStyle(MoneySnapVisualSystem.ink)
                 Text(summary.day.displayLabel)
-                    .font(.moneySnap(size: 14, weight: .regular))
+                    .font(.moneySnap(size: 13, weight: .medium))
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
             }
             .offset(x: 28, y: 7)
@@ -74,23 +74,23 @@ private struct TodaySnapContent: View {
             if let entry = summary.featuredEntries[safe: 0], let maximumAmount {
                 FeaturedSnapCard(
                     entry: entry,
-                    imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
+                    imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
+                    layout: .landscape
                 )
-                .rotationEffect(.degrees(7))
-                .position(x: availableWidth * 0.371, y: 267)
+                .position(x: availableWidth * 0.357, y: 276)
             }
             if let entry = summary.featuredEntries[safe: 1], let maximumAmount {
                 FeaturedSnapCard(
                     entry: entry,
-                    imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
+                    imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
+                    layout: .portrait
                 )
-                .rotationEffect(.degrees(-7))
-                .position(x: availableWidth * 0.743, y: 295)
+                .position(x: availableWidth * 0.736, y: 303)
             }
             if let entry = summary.featuredEntries[safe: 2] {
                 PriceTicket(entry: entry)
-                    .rotationEffect(.degrees(-3))
-                    .position(x: availableWidth * 0.254, y: 353)
+                    .rotationEffect(.degrees(-4))
+                    .position(x: availableWidth * 0.256, y: 354)
             }
         }
     }
@@ -103,7 +103,7 @@ private struct TodaySnapContent: View {
                 .foregroundStyle(.white)
                 .background(.white.opacity(0.18), in: Circle())
             Text("기록하기")
-                .font(.moneySnap(size: 21, weight: .bold))
+                .font(.moneySnap(size: 20, weight: .bold))
         }
         .foregroundStyle(.white)
         .frame(width: 165, height: 64)
@@ -127,7 +127,7 @@ private struct TodaySnapContent: View {
     private var totalSection: some View {
         Group {
             Text("오늘 총 소비")
-                .font(.moneySnap(size: 17, weight: .regular))
+                .font(.moneySnap(size: 16, weight: .medium))
                 .foregroundStyle(MoneySnapVisualSystem.secondaryText)
                 .offset(x: 28, y: 521)
             Text(summary.totalAmount.wonText)
@@ -141,7 +141,7 @@ private struct TodaySnapContent: View {
     private var recentSection: some View {
         Group {
             Text("오늘 소비")
-                .font(.moneySnap(size: 18, weight: .bold))
+                .font(.moneySnap(size: 17, weight: .bold))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
                 .offset(x: 26, y: 612)
             HStack(spacing: 52) {
