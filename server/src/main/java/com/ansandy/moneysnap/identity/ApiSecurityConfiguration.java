@@ -11,7 +11,7 @@ class ApiSecurityConfiguration {
 	@Bean
 	SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
 		http.authorizeHttpRequests(authorize -> authorize
-				.requestMatchers("/actuator/health").permitAll()
+				.requestMatchers("/", "/actuator/health", "/actuator/prometheus").permitAll()
 				.anyRequest().denyAll());
 
 		return http.build();

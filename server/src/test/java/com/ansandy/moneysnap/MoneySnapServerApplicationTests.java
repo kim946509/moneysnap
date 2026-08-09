@@ -8,7 +8,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
 
 @AutoConfigureMockMvc
 @SpringBootTest(properties = {
@@ -33,6 +35,22 @@ class MoneySnapServerApplicationTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("UP"))
 				.andExpect(jsonPath("$.components").doesNotExist());
+	}
+
+	@Test
+	void rootReportsServiceAvailabilityWithoutInfrastructureDetails() throws Exception {
+		mockMvc.perform(get("/"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.service").value("moneysnap-api"))
+				.andExpect(jsonPath("$.status").value("UP"))
+				.andExpect(jsonPath("$.components").doesNotExist());
+	}
+
+	@Test
+	void prometheusMetricsAreAvailableToTheMonitoringNetwork() throws Exception {
+		mockMvc.perform(get("/actuator/prometheus"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("process_uptime_seconds")));
 	}
 
 	@Test

@@ -1,5 +1,7 @@
 # Money Snap CI/CD 공식 조사와 권장 설계
 
+> 역사적 조사: Windows self-hosted runner와 named Tunnel 후보를 검토한 기록이다. 2026-08-09 이후 현재 실행 계약은 Ubuntu Docker/SSH 방식의 `docs/CI_CD.md`와 ADR-003·ADR-008을 따른다.
+
 > 상태: implementation input
 >
 > 조사 기준일: 2026-08-08

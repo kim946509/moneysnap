@@ -6,9 +6,11 @@
 - R2: 활성 상태. private Standard bucket `moneysnap-media-dev`, `moneysnap-media-prod`를 APAC에 생성했다.
 - 원격 검증: 두 bucket 모두 임시 객체 PUT/GET, SHA-256 비교, DELETE를 통과했고 최종 `0 objects / 0 B`다.
 - public surface: `r2.dev`, custom domain, CORS, Data Catalog 모두 비활성 상태다.
-- named Tunnel/DNS route: 미생성. Spring Boot 기본 origin은 `127.0.0.1:8080`으로 준비됐고 hostname·외부 노출 AC 승인 후 dev부터 만든다.
+- API DNS: `moneysnap-server.ansandy.co.kr`가 사용자 관리 Nginx Proxy Manager를 거쳐 Ubuntu host `9090`으로 연결된다.
+- monitoring DNS: `monitor.ansandy.co.kr`의 잘못된 origin IP를 수정했고 Grafana `/api/health` HTTP 200을 검증했다.
+- named Tunnel: 현재 topology에서는 사용하지 않는다.
 - Cloudflare Containers/Workers Paid: 비활성, 승인 전 금지
-- application CI/CD: repository 설정은 준비됐지만 named Tunnel, DNS와 `cloudflared` service는 별도 infrastructure lifecycle로 유지한다.
+- application CI/CD: Docker image만 Ubuntu origin에 배포하며 DNS와 Nginx Proxy Manager는 별도 infrastructure lifecycle로 유지한다.
 
 2026-08-08 설정 시 계정 R2 전체 사용량은 이미 약 463.29 MB였다. 이는 Money Snap 전용 사용량이 아니며 기존 bucket은 변경하지 않았다. R2 Standard의 무료 사용량을 넘으면 사용량 과금될 수 있으므로 앱에서는 6 GB 경고와 7 GB 신규 업로드 차단을 구현하고 Dashboard 사용량과 대조한다.
 
@@ -31,12 +33,12 @@
 
 1. Spring Boot media Adapter 작업에서 dev/prod bucket-scoped credential을 각각 만들고 저장소 밖 secret에 등록한다.
 2. Adapter의 S3-compatible contract test로 PUT/HEAD/GET/DELETE와 presigned URL 만료·권한을 검증한다.
-3. hostname과 public actuator 차단 규칙을 확정한 뒤 `127.0.0.1:8080` origin에 `moneysnap-api-dev` named Tunnel과 DNS route를 만든다. 현재 zone을 사용한다면 후보 hostname은 `api.moneysnap.ansandy.co.kr`다.
-4. Windows service 자동 기동과 Tunnel 재연결을 검증한다.
-5. 공개 출시 전 origin과 production Tunnel/Containers 결정을 다시 승인받는다.
+3. 공개 hostname에서 `/` smoke와 actuator 차단을 회귀 검증한다.
+4. Ubuntu Docker 재부팅 복구와 Nginx Proxy Manager upstream을 정기 검증한다.
+5. 공개 출시 전 현재 port-forward/NPM topology를 Cloudflare Tunnel 또는 managed origin으로 바꿀지 다시 승인받는다.
 
-named Tunnel은 외부 노출·DNS 변경 작업 AC와 hostname이 아직 확정되지 않아 만들지 않았다. 빈 Tunnel credential을 미리 발급해 장기 보관하지 않는다.
+named Tunnel credential은 현재 발급하지 않는다. 도입 시 application release와 분리된 infrastructure 작업으로 다룬다.
 
-GitHub Actions의 server deployment는 Spring Boot JAR과 Scheduled Task만 교체한다. tunnel 생성·삭제, hostname/DNS, tunnel token 발급·rotation과 `cloudflared` update는 수행하지 않는다. runtime tunnel token은 GitHub server artifact나 application secret과 섞지 않고 Windows ACL 제한 token file에만 둔다.
+GitHub Actions의 server deployment는 checksum이 검증된 Docker image와 runtime env만 교체한다. DNS, Nginx Proxy Manager, Prometheus/Grafana lifecycle은 변경하지 않는다.
 
 공식 기준: [R2 pricing](https://developers.cloudflare.com/r2/pricing/), [R2 get started](https://developers.cloudflare.com/r2/get-started/), [Create a Tunnel API](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel-api/)

@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-> 기준일: 2026-08-08
+> 기준일: 2026-08-09
 
 ## 철학
 
@@ -12,7 +12,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 |---|---|---|
 | ADR-001 | accepted | MVP는 native iOS 전용 |
 | ADR-002 | accepted | Spring Boot modular monolith와 PostgreSQL |
-| ADR-003 | accepted | Cloudflare는 edge·Tunnel·R2에 사용하고 무료 폐쇄형 MVP부터 시작 |
+| ADR-003 | accepted | Cloudflare DNS·R2와 개발자 소유 Ubuntu Docker origin으로 무료 폐쇄형 MVP부터 시작 |
 | ADR-004 | accepted | Figma node와 screenshot diff를 시각적 기준으로 사용 |
 | ADR-005 | accepted | Windows 개발과 macOS iOS 검증 lane 분리 |
 | ADR-006 | rejected | D1을 Spring Boot 주 데이터베이스로 사용하지 않음 |
@@ -36,15 +36,15 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 **트레이드오프**: Workers-only 구조보다 메모리와 cold start가 크고 JVM origin 운영이 필요하다. microservice, Kafka, Redis, GraphQL, 실시간 socket과 완전한 offline sync는 MVP에서 도입하지 않는다.
 
-## ADR-003: Cloudflare 무료 폐쇄형 MVP와 단계적 compute 이전
+## ADR-003: Cloudflare DNS·R2와 Ubuntu Docker origin
 
-**결정**: 첫 폐쇄형 TestFlight MVP는 Cloudflare Free의 named Tunnel로 개발자 소유 origin의 Spring Boot를 노출하고, 사진은 private R2 Standard에 저장한다. API 앞에 별도 Worker gateway를 두지 않는다. Spring Boot process는 stateless OCI image/JAR 계약을 지켜 origin만 교체할 수 있게 한다.
+**결정**: 첫 폐쇄형 TestFlight MVP는 개발자 소유 Ubuntu 서버에서 Spring Boot OCI image를 Docker로 실행한다. Cloudflare는 `moneysnap-server.ansandy.co.kr` DNS와 private R2 Standard에 사용하고, 기존 Nginx Proxy Manager가 HTTPS를 host `9090` origin으로 전달한다. API 앞에 별도 Worker gateway나 named Tunnel을 두지 않는다.
 
 공개 App Store 출시 전 또는 exit 기준 도달 시 origin을 재평가한다. Cloudflare에 Spring Boot를 직접 배포하기로 하면 Containers로 이동하되 Workers Paid의 월 최소 5 USD와 초과 과금을 별도 승인한다. 외부 무료 JVM host는 공식 무료 조건과 cold start를 실제 검증한 경우에만 Tunnel 대안으로 채택한다.
 
-**이유**: 표준 Workers에는 JVM이 없고 Cloudflare Containers는 Spring Boot를 실행할 수 있지만 무료 티어가 없다. Tunnel은 compute를 제공하지 않지만 기존 host를 공개 포트 없이 Cloudflare edge에 연결할 수 있다. R2는 S3-compatible API, 월 10GB Standard storage, Class A 100만, Class B 1,000만, 인터넷 egress 무료 범위가 저사용자 사진 MVP에 적합하다.
+**이유**: 표준 Workers에는 JVM이 없고 Cloudflare Containers는 Spring Boot를 실행할 수 있지만 무료 티어가 없다. 이미 운영 중인 Ubuntu Docker/Nginx Proxy Manager/Prometheus/Grafana를 재사용하면 추가 compute 비용 없이 Spring Boot를 실행하고 관찰할 수 있다. R2의 S3-compatible private object storage는 저사용자 사진 MVP에 적합하다.
 
-**트레이드오프**: 무료 Tunnel 단계에는 SLA가 없고 host 전원·인터넷·patch·backup이 단일 장애점이다. R2 budget alert는 비용을 차단하지 않으므로 월 0원을 절대 보장하지 않는다. 서버가 업로드 grant를 제한하고 무료 범위 70%에서 신규 업로드를 정지하는 kill switch를 둔다. 공개 출시, DAU 20 초과, 30분 이상 장애, 주 2회 사용자 영향 장애 중 하나면 무료 origin을 종료한다.
+**트레이드오프**: port-forward와 Nginx Proxy Manager가 origin 공개 경계가 되므로 host patch, firewall, TLS와 proxy 설정을 직접 운영해야 한다. host 전원·인터넷·backup도 단일 장애점이다. 공개 출시 전 Cloudflare Tunnel 또는 managed origin으로 전환할지 재평가하고, 공개 출시·DAU 20 초과·30분 이상 장애·주 2회 사용자 영향 장애 중 하나면 무료 origin 결정을 다시 연다.
 
 ## ADR-004: Figma source of truth와 visual regression
 
@@ -80,13 +80,13 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-008: GitHub Actions와 Xcode Cloud CI/CD 분리
 
-**결정**: Spring Boot의 test·JAR packaging은 GitHub-hosted Ubuntu, development origin 배포는 `[self-hosted, Windows, X64, moneysnap-dev]` 전용 runner에서 GitHub Actions로 수행한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 signing 없이 실행하고, archive·signing·internal TestFlight CD는 Xcode Cloud가 소유한다. Cloudflare Tunnel/DNS/token lifecycle은 application release workflow와 분리한다.
+**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 signing 없이 실행하고, archive·signing·internal TestFlight CD는 Xcode Cloud가 소유한다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
 
-모든 GitHub Action reference는 전체 commit SHA로 고정하고 Dependabot이 갱신한다. workflow 기본 권한은 `contents: read`이며 persistent deployment runner는 `main` push의 검증된 artifact job만 실행한다. server secret은 deployment job과 Windows ACL secret files에만 존재하고 GitHub-hosted CI나 artifact에는 전달하지 않는다.
+모든 GitHub Action reference는 전체 commit SHA로 고정하고 Dependabot이 갱신한다. workflow 기본 권한은 `contents: read`다. server secret은 `server-development` environment를 통과한 `main` deployment job과 Ubuntu mode `600` runtime file에만 존재하며 pull request CI나 artifact에는 전달하지 않는다.
 
-**이유**: 서버는 Windows origin에서 실행되므로 외부 SSH surface 없이 같은 host의 전용 runner가 local JAR을 교체하는 경로가 가장 작다. iOS는 Windows에서 검증할 수 없지만 GitHub macOS runner가 PR compile/test feedback을 제공하고, Apple-managed signing과 포함된 Xcode Cloud quota가 TestFlight credential surface를 줄인다. Tunnel과 app release를 분리하면 JAR rollback이 connector·DNS 상태를 건드리지 않는다.
+**이유**: public repository에서 persistent self-hosted runner를 제거하면 PR 또는 workflow 변경이 장기 실행 host를 침해할 면적이 줄어든다. GitHub-hosted runner가 매 run 격리된 환경에서 image를 만들고, pinned SSH identity와 checksum으로 배포 경계를 고정한다. iOS는 GitHub macOS runner와 Apple-managed Xcode Cloud가 각각 PR feedback과 signing surface를 담당한다.
 
-**트레이드오프**: self-hosted runner와 Windows host는 persistent 공격·장애 영역이므로 PR code를 절대 실행하지 않고 repository 접근을 제한해야 한다. public repository의 standard GitHub-hosted Actions는 무료지만 persistent self-hosted runner의 공격면은 더 엄격하게 다뤄야 한다. Xcode Cloud 첫 workflow, Apple App record, Windows runner와 GitHub environment secret은 repository 파일만으로 활성화할 수 없어 외부 gate가 남는다. 자동 JAR rollback과 양방향 DB migration을 결합하지 않으며 schema는 expand-first 호환성을 별도 AC로 요구한다.
+**트레이드오프**: GitHub-hosted deployment job이 Ubuntu SSH private key를 일시적으로 사용하므로 environment branch policy, pinned known_hosts, secret scanning과 key rotation이 필수다. 현재 activation은 사용자 제공 root key를 사용했으므로 최소 권한 deploy account로 축소하는 hardening 작업이 남는다. 자동 image rollback과 양방향 DB migration을 결합하지 않으며 schema는 expand-first 호환성을 별도 AC로 요구한다.
 
 ## ADR-009: Bundle ID와 iOS visual verification 기준선
 

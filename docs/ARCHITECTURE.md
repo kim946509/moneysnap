@@ -2,7 +2,7 @@
 
 > 상태: accepted baseline
 >
-> 기준일: 2026-08-08
+> 기준일: 2026-08-09
 
 ## 목표
 
@@ -17,17 +17,19 @@
 ```mermaid
 flowchart LR
     IOS["SwiftUI iOS App"]
-    EDGE["Cloudflare DNS / Proxy"]
-    TUNNEL["Named Cloudflare Tunnel"]
-    API["Spring Boot Modular Monolith"]
+    EDGE["Cloudflare DNS"]
+    NPM["Nginx Proxy Manager"]
+    API["Ubuntu Docker / Spring Boot"]
+    MON["Prometheus + Grafana"]
     DB[("Neon PostgreSQL")]
     R2[("Private R2 Standard")]
     MAC["macOS / Xcode Cloud"]
     FIGMA["Figma frame + screenshot"]
 
     IOS -->|"REST JSON"| EDGE
-    EDGE --> TUNNEL
-    TUNNEL --> API
+    EDGE --> NPM
+    NPM -->|"host 9090"| API
+    API -->|"management 9091 / main network"| MON
     API -->|"JDBC + Flyway"| DB
     API -->|"권한 검사와 signed grant"| R2
     IOS -->|"short-lived PUT / GET"| R2
@@ -35,7 +37,7 @@ flowchart LR
     MAC -->|"build, test, screenshot, archive"| IOS
 ```
 
-무료 단계에서 Tunnel 뒤 origin은 개발자 소유 Windows host다. 이 topology는 폐쇄형 TestFlight에만 사용한다. 공개 출시 단계에서는 `EDGE → TUNNEL → API` 구간을 `Cloudflare Worker router → Container` 또는 별도 JVM origin으로 교체하고 API·DB·R2 Interface는 유지한다.
+무료 단계 origin은 개발자 소유 Ubuntu Docker host이며 기존 Nginx Proxy Manager가 HTTPS를 application port `9090`으로 전달한다. 이 topology는 폐쇄형 TestFlight에만 사용한다. 공개 출시 단계에서는 `EDGE → NPM → API` 구간을 Cloudflare Tunnel, Container 또는 별도 managed JVM origin으로 교체하고 API·DB·R2 Interface는 유지한다.
 
 ## 저장소 구조
 
@@ -47,7 +49,8 @@ contracts/
 infra/
 ├── neon/                   # dev/prod project, 역할과 secret 계약
 ├── apple/                  # Apple Developer/App Store Connect 준비 계약
-└── cloudflare/             # Tunnel/R2/향후 Containers 준비와 배포 설정
+├── cloudflare/             # DNS/R2/향후 Containers 준비와 배포 설정
+└── ubuntu/                 # Docker origin, rollback과 monitoring scrape 계약
 docs/                       # 제품·기술 기준 문서
 .ai/                        # AI 작업·검증 루프
 ```
@@ -162,8 +165,8 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 - 금액 비공개는 UI hide가 아니라 server projection과 DTO schema에서 강제한다.
 - 가격, token, presigned URL query, 원본 사진명, DB URL을 log·analytics에 남기지 않는다.
 - 사진 변환 시 위치를 포함한 불필요한 metadata를 제거한다.
-- Tunnel origin은 loopback 또는 private container network에만 bind하고 router port forwarding을 열지 않는다.
-- R2, DB, Tunnel credential은 저장소에 넣지 않고 최소 권한 secret으로 주입한다.
+- public Nginx Proxy Manager는 application `9090`만 전달하고 management `9091`과 actuator path는 외부에 노출하지 않는다.
+- R2, DB, SSH credential은 저장소에 넣지 않고 최소 권한 secret으로 주입한다.
 - 외부 배포, secret 등록, DNS 변경, 유료 플랜 활성화는 별도 release 승인을 요구한다.
 
 ## 무료 운영 guardrail
@@ -174,7 +177,7 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 - Class A/B 추정량과 R2 dashboard 사용량을 대조하고 60/70% 알림을 둔다.
 - Cloudflare budget alert는 다음 날 발송되는 정보성 알림이며 hard cap이 아님을 운영 문서에 명시한다.
 - 자동 과금을 기술적으로 완전히 차단할 수 없는 resource는 사용자 승인 없이 생성하지 않는다.
-- named Tunnel 무료 단계는 신원을 아는 10~20명 내외, 최대 4~8주 폐쇄형 TestFlight로 제한한다.
+- self-hosted 무료 단계는 신원을 아는 10~20명 내외, 최대 4~8주 폐쇄형 TestFlight로 제한한다.
 
 ## 테스트 전략
 
@@ -202,14 +205,14 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 ## iOS build와 배포 lane
 
 - Windows: Spring Boot build/test, Swift source와 project file 작성, Figma asset 준비, CI/CD 정적 검증.
-- GitHub-hosted Ubuntu: Java 21 test·bootJar와 SHA-256 JAR artifact. cloud secret을 주입하지 않는다.
-- 전용 Windows self-hosted runner: 성공한 `main` JAR만 local origin에 배포하고 loopback health 실패 시 이전 JAR로 rollback한다. PR code는 실행하지 않는다.
+- GitHub-hosted Ubuntu CI: Java 21 test·bootJar와 digest-pinned Docker image archive를 만들며 secret을 주입하지 않는다.
+- GitHub-hosted Ubuntu CD: 성공한 `main` image만 pinned SSH Ubuntu origin에 전송하고 container health 실패 시 이전 image로 rollback한다.
 - GitHub-hosted `macos-15`: iOS·contract 변경에만 signing 없는 Simulator build/test를 실행한다.
 - macOS/Xcode: SwiftUI preview, screenshot diff, interactive debugging과 첫 Xcode Cloud workflow 설정.
 - Xcode Cloud: Apple-managed build/test/sign/archive와 internal TestFlight. Apple Developer Program 포함 25 compute hours/month 안에서 PR test와 main/release archive를 분리한다.
 - interactive pixel tuning은 Xcode Cloud만으로 완료할 수 없으므로 실제 또는 원격 Mac 세션이 필요하다.
 
-세부 trigger, runner label, environment secret, checksum, health와 rollback 계약은 `docs/CI_CD.md`가 소유한다. Tunnel/DNS와 `cloudflared` service는 application CD가 만들거나 재시작하지 않는다.
+세부 trigger, environment secret, checksum, health와 rollback 계약은 `docs/CI_CD.md`가 소유한다. DNS, Nginx Proxy Manager와 monitoring 설정은 application CD가 만들거나 재시작하지 않는다.
 
 ## 금지할 구조
 
@@ -226,14 +229,14 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 
 ## 배포 전환 기준
 
-다음 중 하나면 무료 Tunnel origin을 종료하고 public origin 결정을 연다.
+다음 중 하나면 self-hosted 무료 origin을 종료하고 public origin 결정을 연다.
 
 - 공개 App Store 심사 또는 지인 밖 사용자 모집
 - DAU 20 또는 등록 사용자 100 초과
 - 30분 이상 장애 1회 또는 한 주 사용자 영향 장애 2회
 - p95 API 응답 500ms 초과가 지속되거나 upload 성공률 99% 미만
 - RPO 24시간 또는 RTO 4시간을 만족하지 못함
-- Windows host 운영에 주 1시간 이상 소비
+- Ubuntu host 운영에 주 1시간 이상 소비
 - 예상 R2/DB 사용량이 무료 범위의 70% 도달
 
 Cloudflare Containers 채택 시 월 최소 5 USD, 예상 memory/CPU/disk, `sleepAfter`, max instance 1, 외부 PostgreSQL latency를 실제 부하로 검증하고 별도 승인한다.

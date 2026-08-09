@@ -10,7 +10,7 @@ Java 21과 Spring Boot 4.1.0으로 만든 modular monolith API scaffold다.
 .\gradlew.bat bootRun
 ```
 
-기본 address는 `127.0.0.1`이고 health endpoint는 `/actuator/health` 하나만 노출한다. Cloudflare Tunnel은 이후 이 loopback origin에 연결하되 public API hostname에서 actuator path를 제외한다.
+기본 address는 `127.0.0.1`이다. Docker 배포에서는 application `8080`과 management `9091`을 분리하며 public API hostname에서는 actuator path를 노출하지 않는다.
 
 ## 검증
 
@@ -34,11 +34,10 @@ runtime 또는 migration 변수 하나라도 빠지면 production startup은 실
 
 ## CI/CD
 
-- pull request와 `main` push: `.github/workflows/server-ci-cd.yml`이 Java 21 test·bootJar·SHA-256 artifact를 만든다.
-- Windows deployment behavior: `scripts/test-deployment-support.ps1`이 checksum 변조 거부, secret ACL과 rollback 파일 복원을 검증한다.
-- development deploy: 성공한 `main` run만 전용 `[self-hosted, Windows, X64, moneysnap-dev]` runner에서 실행한다.
-- origin install: `infra/windows/install-server-host.ps1`
-- deploy/rollback: `scripts/deploy.ps1`
-- process entry: `scripts/run-server.ps1`
+- pull request와 `main` push: `.github/workflows/server-ci-cd.yml`이 Java 21 test·bootJar와 immutable Docker image archive를 만든다.
+- deployment behavior: `scripts/test-docker-deployment.sh`가 정상 health gate와 실패 시 이전 image rollback을 검증한다.
+- development deploy: 성공한 `main` run만 GitHub-hosted Ubuntu에서 pinned SSH host로 artifact를 전송한다.
+- container contract: `Dockerfile`, `infra/ubuntu/compose.yaml`
+- deploy/rollback: `infra/ubuntu/deploy.sh`
 
-상세 GitHub environment secret과 activation 순서는 `docs/CI_CD.md`를 따른다. Cloudflare Tunnel은 server release workflow가 관리하지 않는다.
+상세 GitHub environment secret과 운영 경계는 `docs/CI_CD.md`를 따른다. DNS, Nginx Proxy Manager와 Prometheus 설정은 server release workflow가 관리하지 않는다.

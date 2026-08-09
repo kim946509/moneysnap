@@ -2,7 +2,7 @@
 
 > 상태: revised baseline
 >
-> 기준일: 2026-08-08
+> 기준일: 2026-08-09
 >
 > 사용자 확정: iOS 전용, Spring Boot backend, Cloudflare 사용, Figma 고정밀 구현, 소규모 단계 무료 우선
 
@@ -14,11 +14,11 @@
 - API: Java 21 LTS, Spring Boot 4.1 계열, Gradle, REST/JSON, OpenAPI 3.1
 - 데이터: Neon PostgreSQL 18 dev/prod 분리, Flyway, Spring Data JPA
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned PUT/GET
-- 무료 폐쇄형 배포: Cloudflare named Tunnel → 개발자 소유 Windows의 stateless Spring Boot origin
+- 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
 - iOS CI: Apple Developer Program에 포함된 Xcode Cloud 월 25시간, 단 최초 workflow와 화면 조정에는 Mac/Xcode 필요
 - 디자인 검증: Figma frame node별 393x852 reference와 SwiftUI snapshot overlay/diff
 
-표준 Cloudflare Workers에는 JVM이 없고 Cloudflare Containers는 Workers Paid 전용이라 월 최소 5 USD다. 따라서 Spring Boot를 유지하면서 추가 cloud compute 비용 0원을 우선하는 동안에는 Tunnel 하이브리드가 유일하게 Cloudflare 안에서 정직한 시작점이다. 공개 출시 단계에서 Cloudflare 직접 compute가 중요해지면 Containers로 이동한다.
+표준 Cloudflare Workers에는 JVM이 없고 Cloudflare Containers는 Workers Paid 전용이라 월 최소 5 USD다. 현재는 이미 운영 중인 Ubuntu Docker/Nginx Proxy Manager를 재사용해 추가 cloud compute 비용 없이 시작한다. 공개 출시 단계에서는 Cloudflare Tunnel, Containers 또는 managed JVM origin을 다시 비교한다.
 
 공식 근거와 후보 수치는 [SPRING_CLOUDFLARE_RESEARCH.md](SPRING_CLOUDFLARE_RESEARCH.md), 확정 결정은 [ADR.md](ADR.md), 구현 경계는 [ARCHITECTURE.md](ARCHITECTURE.md)를 따른다.
 
@@ -28,7 +28,7 @@
 |---|---:|---|---|---|
 | Cloudflare Containers + PostgreSQL + R2 | 최소 $5 | 직접 실행 | public MVP 후보 | 무료 조건 때문에 지금 보류 |
 | 무료 JVM host + Cloudflare edge/R2 + 무료 PostgreSQL | $0 가능 | 실행 가능 | 약 1분 cold start와 비운영 조건 | host 실측 후 보조 대안 |
-| 자체 Windows origin + named Tunnel + R2 | 추가 cloud compute $0 | 직접 실행 | 폐쇄형 TestFlight만 | **첫 단계 채택** |
+| 자체 Ubuntu Docker + NPM + Cloudflare DNS/R2 | 추가 cloud compute $0 | 직접 실행 | 폐쇄형 TestFlight만 | **첫 단계 채택** |
 | Workers + D1 + R2 | $0 가능 | 불가 | Cloudflare-native | 사용자 고정 조건과 충돌해 제외 |
 
 무료 단계는 10~20명 내외의 신원을 아는 tester, 4~8주, uptime 약속 없는 폐쇄형 TestFlight로 제한한다. public App Store 배포 전에 origin 결정을 다시 연다.
@@ -145,8 +145,8 @@ Apple Developer 계정 결제가 되어 있으므로 Xcode Cloud 월 25시간은
 
 ### Phase 4 — 폐쇄형 무료 TestFlight
 
-1. Spring Boot service에 named Tunnel을 연결하고 기존 private R2, Neon backup·restore 절차를 검증
-2. Windows service 자동 기동·재부팅 recovery·external health 확인
+1. Ubuntu Docker Spring Boot와 기존 private R2, Neon backup·restore 절차를 검증
+2. Docker restart policy·Nginx Proxy Manager·Prometheus/Grafana recovery와 external health 확인
 3. Xcode Cloud archive와 TestFlight closed cohort
 4. 성능, 장애, R2/DB 사용량을 4~8주 관찰
 

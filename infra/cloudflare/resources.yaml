@@ -1,5 +1,5 @@
 version: 1
-observed_at: 2026-08-08
+observed_at: 2026-08-09
 
 account:
   id: 6bcae71f04b38cc620c6d3b5bd68cd78
@@ -9,7 +9,13 @@ zone:
   id: b4f39271fd02e7aae60348b3f3cb2fb5
   status: active
   tunnel: null
-  dns_route: null
+  dns_routes:
+    development_api:
+      hostname: moneysnap-server.ansandy.co.kr
+      origin_address: 61.109.115.47
+      origin_port: 9090
+      proxy: nginx_proxy_manager
+      https_verified: true
 
 r2:
   endpoint: https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com
