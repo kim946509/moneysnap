@@ -61,6 +61,7 @@ docs/                       # 제품·기술 기준 문서
 
 | Module | 좁은 Interface | 숨기는 Implementation |
 |---|---|---|
+| `AuthenticationClient` | `signIn`, `restore`, `refresh`, `logout`, `deleteAccount` | AuthenticationServices, Keychain, bearer token rotation, Apple credential state |
 | `CaptureFlow` | 사진 선택부터 한 Snap 저장 완료까지 | PhotosPicker, 이미지 방향 보정·리사이즈·EXIF 제거, 여러 장 순차 처리, upload grant와 retry |
 | `SnapJournalClient` | `today`, `record`, `revise`, `delete` | URLSession, bearer session, OpenAPI DTO, 오류 정규화 |
 | `GroupSharingClient` | `groups`, `share`, `groupToday`, `memberToday` | membership API와 visible/hidden projection decoding |
@@ -87,6 +88,15 @@ com.ansandy.moneysnap
 각 feature는 `api → application → domain` 방향으로 호출하며 persistence와 외부 SDK Adapter는 feature 내부에 둔다. 다른 feature의 repository나 entity를 직접 참조하지 않고 application Interface를 호출한다. 범용 `service`, `util`, `repository` 패키지에 도메인 규칙을 모으지 않는다.
 
 ### 핵심 Interface와 불변 규칙
+
+`IdentitySession`
+
+- identity provider는 Sign in with Apple 하나이며 iOS의 identity token과 authorization code를 서버에서 검증·교환한다.
+- access token은 15분, rotating refresh session은 마지막 정상 사용으로부터 180일 뒤 만료한다.
+- refresh token 원문은 DB에 저장하지 않고 단방향 hash만 저장한다. 재사용이 탐지된 token family는 전체 폐기한다.
+- iOS는 refresh credential을 Keychain에만 저장하고 session 복구가 끝나기 전 인증 화면을 결정하지 않는다.
+- 로그아웃은 현재 session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session과 사용자 데이터를 삭제하고 Apple token을 revoke한다.
+- Apple `consent-revoked`는 모든 session을 폐기하고, `account-delete`는 사용자 데이터 삭제 command를 실행한다.
 
 `SnapJournal`
 
@@ -124,7 +134,8 @@ com.ansandy.moneysnap
 
 ```text
 users
-sessions
+apple_identities(user_id, apple_subject, encrypted_apple_refresh_token, created_at, updated_at)
+sessions(id, user_id, token_hash, token_family, expires_at, last_used_at, revoked_at)
 snaps(id, owner_id, category, amount_won, local_day, image_id?, created_at, updated_at)
 groups(id, amount_visibility)
 group_memberships(group_id, user_id, role, joined_at)
@@ -160,7 +171,8 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 
 ## 보안과 개인정보 경계
 
-- 인증 provider 결정 전에도 `IdentityVerifier` Seam을 유지하고 production Adapter와 test Adapter를 둔다. iOS app에 추출 가능한 고정 secret을 넣지 않는다.
+- `IdentityVerifier`는 Apple issuer, audience, signature, nonce와 token lifetime을 검증한다. iOS app에 Apple private key나 추출 가능한 고정 secret을 넣지 않는다.
+- Apple refresh token은 서버에서 암호화해 저장하고 암호화 key는 저장소 밖 runtime secret으로 주입한다. Money Snap refresh token은 hash만 저장한다.
 - 모든 개인 Snap 조회는 owner를 조건에 포함하고, 모든 group 조회는 membership을 조건에 포함한다.
 - 금액 비공개는 UI hide가 아니라 server projection과 DTO schema에서 강제한다.
 - 가격, token, presigned URL query, 원본 사진명, DB URL을 log·analytics에 남기지 않는다.
@@ -226,6 +238,7 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 - 개발 편의를 위한 상시 Docker Compose PostgreSQL과 dev/prod DB 공유
 - 기능별 microservice, Kafka, Redis, realtime socket을 근거 없이 선도입
 - macOS build·snapshot evidence 없이 iOS 작업을 완료 처리
+- MVP 범위 밖 알림을 위해 APNs provider, device token table 또는 background job을 추가
 
 ## 배포 전환 기준
 

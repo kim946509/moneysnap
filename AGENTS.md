@@ -22,7 +22,7 @@
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - development Spring Boot는 개발자 소유 Ubuntu Docker에서 `moneysnap-server`로 실행되며 private host `192.168.1.102:9090`, external network `main`, container management `9091` 계약을 사용한다. `moneysnap-server.ansandy.co.kr`은 Cloudflare DNS와 기존 Nginx Proxy Manager를 거쳐 `/` 200, public actuator 403을 반환한다.
 - 기존 Prometheus는 host publish `127.0.0.1:9092`와 container `9090`을 사용하며 `moneysnap-server:9091` target을 `up=1`로 수집한다. Grafana `monitor.ansandy.co.kr/api/health`는 200이다.
-- 다음 기술 게이트는 변경된 Ubuntu Docker CD의 remote `main` run, Apple explicit App ID와 Xcode Cloud 첫 workflow다. 인증 정책·사진 quota를 결정한 뒤 첫 개인 Snap vertical slice를 시작한다.
+- 다음 기능 단계는 Sign in with Apple 단독 인증·지속 session·로그아웃·계정 탈퇴다. 실제 Apple 연동에는 explicit App ID와 key activation이 필요하며, 이후 사진 quota를 확정하고 개인 Snap 저장으로 진행한다.
 - 그룹 생성·초대, 그룹 공개 설정 변경, 저장 후 공유 진입처럼 미결정인 제품 정책은 관련 기능의 작업 항목을 `ready`로 바꾸기 전에 확정한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 
@@ -46,7 +46,7 @@
 - 세부 문서가 `docs/PRD.md`와 충돌하면 작업을 진행하기 전에 문서를 일치시킬 것
 
 ## 기술 스택
-- MVP 플랫폼: native iOS 전용, iOS 17+, Swift 6, SwiftUI, Swift Concurrency, Observation, PhotosUI, URLSession, SpriteKit
+- MVP 플랫폼: native iOS 전용, iOS 17+, Swift 6, SwiftUI, Swift Concurrency, Observation, AuthenticationServices, Keychain, PhotosUI, URLSession, SpriteKit
 - API: Java 21 LTS, Spring Boot 4.1.0, Gradle 9.5.1, REST/JSON, OpenAPI 3.1
 - 데이터: Neon PostgreSQL 18, dev/prod project 분리, Flyway, Spring Data JPA
 - DB 테스트: 테스트 실행 중에만 PostgreSQL 18 Testcontainers 사용
@@ -61,6 +61,9 @@
 ## 아키텍처 규칙
 - 하나의 iOS app, 하나의 Spring Boot modular monolith, 하나의 PostgreSQL로 시작한다.
 - backend는 package-by-feature `identity`, `snap`, `group`, `media` 경계를 따른다. microservice, Kafka, Redis, GraphQL은 MVP에서 도입하지 않는다.
+- MVP identity provider는 Sign in with Apple 하나다. access token은 15분, rotating refresh session은 180일 inactivity window를 사용하고 iOS Keychain에 저장한다.
+- 로그아웃은 현재 device session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session·사용자 데이터를 삭제하고 Apple token을 revoke한다.
+- 점심·저녁 리마인더를 포함한 로컬 알림과 APNs 원격 알림은 MVP에서 제외한다.
 - Snap은 항상 개인 기록으로 먼저 저장하며 group 공유를 같은 command에 넣지 않는다.
 - 금액 비공개 group response에는 금액과 금액 기반 크기·정렬 필드를 포함하지 않는다. client-side hide로 구현하지 않는다.
 - 사진 bucket은 private다. iOS에 R2 credential이나 permanent object URL을 넣지 않고 backend 권한 검사 후 짧은 PUT/GET grant만 사용한다.

@@ -104,6 +104,13 @@ Icon: iOS/SF Symbol 또는 02 Components의 아이콘 인스턴스 사용
 | 탭 라벨 | iOS 탭바 컴포넌트의 label property 사용 |
 
 ## Motion / Interaction
+
+### Authentication and account
+- 로그인 화면은 Figma의 해당 frame을 기준으로 구현하고 Sign in with Apple 단일 액션만 둔다.
+- 유효한 session을 복구하는 동안 로그인 화면을 잠깐 노출했다가 홈으로 전환하는 깜빡임을 만들지 않는다.
+- 로그아웃과 계정 탈퇴를 같은 의미로 보이게 하지 않는다. 탈퇴는 설명과 재인증, 최종 확인이 있는 위험 액션으로 둔다.
+- MVP에서는 알림 권한 사전 안내, 시스템 권한 prompt와 알림 시간 설정 화면을 만들지 않는다.
+
 ### Home Canvas Physics
 - 홈의 소비 오브젝트는 정적인 카드가 아니라 캔버스 위 물체처럼 동작한다.
 - 새 소비가 추가되면 화면 상단에서 떨어지고, 기존 소비 오브젝트와 부딪히며 자연스럽게 자리를 잡는다.

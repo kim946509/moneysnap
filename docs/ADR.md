@@ -19,6 +19,8 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 | ADR-007 | accepted | 개발·운영 PostgreSQL은 분리된 Neon Free 프로젝트 사용 |
 | ADR-008 | accepted | 서버는 GitHub Actions CI/CD, iOS는 GitHub Simulator CI와 Xcode Cloud CD 사용 |
 | ADR-009 | accepted | Bundle ID와 iOS visual verification toolchain 고정 |
+| ADR-010 | accepted | Sign in with Apple 단독 인증과 서버 소유 장기 session |
+| ADR-011 | accepted | 기록 리마인더와 원격 알림은 MVP에서 제외 |
 
 ## ADR-001: native iOS 전용 MVP
 
@@ -96,9 +98,25 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 **트레이드오프**: runner image에서 이 Xcode 또는 runtime이 제거되면 CI가 의도적으로 실패한다. 기준선 변경은 자동 fallback하지 않고 Figma reference 재검토와 ADR 갱신을 요구한다. 현재 홈은 placeholder이므로 visual report는 parity gate가 아니며 홈 기능 작업에서 사람이 승인한 threshold를 활성화한다.
 
+## ADR-010: Sign in with Apple 단독 인증과 지속 session
+
+**결정**: MVP identity provider는 Sign in with Apple 하나만 사용한다. 서버가 Apple credential을 검증·교환하고 15분 access token과 180일 inactivity window를 가진 rotating refresh session을 발급한다. iOS는 refresh credential을 Keychain에 저장한다. 로그아웃은 현재 기기 session만 폐기하고, 계정 탈퇴는 재인증 뒤 모든 session·사용자 데이터를 삭제하고 Apple token을 revoke한다.
+
+**이유**: iOS 전용 MVP에서 별도 비밀번호 계정과 여러 provider를 운영할 이유가 없으며 Apple 로그인은 사용자 진입 마찰과 credential 보관 범위를 줄인다. 앱 자체 session을 사용하면 Apple identity token을 매 API 요청에 재사용하지 않고 사용자 경험과 폐기 범위를 제어할 수 있다.
+
+**트레이드오프**: 실제 로그인과 token revoke에는 Apple explicit App ID, server key와 macOS/device 검증이 필요하다. 서버는 Apple key rotation, server-to-server account event와 refresh token 암호화를 운영해야 한다.
+
+## ADR-011: 알림은 MVP에서 제외
+
+**결정**: 점심·저녁 고정 리마인더를 포함한 iOS 로컬 알림과 APNs 원격 알림을 MVP에서 구현하지 않는다.
+
+**이유**: 알림은 단순한 시간 trigger 외에도 권한 요청, 거부 복구, 시간대, 기록 완료 후 취소, 설정과 피로 방지 정책이 필요하다. 첫 MVP는 알림 없이 핵심 기록 루프의 반복 사용성을 먼저 검증한다.
+
+**트레이드오프**: 초기 사용자의 재방문을 앱이 직접 상기시키지 못한다. 실제 사용 데이터에서 기록 누락이 핵심 문제로 확인되면 별도 기능으로 다시 연다.
+
 ## 아직 확정하지 않은 결정
 
 - 첫 macOS interactive 환경을 로컬 Mac, 원격 Mac 중 무엇으로 확보할지
-- Sign in with Apple만 사용할지와 계정·초대 정책
+- 그룹 계정·초대 정책
 - 사진 최대 변·압축 품질·파일 크기·사용자별 일일 quota
 - public App Store 전환 시 Cloudflare Containers 월 5 USD를 승인할지 또는 다른 JVM origin을 사용할지

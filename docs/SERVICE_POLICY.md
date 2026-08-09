@@ -34,6 +34,22 @@ Money Snap은 복잡한 가계부가 아니라 가볍게 쓰는 소셜 소비 �
 
 초기 MVP에서는 결제수단, 예산, 상세 메모, 위치, 태그, 영수증 정보 같은 입력을 필수로 요구하지 않는다. 이유: 기록 흐름이 길어지면 Money Snap의 핵심 가치인 가벼움이 깨진다.
 
+## 인증과 계정 정책
+
+MVP 로그인은 Sign in with Apple만 제공한다. iOS가 Apple 사용자 인증을 시작하고 서버가 Apple credential을 검증한 뒤 Money Snap 자체 세션을 발급한다. 다른 소셜 로그인, 이메일·비밀번호와 게스트 계정은 만들지 않는다.
+
+로그인한 사용자는 매번 Apple 로그인을 반복하지 않는다. 짧은 access token과 회전하는 refresh session을 사용하며, refresh session은 iOS Keychain에 저장한다. 정상 사용 중에는 180일 inactivity window가 갱신되어 사실상 로그인 상태가 유지된다. Apple credential이 취소되거나 refresh session이 만료·폐기된 경우에만 다시 로그인한다.
+
+로그아웃은 현재 기기의 Money Snap session과 Keychain credential만 지운다. Apple 계정의 앱 사용 승인을 자동으로 철회하거나 다른 기기의 session을 종료하지 않는다.
+
+계정 탈퇴는 마이 화면에서 찾을 수 있어야 하며, 재인증과 명시적 확인 뒤 수행한다. 서버는 모든 Money Snap session을 폐기하고 개인·공유 데이터와 계정에 연결된 데이터를 삭제하며 Apple token revoke endpoint로 authorization을 철회한다. 성공 후 iOS는 Keychain과 로컬 개인 데이터를 지운다. 자동 복구를 전제로 한 soft delete로 탈퇴를 가장하지 않는다.
+
+Apple의 `consent-revoked` event는 모든 Money Snap session을 폐기하지만 사용자 데이터를 자동 삭제하지 않는다. Apple의 `account-delete` event는 계정과 관련 데이터를 삭제한다. 앱 안의 탈퇴와 Apple account event는 같은 삭제 application Interface를 사용한다.
+
+## 알림 정책
+
+점심·저녁 기록 리마인더를 포함한 로컬 알림과 APNs 원격 푸시는 MVP에서 제외한다. 핵심 기록 루프의 실제 사용성을 확인한 뒤 별도 기능으로 권한 요청 시점, 빈도, 시간과 피로 방지 정책을 결정한다. 로그인이나 첫 실행에서 알림 권한을 요청하지 않는다.
+
 ## 그룹 공유 정책
 
 Money Snap에서 친구 공유는 그룹 공유를 의미한다.
@@ -114,6 +130,7 @@ Money Snap의 입력 UX는 선택 중심이어야 한다.
 - 사진 배경 제거 및 누끼 처리
 - 공유용 이미지와 짧은 영상 생성
 - 예산 추천과 복잡한 통계
+- 로컬 기록 리마인더와 원격 푸시 알림
 
 제외 이유는 모두 동일하다. Money Snap의 초기 목표는 재무 관리 기능을 확장하는 것이 아니라, 소비를 빠르게 기록하고 직관적으로 보고 선택적으로 공유하는 경험을 검증하는 것이다.
 
