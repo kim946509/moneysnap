@@ -15,12 +15,12 @@
 - 현재 단계는 **public repository remote CI와 iOS visual baseline 활성화, development CD·Apple activation 전**이다.
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
 - SwiftUI + Spring Boot + PostgreSQL + Cloudflare Tunnel/R2 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
-- `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native CI를 사용한다.
+- `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native test·393x852 visual artifact 생성을 통과했다.
 - repository는 public이고 draft PR #1이 remote CI 기준점이다. `server-development` environment는 `main` 전용 branch policy가 있지만 secret은 비어 있고 self-hosted deployment와 TestFlight는 미활성 상태다.
 - Neon Free에 `moneysnap-dev`와 `moneysnap-prod`가 생성되어 있다. 개발·운영 DB를 공유하지 않는다.
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - Cloudflare named Tunnel과 DNS route는 아직 만들지 않았다. Spring Boot origin은 `127.0.0.1:8080`을 기본으로 하며 hostname과 외부 노출 작업 AC를 확정한 뒤 dev Tunnel부터 생성한다.
-- 다음 기술 게이트는 GitHub iOS visual artifact 확인, public repository branch protection, Windows runner·`server-development` secret activation, Apple explicit App ID와 Xcode Cloud 첫 workflow다. 인증 정책·사진 quota를 결정한 뒤 첫 개인 Snap vertical slice를 시작한다.
+- 다음 기술 게이트는 Windows runner·`server-development` secret activation, Apple explicit App ID와 Xcode Cloud 첫 workflow다. 인증 정책·사진 quota를 결정한 뒤 첫 개인 Snap vertical slice를 시작한다.
 - 그룹 생성·초대, 그룹 공개 설정 변경, 저장 후 공유 진입처럼 미결정인 제품 정책은 관련 기능의 작업 항목을 `ready`로 바꾸기 전에 확정한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 
@@ -71,6 +71,7 @@
 - 인증 기능 전까지 `/actuator/health`만 익명 접근을 허용하고 나머지 route는 기본 거부한다. public API hostname에서는 actuator path 자체를 노출하지 않는다.
 - 최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple explicit App ID와 App Store Connect app record 생성은 별도 Apple activation 작업에서 수행하며 private key·certificate·2FA code를 저장소에 넣지 않는다.
 - GitHub workflow action은 full commit SHA로 고정하고 Dependabot PR로 갱신한다. workflow 기본 권한은 `contents: read`다.
+- `main` branch는 PR, linear history와 conversation resolution을 요구하고 force-push·delete를 금지한다. path-scoped CI를 required check로 지정하면 관련 없는 PR이 pending될 수 있으므로 항상 실행되는 gate를 설계하기 전에는 required status check를 추가하지 않는다.
 - secret이 있는 persistent Windows runner에서는 PR·임의 branch code를 실행하지 않는다. development CD는 성공한 `main` push artifact와 `[self-hosted, Windows, X64, moneysnap-dev]` label을 모두 요구한다.
 - GitHub-hosted CI에는 Neon/R2/Tunnel/Apple secret을 주입하지 않는다. server environment secret은 deployment step과 Windows ACL secret files에만 전달한다.
 - application CD는 Cloudflare Tunnel/DNS/token이나 `cloudflared` service를 생성·재시작하지 않는다. infrastructure lifecycle은 별도 승인 작업이 소유한다.
@@ -110,6 +111,7 @@
 - Windows iOS visual baseline 계약 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
 - CI/CD repository 계약 검증: `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
 - Windows deployment 동작 검증: `powershell -ExecutionPolicy Bypass -File server\scripts\test-deployment-support.ps1`
-- macOS native iOS 검증 명령은 `bash ios/scripts/test.sh`이지만 Mac/Xcode에서 통과하기 전에는 검증된 명령으로 간주하지 않는다.
+- macOS native iOS 검증: `bash ios/scripts/test.sh` (GitHub-hosted Xcode 16.4·iPhone 16·iOS 18.5에서 통과)
+- macOS visual evidence 생성: `bash ios/scripts/capture-visual-baseline.sh` (393x852 app/reference/overlay/diff/report 생성 검증 완료)
 - 현재 AI 환경 문서 변경의 기본 검증 명령: `git diff --check`
 - 현재 필수 AI 환경 경로 검증 명령: `$required = @('AGENTS.md','CONTEXT.md','.ai/README.md','.ai/harness.yaml','.ai/GRAPHS.md','.ai/LOOPS.md','.ai/templates/work-item.md','docs/AI_ENVIRONMENT.md'); $missing = $required | Where-Object { -not (Test-Path -LiteralPath $_) }; if ($missing) { $missing; exit 1 }`

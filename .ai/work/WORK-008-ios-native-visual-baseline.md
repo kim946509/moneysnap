@@ -1,6 +1,6 @@
 ---
 id: WORK-008
-status: verify
+status: complete
 depends_on: [WORK-007]
 owner: codex
 ---
@@ -30,13 +30,13 @@ GitHub macOS runner에서 Money Snap을 고정된 Xcode·Simulator 조합으로 
 
 ## Acceptance criteria
 
-- [ ] `AppTab`은 Swift 6 strict concurrency에서 compile 가능한 값 타입이다.
-- [ ] Bundle ID `com.ansandy.moneysnap`을 repository의 최종 식별자로 기록한다.
-- [ ] Figma `9:2` reference는 393x852이며 manifest SHA-256과 일치한다.
-- [ ] iOS test와 screenshot은 Xcode 16.4, iPhone 16, iOS 18.5를 사용한다.
-- [ ] macOS CI는 393x852 app screenshot, Figma reference, overlay, diff와 report를 artifact로 남긴다.
-- [ ] 홈 기능 전에는 visual diff를 report-only로 운용하고 parity 성공으로 오인하지 않는다.
-- [ ] Windows 정적 계약, shell syntax, 서버 회귀 검증과 실제 GitHub Actions를 통과한다.
+- [x] `AppTab`은 Swift 6 strict concurrency에서 compile 가능한 값 타입이다.
+- [x] Bundle ID `com.ansandy.moneysnap`을 repository의 최종 식별자로 기록한다.
+- [x] Figma `9:2` reference는 393x852이며 manifest SHA-256과 일치한다.
+- [x] iOS test와 screenshot은 Xcode 16.4, iPhone 16, iOS 18.5를 사용한다.
+- [x] macOS CI는 393x852 app screenshot, Figma reference, overlay, diff와 report를 artifact로 남긴다.
+- [x] 홈 기능 전에는 visual diff를 report-only로 운용하고 parity 성공으로 오인하지 않는다.
+- [x] Windows 정적 계약, shell syntax, 서버 회귀 검증과 실제 GitHub Actions를 통과한다.
 
 ## Test seam
 
@@ -72,7 +72,10 @@ GitHub PR checks
   - GitHub run inventory에서 Xcode 16.4, iPhone 16, iOS 18.5를 확인
   - GitHub iOS run `31289000087`에서 native test, app capture, Swift diff와 artifact upload가 성공
   - 내려받은 artifact는 app/reference/overlay/diff가 모두 393x852이고 reference SHA-256이 manifest와 일치
-  - artifact 육안 검토에서 overlay/diff의 CoreGraphics 수직 좌표가 뒤집힌 문제를 발견해 불필요한 flip transform을 제거하고 재실행 대기
+  - artifact 육안 검토에서 overlay/diff의 CoreGraphics 수직 좌표가 뒤집힌 문제를 발견해 불필요한 flip transform을 제거
+  - 최종 GitHub iOS run `31289280268` → native test, capture, overlay/diff, artifact upload 모두 성공, job 9m37s
+  - 최종 artifact `9030955874` → app/reference/overlay/diff 393x852, reference SHA-256 일치, 정상 방향 육안 확인
+  - placeholder 대비 Figma report → mismatch 136,270px(40.6975%), normalized MAE 0.126553, `report-only`
 - 리뷰:
   - Code Review Graph는 Swift diff helper를 test gap으로 표시했다. macOS CI가 helper를 실제 reference/Simulator screenshot으로 실행하는 integration seam이며 별도 unit target은 추가하지 않는다.
 
@@ -88,7 +91,7 @@ GitHub PR checks
 - graph action: `full_rebuild=false`, base `a7ba1d1` 증분 update
 - base: `a7ba1d1`
 - risk: low `0.40`; 89 nodes, 381 edges, 32 files
-- findings와 처리 결과: `AppTab`·visual diff helper test gap을 확인했다. AppTab은 기존 Swift Testing, helper는 실제 macOS artifact integration run으로 검증하며 남은 graph finding은 없다.
+- findings와 처리 결과: `AppTab`·visual diff helper test gap을 확인했다. AppTab은 기존 Swift Testing, helper는 두 차례 실제 macOS artifact integration run과 결과 이미지 육안 검사로 검증했다. 방향 finding 수정 뒤 base `72e6050` 증분 update도 low `0.40`, 남은 actionable finding 0개다.
 
 ## Decisions and risks
 

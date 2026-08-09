@@ -61,7 +61,7 @@ repository 파일을 push한 뒤 GitHub에서 다음 상태가 필요하다.
   - `NEON_MIGRATION_DATABASE_PASSWORD`
 - Self-hosted runner labels: `self-hosted`, `Windows`, `X64`, `moneysnap-dev`
 - runner access: public repository의 검증된 `main` deployment job에만 허용하며 PR·임의 branch code는 실행하지 않음
-- branch protection: `main`에 server CI와 iOS CI가 적용되면 성공 check를 merge 조건으로 추가
+- branch protection: `main`은 PR, stale review dismissal, linear history와 conversation resolution을 요구하며 admin에도 적용하고 force-push·delete를 금지
 
 repository는 public이며 `server-development` environment의 custom deployment branch policy는 `main` 하나로 제한한다. persistent Windows runner는 공개 repository 공격면을 가지므로 branch protection과 workflow 검증이 완료되기 전 등록하지 않는다. 자동 CD는 폐쇄형 development origin만 대상으로 하며 production/public 배포 workflow는 만들지 않는다.
 
@@ -87,14 +87,16 @@ Xcode Cloud 기본 배포에는 GitHub-held `.p12`, provisioning profile 또는 
 
 | 항목 | 상태 |
 |---|---|
+| GitHub repository | public |
 | server workflow source와 정적 검증 | 준비 완료 |
-| iOS workflow source와 Xcode Cloud hook | 준비 완료 |
+| iOS workflow source와 Xcode Cloud hook | GitHub native/visual CI 활성화, Xcode Cloud hook 준비 완료 |
 | local Gradle test·canonical bootJar | 검증 완료 |
 | GitHub `server-development` environment | 생성 완료, `main` 전용 branch policy, secret 0개 |
-| GitHub remote workflow run | public draft PR #1에서 활성화, server CI 통과 |
+| GitHub `main` branch protection | PR·linear history·conversation resolution 필수, force-push/delete 금지 |
+| GitHub remote workflow run | public draft PR #1에서 server와 iOS CI 통과 |
 | Windows self-hosted runner와 Scheduled Task | 미등록 |
 | GitHub `server-development` secret | 6개 모두 미등록 |
-| GitHub-hosted macOS native test | 첫 run에서 Swift 6 `AppTab` Sendable finding 확인, 수정 run 대기 |
+| GitHub-hosted macOS native test | run `31289280268` 성공, visual artifact `9030955874` 검증 완료 |
 | Xcode Cloud/TestFlight | Apple gate와 Mac/Xcode activation 대기 |
 | Cloudflare named Tunnel/DNS | 별도 infrastructure 승인 작업 대기 |
 
