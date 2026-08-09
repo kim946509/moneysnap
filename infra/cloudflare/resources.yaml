@@ -1,0 +1,37 @@
+version: 1
+observed_at: 2026-08-08
+
+account:
+  id: 6bcae71f04b38cc620c6d3b5bd68cd78
+
+zone:
+  name: ansandy.co.kr
+  id: b4f39271fd02e7aae60348b3f3cb2fb5
+  status: active
+  tunnel: null
+  dns_route: null
+
+r2:
+  endpoint: https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com
+  buckets:
+    development:
+      name: moneysnap-media-dev
+      location: APAC
+      storage_class: Standard
+      public_access: false
+      cors: false
+      data_catalog: false
+    production:
+      name: moneysnap-media-prod
+      location: APAC
+      storage_class: Standard
+      public_access: false
+      cors: false
+      data_catalog: false
+  credentials:
+    status: deferred_until_backend_media_adapter
+    policy: separate_bucket_scoped_object_read_write_credentials
+
+paid_services:
+  workers_paid: false
+  containers: false
