@@ -144,7 +144,7 @@ private struct TodaySnapContent: View {
                 .font(.moneySnap(size: 17, weight: .bold))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
                 .offset(x: 26, y: 612)
-            HStack(spacing: 0) {
+            HStack(spacing: 28) {
                 ForEach(summary.recentEntries) { entry in
                     RecentSnapRow(entry: entry)
                 }

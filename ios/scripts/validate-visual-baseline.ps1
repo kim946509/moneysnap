@@ -70,7 +70,7 @@ Assert-True ($capture -match '--maximum-mean-absolute-error') 'Visual capture mu
 Assert-True ($capture -match '--maximum-mismatched-pixel-ratio') 'Visual capture must enforce the reviewed mismatched-pixel threshold.'
 
 $todayView = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift')
-Assert-True ($todayView -match 'HStack\(spacing:\s*0\)\s*\{\s*ForEach\(summary\.recentEntries\)') 'Recent Snap rows must use the Figma zero-gap two-column layout.'
+Assert-True ($todayView -match 'HStack\(spacing:\s*28\)\s*\{\s*ForEach\(summary\.recentEntries\)') 'Recent Snap rows must use the Figma 28-point two-column gap.'
 
 $workflow = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot '.github\workflows\ios-ci.yml')
 Assert-True ($workflow -match 'DEVELOPER_DIR:\s*/Applications/Xcode_16\.4\.app/Contents/Developer') 'iOS CI must pin Xcode 16.4.'
