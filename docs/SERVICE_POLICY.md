@@ -44,7 +44,7 @@ MVP 로그인은 Sign in with Apple만 제공한다. iOS가 Apple 사용자 인�
 
 계정 탈퇴는 마이 화면에서 찾을 수 있어야 하며, 재인증과 명시적 확인 뒤 수행한다. 서버는 모든 Money Snap session을 폐기하고 개인·공유 데이터와 계정에 연결된 데이터를 삭제하며 Apple token revoke endpoint로 authorization을 철회한다. 성공 후 iOS는 Keychain과 로컬 개인 데이터를 지운다. 자동 복구를 전제로 한 soft delete로 탈퇴를 가장하지 않는다.
 
-Apple의 `consent-revoked` event는 모든 Money Snap session을 폐기하지만 사용자 데이터를 자동 삭제하지 않는다. Apple의 `account-delete` event는 계정과 관련 데이터를 삭제한다. 앱 안의 탈퇴와 Apple account event는 같은 삭제 application Interface를 사용한다.
+Apple의 `consent-revoked` event는 모든 Money Snap session을 폐기하지만 사용자 데이터를 자동 삭제하지 않는다. Apple의 `account-deleted` event는 계정과 관련 데이터를 삭제한다. 앱 안의 탈퇴와 Apple account event는 같은 로컬 계정 삭제 경계를 사용한다.
 
 ## 알림 정책
 

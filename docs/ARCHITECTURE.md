@@ -96,7 +96,7 @@ com.ansandy.moneysnap
 - refresh token 원문은 DB에 저장하지 않고 단방향 hash만 저장한다. 재사용이 탐지된 token family는 전체 폐기한다.
 - iOS는 refresh credential을 Keychain에만 저장하고 session 복구가 끝나기 전 인증 화면을 결정하지 않는다.
 - 로그아웃은 현재 session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session과 사용자 데이터를 삭제하고 Apple token을 revoke한다.
-- Apple `consent-revoked`는 모든 session을 폐기하고, `account-delete`는 사용자 데이터 삭제 command를 실행한다.
+- Apple `consent-revoked`는 모든 session을 폐기하고, `account-deleted`는 사용자 데이터 삭제 command를 실행한다.
 
 `SnapJournal`
 

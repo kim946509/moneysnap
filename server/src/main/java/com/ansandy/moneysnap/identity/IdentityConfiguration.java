@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
@@ -67,20 +68,42 @@ class IdentityConfiguration {
 
 	@Bean
 	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
+	JwtDecoder appleJwtDecoder(
+			@Value("${moneysnap.apple.jwk-set-uri:https://appleid.apple.com/auth/keys}") String jwkSetUri) {
+		return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+				.jwsAlgorithm(SignatureAlgorithm.RS256)
+				.build();
+	}
+
+	@Bean
+	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
 	AppleAuthorizationGateway appleAuthorizationGateway(
 			Clock identityClock,
 			AppleClientSecretProvider clientSecret,
 			AppleRefreshTokenCipher refreshTokenCipher,
+			JwtDecoder appleJwtDecoder,
 			@Value("${moneysnap.apple.client-id}") String clientId,
-			@Value("${moneysnap.apple.jwk-set-uri:https://appleid.apple.com/auth/keys}") String jwkSetUri,
 			@Value("${moneysnap.apple.token-uri:https://appleid.apple.com/auth/token}") String tokenUri) {
-		NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
-				.jwsAlgorithm(SignatureAlgorithm.RS256)
-				.build();
 		return new AppleAuthorizationAdapter(
-				new AppleIdentityTokenVerifier(decoder, clientId, identityClock),
+				new AppleIdentityTokenVerifier(appleJwtDecoder, clientId, identityClock),
 				new AppleTokenClient(RestClient.create(), URI.create(tokenUri), clientId, clientSecret),
 				refreshTokenCipher);
+	}
+
+	@Bean
+	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
+	AppleAccountEventVerifier appleAccountEventVerifier(
+			JwtDecoder appleJwtDecoder,
+			Clock identityClock,
+			@Value("${moneysnap.apple.client-id}") String clientId) {
+		return new AppleAccountEventJwsVerifier(appleJwtDecoder, clientId, identityClock);
+	}
+
+	@Bean
+	AppleAccountEventService appleAccountEventService(
+			JdbcIdentitySessionStore store,
+			Clock identityClock) {
+		return new AppleAccountEventService(store, identityClock);
 	}
 
 	@Bean
@@ -113,6 +136,17 @@ class IdentityConfiguration {
 	AppleAuthorizationGateway unavailableAppleAuthorizationGateway() {
 		return request -> {
 			throw new IdentitySessionException(IdentitySessionFailure.UNAUTHORIZED);
+		};
+	}
+
+	@Bean
+	@ConditionalOnProperty(
+			name = "moneysnap.apple.enabled",
+			havingValue = "false",
+			matchIfMissing = true)
+	AppleAccountEventVerifier unavailableAppleAccountEventVerifier() {
+		return payload -> {
+			throw new AppleAccountEventException(AppleAccountEventFailure.UNAUTHORIZED);
 		};
 	}
 }

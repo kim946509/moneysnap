@@ -26,6 +26,7 @@ class ApiSecurityConfiguration {
 						"/actuator/health",
 						"/actuator/prometheus",
 						"/api/v1/auth/apple",
+						"/api/v1/auth/apple/events",
 						"/api/v1/auth/refresh").permitAll()
 				.requestMatchers("/api/v1/**").authenticated()
 				.anyRequest().denyAll());

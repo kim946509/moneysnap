@@ -200,6 +200,54 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				.update();
 	}
 
+	@Override
+	public void applyAppleAccountEvent(VerifiedAppleAccountEvent event, Instant receivedAt) {
+		transactions.executeWithoutResult(status -> {
+			int inserted = jdbc.sql("""
+					INSERT INTO apple_account_event_receipts (event_id, received_at)
+					VALUES (:eventId, :receivedAt)
+					ON CONFLICT (event_id) DO NOTHING
+					""")
+					.param("eventId", event.eventId())
+					.param("receivedAt", Timestamp.from(receivedAt))
+					.update();
+			if (inserted == 0) {
+				return;
+			}
+
+			switch (event.type()) {
+				case CONSENT_REVOKED -> revokeAllSessions(event.subject(), receivedAt);
+				case ACCOUNT_DELETED -> deleteUser(event.subject());
+				case EMAIL_ENABLED, EMAIL_DISABLED -> {
+				}
+			}
+		});
+	}
+
+	private void revokeAllSessions(String appleSubject, Instant now) {
+		jdbc.sql("""
+				UPDATE identity_sessions
+				SET revoked_at = COALESCE(revoked_at, :now)
+				WHERE user_id = (
+					SELECT user_id FROM apple_identities WHERE apple_subject = :appleSubject
+				)
+				""")
+				.param("appleSubject", appleSubject)
+				.param("now", Timestamp.from(now))
+				.update();
+	}
+
+	private void deleteUser(String appleSubject) {
+		jdbc.sql("""
+				DELETE FROM users
+				WHERE id = (
+					SELECT user_id FROM apple_identities WHERE apple_subject = :appleSubject
+				)
+				""")
+				.param("appleSubject", appleSubject)
+				.update();
+	}
+
 	private Optional<UUID> findUser(String appleSubject) {
 		return jdbc.sql("SELECT user_id FROM apple_identities WHERE apple_subject = :subject")
 				.param("subject", appleSubject)

@@ -176,6 +176,8 @@ interface IdentitySessionStore {
 	boolean isIdentityOwnedBy(UUID userId, String appleSubject);
 
 	void deleteUser(UUID userId);
+
+	void applyAppleAccountEvent(VerifiedAppleAccountEvent event, Instant receivedAt);
 }
 
 interface SessionTokenGenerator {
