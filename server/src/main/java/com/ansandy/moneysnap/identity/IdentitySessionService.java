@@ -172,6 +172,10 @@ interface IdentitySessionStore {
 			Instant now);
 
 	void revokeSession(UUID sessionId, Instant now);
+
+	boolean isIdentityOwnedBy(UUID userId, String appleSubject);
+
+	void deleteUser(UUID userId);
 }
 
 interface SessionTokenGenerator {

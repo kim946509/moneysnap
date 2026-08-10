@@ -25,10 +25,16 @@ class IdentityConfiguration {
 	}
 
 	@Bean
-	IdentitySessionService identitySessionService(DataSource dataSource, Clock identityClock) {
-		JdbcIdentitySessionStore store = new JdbcIdentitySessionStore(
+	JdbcIdentitySessionStore identitySessionStore(DataSource dataSource) {
+		return new JdbcIdentitySessionStore(
 				JdbcClient.create(dataSource),
 				new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
+	}
+
+	@Bean
+	IdentitySessionService identitySessionService(
+			JdbcIdentitySessionStore store,
+			Clock identityClock) {
 		return new IdentitySessionService(
 				store,
 				new SecureSessionTokenGenerator(),
@@ -38,28 +44,65 @@ class IdentityConfiguration {
 
 	@Bean
 	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
-	AppleAuthorizationGateway appleAuthorizationGateway(
+	AppleClientSecretProvider appleClientSecretProvider(
 			Clock identityClock,
 			@Value("${moneysnap.apple.client-id}") String clientId,
 			@Value("${moneysnap.apple.team-id}") String teamId,
 			@Value("${moneysnap.apple.key-id}") String keyId,
-			@Value("${moneysnap.apple.private-key}") String privateKey,
-			@Value("${moneysnap.apple.refresh-token-encryption-key}") String encryptionKey,
-			@Value("${moneysnap.apple.jwk-set-uri:https://appleid.apple.com/auth/keys}") String jwkSetUri,
-			@Value("${moneysnap.apple.token-uri:https://appleid.apple.com/auth/token}") String tokenUri) {
-		NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
-				.jwsAlgorithm(SignatureAlgorithm.RS256)
-				.build();
-		AppleClientSecretProvider clientSecret = new AppleClientSecretProvider(
+			@Value("${moneysnap.apple.private-key}") String privateKey) {
+		return new AppleClientSecretProvider(
 				teamId,
 				clientId,
 				keyId,
 				privateKey.replace("\\n", "\n"),
 				identityClock);
+	}
+
+	@Bean
+	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
+	AppleRefreshTokenCipher appleRefreshTokenCipher(
+			@Value("${moneysnap.apple.refresh-token-encryption-key}") String encryptionKey) {
+		return new AppleRefreshTokenCipher(encryptionKey);
+	}
+
+	@Bean
+	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
+	AppleAuthorizationGateway appleAuthorizationGateway(
+			Clock identityClock,
+			AppleClientSecretProvider clientSecret,
+			AppleRefreshTokenCipher refreshTokenCipher,
+			@Value("${moneysnap.apple.client-id}") String clientId,
+			@Value("${moneysnap.apple.jwk-set-uri:https://appleid.apple.com/auth/keys}") String jwkSetUri,
+			@Value("${moneysnap.apple.token-uri:https://appleid.apple.com/auth/token}") String tokenUri) {
+		NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+				.jwsAlgorithm(SignatureAlgorithm.RS256)
+				.build();
 		return new AppleAuthorizationAdapter(
 				new AppleIdentityTokenVerifier(decoder, clientId, identityClock),
 				new AppleTokenClient(RestClient.create(), URI.create(tokenUri), clientId, clientSecret),
-				new AppleRefreshTokenCipher(encryptionKey));
+				refreshTokenCipher);
+	}
+
+	@Bean
+	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
+	AppleTokenRevoker appleTokenRevoker(
+			AppleClientSecretProvider clientSecret,
+			@Value("${moneysnap.apple.client-id}") String clientId,
+			@Value("${moneysnap.apple.revoke-uri:https://appleid.apple.com/auth/revoke}") String revokeUri) {
+		return new AppleTokenRevocationClient(
+				RestClient.create(),
+				URI.create(revokeUri),
+				clientId,
+				clientSecret);
+	}
+
+	@Bean
+	@ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
+	AccountDeletionService accountDeletionService(
+			JdbcIdentitySessionStore store,
+			AppleRefreshTokenCipher refreshTokenCipher,
+			AppleTokenRevoker appleTokenRevoker) {
+		return new AccountDeletionService(store, refreshTokenCipher, appleTokenRevoker);
 	}
 
 	@Bean

@@ -180,6 +180,26 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				.update();
 	}
 
+	@Override
+	public boolean isIdentityOwnedBy(UUID userId, String appleSubject) {
+		return jdbc.sql("""
+				SELECT count(*)
+				FROM apple_identities
+				WHERE user_id = :userId AND apple_subject = :appleSubject
+				""")
+				.param("userId", userId)
+				.param("appleSubject", appleSubject)
+				.query(Integer.class)
+				.single() == 1;
+	}
+
+	@Override
+	public void deleteUser(UUID userId) {
+		jdbc.sql("DELETE FROM users WHERE id = :userId")
+				.param("userId", userId)
+				.update();
+	}
+
 	private Optional<UUID> findUser(String appleSubject) {
 		return jdbc.sql("SELECT user_id FROM apple_identities WHERE apple_subject = :subject")
 				.param("subject", appleSubject)

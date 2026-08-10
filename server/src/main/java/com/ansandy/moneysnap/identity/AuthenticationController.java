@@ -30,11 +30,8 @@ class AuthenticationController {
 	}
 
 	@PostMapping("/apple")
-	SessionResponse signInWithApple(@Valid @RequestBody AppleSignInRequest request) {
-		VerifiedAppleAuthorization verified = appleAuthorization.authorize(new AppleAuthorizationRequest(
-				request.identityToken(),
-				request.authorizationCode(),
-				request.nonce()));
+	SessionResponse signInWithApple(@Valid @RequestBody AppleCredentialRequest request) {
+		VerifiedAppleAuthorization verified = appleAuthorization.authorize(request.toAuthorizationRequest());
 		return SessionResponse.from(sessions.signIn(
 				verified.identity(),
 				verified.encryptedRefreshToken()));
@@ -56,12 +53,6 @@ class AuthenticationController {
 	void unauthorized() {
 	}
 
-	private record AppleSignInRequest(
-			@NotBlank @Size(max = 8192) String identityToken,
-			@NotBlank @Size(max = 2048) String authorizationCode,
-			@NotBlank @Size(max = 256) String nonce) {
-	}
-
 	private record RefreshRequest(@NotBlank @Size(max = 512) String refreshToken) {
 	}
 
@@ -78,5 +69,15 @@ class AuthenticationController {
 					tokens.refreshToken(),
 					tokens.refreshExpiresAt());
 		}
+	}
+}
+
+record AppleCredentialRequest(
+		@NotBlank @Size(max = 8192) String identityToken,
+		@NotBlank @Size(max = 2048) String authorizationCode,
+		@NotBlank @Size(max = 256) String nonce) {
+
+	AppleAuthorizationRequest toAuthorizationRequest() {
+		return new AppleAuthorizationRequest(identityToken, authorizationCode, nonce);
 	}
 }
