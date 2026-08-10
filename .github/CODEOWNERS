@@ -1,0 +1,6 @@
+/.github/workflows/ @kim946509
+/.github/dependabot.yml @kim946509
+/server/scripts/ @kim946509
+/infra/ubuntu/ @kim946509
+/ios/ci_scripts/ @kim946509
+/ios/scripts/test.sh @kim946509

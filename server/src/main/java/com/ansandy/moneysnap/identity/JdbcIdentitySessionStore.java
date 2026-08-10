@@ -1,0 +1,206 @@
+package com.ansandy.moneysnap.identity;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionTemplate;
+
+final class JdbcIdentitySessionStore implements IdentitySessionStore {
+
+	private final JdbcClient jdbc;
+	private final TransactionTemplate transactions;
+
+	JdbcIdentitySessionStore(JdbcClient jdbc, TransactionTemplate transactions) {
+		this.jdbc = jdbc;
+		this.transactions = transactions;
+	}
+
+	@Override
+	public UUID findOrCreateUser(String appleSubject, Instant now) {
+		return transactions.execute(status -> {
+			Optional<UUID> existing = findUser(appleSubject);
+			if (existing.isPresent()) {
+				return existing.get();
+			}
+
+			UUID candidate = UUID.randomUUID();
+			jdbc.sql("INSERT INTO users (id, created_at) VALUES (:id, :createdAt)")
+					.param("id", candidate)
+					.param("createdAt", Timestamp.from(now))
+					.update();
+			int inserted = jdbc.sql("""
+					INSERT INTO apple_identities (user_id, apple_subject, created_at, updated_at)
+					VALUES (:userId, :subject, :now, :now)
+					ON CONFLICT (apple_subject) DO NOTHING
+					""")
+					.param("userId", candidate)
+					.param("subject", appleSubject)
+					.param("now", Timestamp.from(now))
+					.update();
+			if (inserted == 1) {
+				return candidate;
+			}
+
+			UUID actual = findUser(appleSubject).orElseThrow();
+			jdbc.sql("DELETE FROM users WHERE id = :id")
+					.param("id", candidate)
+					.update();
+			return actual;
+		});
+	}
+
+	@Override
+	public void createSession(NewIdentitySession session) {
+		transactions.executeWithoutResult(status -> {
+			jdbc.sql("""
+					INSERT INTO identity_sessions (
+						id, user_id, access_token_hash, access_expires_at,
+						refresh_expires_at, created_at, last_used_at
+					) VALUES (
+						:id, :userId, :accessHash, :accessExpiresAt,
+						:refreshExpiresAt, :createdAt, :createdAt
+					)
+					""")
+					.param("id", session.sessionId())
+					.param("userId", session.userId())
+					.param("accessHash", session.accessTokenHash())
+					.param("accessExpiresAt", Timestamp.from(session.accessExpiresAt()))
+					.param("refreshExpiresAt", Timestamp.from(session.refreshExpiresAt()))
+					.param("createdAt", Timestamp.from(session.createdAt()))
+					.update();
+			insertRefreshToken(
+					session.sessionId(),
+					session.refreshTokenHash(),
+					session.refreshExpiresAt(),
+					session.createdAt());
+		});
+	}
+
+	@Override
+	public Optional<SessionActor> findActiveAccess(String accessTokenHash, Instant now) {
+		return jdbc.sql("""
+				SELECT user_id, id
+				FROM identity_sessions
+				WHERE access_token_hash = :accessHash
+				  AND access_expires_at > :now
+				  AND revoked_at IS NULL
+				""")
+				.param("accessHash", accessTokenHash)
+				.param("now", Timestamp.from(now))
+				.query((row, rowNumber) -> new SessionActor(
+						row.getObject("user_id", UUID.class),
+						row.getObject("id", UUID.class)))
+				.optional();
+	}
+
+	@Override
+	public RefreshRotation rotateRefresh(
+			String currentRefreshTokenHash,
+			String nextAccessTokenHash,
+			Instant nextAccessExpiresAt,
+			String nextRefreshTokenHash,
+			Instant nextRefreshExpiresAt,
+			Instant now) {
+		return transactions.execute(status -> {
+			Optional<RefreshRow> current = jdbc.sql("""
+					SELECT r.id AS refresh_id, r.session_id, r.status, r.expires_at,
+					       s.revoked_at
+					FROM identity_refresh_tokens r
+					JOIN identity_sessions s ON s.id = r.session_id
+					WHERE r.token_hash = :tokenHash
+					FOR UPDATE OF r, s
+					""")
+					.param("tokenHash", currentRefreshTokenHash)
+					.query((row, rowNumber) -> new RefreshRow(
+							row.getObject("refresh_id", UUID.class),
+							row.getObject("session_id", UUID.class),
+							row.getString("status"),
+							row.getTimestamp("expires_at").toInstant(),
+							row.getTimestamp("revoked_at") == null
+									? null
+									: row.getTimestamp("revoked_at").toInstant()))
+					.optional();
+
+			if (current.isEmpty() || current.get().revokedAt() != null) {
+				return RefreshRotation.INVALID;
+			}
+			RefreshRow token = current.get();
+			if ("USED".equals(token.status())) {
+				revokeSession(token.sessionId(), now);
+				return RefreshRotation.REUSED;
+			}
+			if (!"ACTIVE".equals(token.status()) || !token.expiresAt().isAfter(now)) {
+				return RefreshRotation.INVALID;
+			}
+
+			jdbc.sql("""
+					UPDATE identity_refresh_tokens
+					SET status = 'USED', used_at = :now
+					WHERE id = :id
+					""")
+					.param("id", token.refreshId())
+					.param("now", Timestamp.from(now))
+					.update();
+			jdbc.sql("""
+					UPDATE identity_sessions
+					SET access_token_hash = :accessHash,
+					    access_expires_at = :accessExpiresAt,
+					    refresh_expires_at = :refreshExpiresAt,
+					    last_used_at = :now
+					WHERE id = :sessionId AND revoked_at IS NULL
+					""")
+					.param("sessionId", token.sessionId())
+					.param("accessHash", nextAccessTokenHash)
+					.param("accessExpiresAt", Timestamp.from(nextAccessExpiresAt))
+					.param("refreshExpiresAt", Timestamp.from(nextRefreshExpiresAt))
+					.param("now", Timestamp.from(now))
+					.update();
+			insertRefreshToken(token.sessionId(), nextRefreshTokenHash, nextRefreshExpiresAt, now);
+			return RefreshRotation.SUCCESS;
+		});
+	}
+
+	@Override
+	public void revokeSession(UUID sessionId, Instant now) {
+		jdbc.sql("""
+				UPDATE identity_sessions
+				SET revoked_at = COALESCE(revoked_at, :now)
+				WHERE id = :sessionId
+				""")
+				.param("sessionId", sessionId)
+				.param("now", Timestamp.from(now))
+				.update();
+	}
+
+	private Optional<UUID> findUser(String appleSubject) {
+		return jdbc.sql("SELECT user_id FROM apple_identities WHERE apple_subject = :subject")
+				.param("subject", appleSubject)
+				.query(UUID.class)
+				.optional();
+	}
+
+	private void insertRefreshToken(UUID sessionId, String tokenHash, Instant expiresAt, Instant now) {
+		jdbc.sql("""
+				INSERT INTO identity_refresh_tokens (
+					id, session_id, token_hash, status, expires_at, created_at
+				) VALUES (:id, :sessionId, :tokenHash, 'ACTIVE', :expiresAt, :createdAt)
+				""")
+				.param("id", UUID.randomUUID())
+				.param("sessionId", sessionId)
+				.param("tokenHash", tokenHash)
+				.param("expiresAt", Timestamp.from(expiresAt))
+				.param("createdAt", Timestamp.from(now))
+				.update();
+	}
+
+	private record RefreshRow(
+			UUID refreshId,
+			UUID sessionId,
+			String status,
+			Instant expiresAt,
+			Instant revokedAt) {
+	}
+}

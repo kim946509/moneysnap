@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "generated_at": "2026-08-08",
+  "hash_scope": "SKILL.md",
+  "upstream_commits": {
+    "https://github.com/mattpocock/skills": "84fdeffd12f2ee307994d1eb6feb48173b6e0502"
+  },
+  "skills": [
+    {
+      "name": "grill-with-docs",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/grill-with-docs",
+      "sha256": "7570664bfb28077163e27ac1484c2a433d4277f8bff5d22f9b91446815107e77",
+      "normalization": "removed Claude-only disable-model-invocation; agents/openai.yaml keeps allow_implicit_invocation=false"
+    },
+    {
+      "name": "domain-modeling",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/domain-modeling",
+      "sha256": "152e2c97239affb12a60c5f4a7e74ab546a49ae169688c81f4e2ccc42dafa579"
+    },
+    {
+      "name": "to-spec",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/to-spec",
+      "sha256": "da2e61170fc3649d6e89ab99a887b6e0e77de5efd7ad9dd75b89a5ec94c6134a",
+      "normalization": "removed Claude-only disable-model-invocation; agents/openai.yaml keeps allow_implicit_invocation=false"
+    },
+    {
+      "name": "to-tickets",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/to-tickets",
+      "sha256": "046f4a54661f812338155def8abf1ab9ef40c36effd8ad2a20f58ee9fe6fe45a",
+      "normalization": "removed Claude-only disable-model-invocation; agents/openai.yaml keeps allow_implicit_invocation=false"
+    },
+    {
+      "name": "implement",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/implement",
+      "sha256": "dc27831f466b865bf9e95f28c9361e9e99d59bcfb72a9585aa49a6829b3de3f8",
+      "normalization": "removed Claude-only disable-model-invocation; agents/openai.yaml keeps allow_implicit_invocation=false"
+    },
+    {
+      "name": "tdd",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/tdd",
+      "sha256": "5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08"
+    },
+    {
+      "name": "diagnosing-bugs",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/diagnosing-bugs",
+      "sha256": "b9339b09ee3980808d8c5a35c7251b891b8b1e0036ec4ca37812b976ebddf6b6"
+    },
+    {
+      "name": "codebase-design",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/codebase-design",
+      "sha256": "a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad"
+    },
+    {
+      "name": "code-review",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/code-review",
+      "sha256": "9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442"
+    },
+    {
+      "name": "research",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/research",
+      "sha256": "af378829f015775a3bcd65ff466826722e99359017ae6bae227ca4c9bd14049c"
+    },
+    {
+      "name": "resolving-merge-conflicts",
+      "source": "https://github.com/mattpocock/skills",
+      "ref": "main",
+      "path": "skills/engineering/resolving-merge-conflicts",
+      "sha256": "c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24"
+    },
+    {
+      "name": "project-ai-bootstrap",
+      "source": "local",
+      "ref": "1",
+      "path": ".agents/skills/project-ai-bootstrap",
+      "sha256": "4af0a57268a43b52e04804a8d7055792c96ac046d594a066a51c5441de8f5777"
+    }
+  ]
+}

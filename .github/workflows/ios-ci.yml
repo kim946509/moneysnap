@@ -1,0 +1,71 @@
+name: iOS CI
+
+on:
+  pull_request:
+    paths:
+      - "ios/**"
+      - "contracts/**"
+      - ".github/workflows/ios-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - "contracts/**"
+      - ".github/workflows/ios-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator-test:
+    name: Build and test without signing
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      MONEYSNAP_SIMULATOR_DEVICE: "iPhone 16"
+      MONEYSNAP_SIMULATOR_OS: "18.5"
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Record Xcode and Simulator inventory
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available
+
+      - name: Run Swift native tests
+        env:
+          RESULT_BUNDLE_PATH: ${{ runner.temp }}/MoneySnap.xcresult
+        run: bash ios/scripts/test.sh
+
+      - name: Capture Figma visual evidence
+        env:
+          VISUAL_OUTPUT_DIR: ${{ runner.temp }}/MoneySnapVisual
+        run: bash ios/scripts/capture-visual-baseline.sh
+
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-visual-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/MoneySnapVisual
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload failed test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ios-test-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/MoneySnap.xcresult
+          if-no-files-found: ignore
+          retention-days: 3

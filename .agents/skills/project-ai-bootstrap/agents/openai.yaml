@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project AI Bootstrap"
+  short_description: "프로젝트 로컬 AI 개발 환경을 설계하고 초기화"
+  default_prompt: "Use $project-ai-bootstrap to set up a portable project-local AI development environment."

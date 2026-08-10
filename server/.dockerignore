@@ -1,0 +1,9 @@
+.gradle
+build/*
+!build/libs/
+build/libs/*
+!build/libs/moneysnap-server.jar
+src
+scripts
+*.md
+.env*

@@ -1,0 +1,466 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B00000000000000000000001 /* MoneySnapApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000001 /* MoneySnapApp.swift */; };
+		B00000000000000000000002 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000002 /* AppShellView.swift */; };
+		B00000000000000000000003 /* AppTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000003 /* AppTab.swift */; };
+		B00000000000000000000004 /* RouterPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000004 /* RouterPath.swift */; };
+		B00000000000000000000005 /* PlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000005 /* PlaceholderView.swift */; };
+		B00000000000000000000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000006 /* Assets.xcassets */; };
+		B00000000000000000000007 /* AppShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000007 /* AppShellTests.swift */; };
+		B00000000000000000000008 /* TodaySnapViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000010 /* TodaySnapViewModelTests.swift */; };
+		B00000000000000000000009 /* TodaySnapModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* TodaySnapModels.swift */; };
+		B00000000000000000000010 /* SnapJournalClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* SnapJournalClient.swift */; };
+		B00000000000000000000011 /* TodaySnapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* TodaySnapViewModel.swift */; };
+		B00000000000000000000012 /* TodaySnapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* TodaySnapView.swift */; };
+		B00000000000000000000013 /* NotoSansKR-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* NotoSansKR-VariableFont_wght.ttf */; };
+		B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* TodayCanvasLayout.swift */; };
+		B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000018 /* TodaySnapCardViews.swift */; };
+		B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000019 /* MoneySnapVisualSystem.swift */; };
+		B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000020 /* MoneySnapTabBar.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 900000000000000000000001;
+			remoteInfo = MoneySnap;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F00000000000000000000001 /* MoneySnapApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapApp.swift; sourceTree = "<group>"; };
+		F00000000000000000000002 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
+		F00000000000000000000003 /* AppTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTab.swift; sourceTree = "<group>"; };
+		F00000000000000000000004 /* RouterPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouterPath.swift; sourceTree = "<group>"; };
+		F00000000000000000000005 /* PlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderView.swift; sourceTree = "<group>"; };
+		F00000000000000000000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F00000000000000000000007 /* AppShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000008 /* MoneySnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoneySnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000009 /* MoneySnapTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MoneySnapTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000010 /* TodaySnapViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapViewModelTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000011 /* TodaySnapModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapModels.swift; sourceTree = "<group>"; };
+		F00000000000000000000012 /* SnapJournalClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapJournalClient.swift; sourceTree = "<group>"; };
+		F00000000000000000000013 /* TodaySnapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapViewModel.swift; sourceTree = "<group>"; };
+		F00000000000000000000014 /* TodaySnapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapView.swift; sourceTree = "<group>"; };
+		F00000000000000000000015 /* NotoSansKR-VariableFont_wght.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSansKR-VariableFont_wght.ttf"; sourceTree = "<group>"; };
+		F00000000000000000000016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F00000000000000000000017 /* TodayCanvasLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasLayout.swift; sourceTree = "<group>"; };
+		F00000000000000000000018 /* TodaySnapCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapCardViews.swift; sourceTree = "<group>"; };
+		F00000000000000000000019 /* MoneySnapVisualSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapVisualSystem.swift; sourceTree = "<group>"; };
+		F00000000000000000000020 /* MoneySnapTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapTabBar.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		800000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		800000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000004 /* MoneySnap */,
+				A00000000000000000000008 /* MoneySnapTests */,
+				A00000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000008 /* MoneySnap.app */,
+				F00000000000000000000009 /* MoneySnapTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000004 /* MoneySnap */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000005 /* App */,
+				A00000000000000000000006 /* Features */,
+				A00000000000000000000012 /* VisualSystem */,
+				A00000000000000000000010 /* Resources */,
+				F00000000000000000000006 /* Assets.xcassets */,
+				F00000000000000000000016 /* Info.plist */,
+			);
+			path = MoneySnap;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000005 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000001 /* MoneySnapApp.swift */,
+				F00000000000000000000002 /* AppShellView.swift */,
+				F00000000000000000000003 /* AppTab.swift */,
+				F00000000000000000000004 /* RouterPath.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000006 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000009 /* Home */,
+				A00000000000000000000007 /* Placeholder */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000007 /* Placeholder */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000005 /* PlaceholderView.swift */,
+			);
+			path = Placeholder;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000008 /* MoneySnapTests */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000007 /* AppShellTests.swift */,
+				F00000000000000000000010 /* TodaySnapViewModelTests.swift */,
+			);
+			path = MoneySnapTests;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000009 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000011 /* TodaySnapModels.swift */,
+				F00000000000000000000012 /* SnapJournalClient.swift */,
+				F00000000000000000000013 /* TodaySnapViewModel.swift */,
+				F00000000000000000000014 /* TodaySnapView.swift */,
+				F00000000000000000000017 /* TodayCanvasLayout.swift */,
+				F00000000000000000000018 /* TodaySnapCardViews.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000010 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000011 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000011 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000015 /* NotoSansKR-VariableFont_wght.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000012 /* VisualSystem */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000019 /* MoneySnapVisualSystem.swift */,
+				F00000000000000000000020 /* MoneySnapTabBar.swift */,
+			);
+			path = VisualSystem;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		900000000000000000000001 /* MoneySnap */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000002 /* Build configuration list for PBXNativeTarget "MoneySnap" */;
+			buildPhases = (
+				800000000000000000000001 /* Sources */,
+				800000000000000000000002 /* Frameworks */,
+				800000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MoneySnap;
+			productName = MoneySnap;
+			productReference = F00000000000000000000008 /* MoneySnap.app */;
+			productType = "com.apple.product-type.application";
+		};
+		900000000000000000000002 /* MoneySnapTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700000000000000000000003 /* Build configuration list for PBXNativeTarget "MoneySnapTests" */;
+			buildPhases = (
+				800000000000000000000004 /* Sources */,
+				800000000000000000000005 /* Frameworks */,
+				800000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00000000000000000000001 /* PBXTargetDependency */,
+			);
+			name = MoneySnapTests;
+			productName = MoneySnapTests;
+			productReference = F00000000000000000000009 /* MoneySnapTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					900000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					900000000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 900000000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = 700000000000000000000001 /* Build configuration list for PBXProject "MoneySnap" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A00000000000000000000002;
+			productRefGroup = A00000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				900000000000000000000001 /* MoneySnap */,
+				900000000000000000000002 /* MoneySnapTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		800000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000006 /* Assets.xcassets in Resources */,
+				B00000000000000000000013 /* NotoSansKR-VariableFont_wght.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		800000000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		800000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000001 /* MoneySnapApp.swift in Sources */,
+				B00000000000000000000002 /* AppShellView.swift in Sources */,
+				B00000000000000000000003 /* AppTab.swift in Sources */,
+				B00000000000000000000004 /* RouterPath.swift in Sources */,
+				B00000000000000000000005 /* PlaceholderView.swift in Sources */,
+				B00000000000000000000009 /* TodaySnapModels.swift in Sources */,
+				B00000000000000000000010 /* SnapJournalClient.swift in Sources */,
+				B00000000000000000000011 /* TodaySnapViewModel.swift in Sources */,
+				B00000000000000000000012 /* TodaySnapView.swift in Sources */,
+				B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */,
+				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
+				B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */,
+				B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		800000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B00000000000000000000007 /* AppShellTests.swift in Sources */,
+				B00000000000000000000008 /* TodaySnapViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00000000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 900000000000000000000001 /* MoneySnap */;
+			targetProxy = C00000000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		C00000000000000000000101 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		C00000000000000000000102 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		C00000000000000000000103 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MoneySnap/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Money Snap";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ansandy.moneysnap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C00000000000000000000104 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MoneySnap/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Money Snap";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ansandy.moneysnap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		C00000000000000000000105 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ansandy.moneysnap.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MoneySnap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MoneySnap";
+			};
+			name = Debug;
+		};
+		C00000000000000000000106 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ansandy.moneysnap.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MoneySnap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MoneySnap";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		700000000000000000000001 /* Build configuration list for PBXProject "MoneySnap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000101 /* Debug */,
+				C00000000000000000000102 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000002 /* Build configuration list for PBXNativeTarget "MoneySnap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000103 /* Debug */,
+				C00000000000000000000104 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700000000000000000000003 /* Build configuration list for PBXNativeTarget "MoneySnapTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C00000000000000000000105 /* Debug */,
+				C00000000000000000000106 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
+}
