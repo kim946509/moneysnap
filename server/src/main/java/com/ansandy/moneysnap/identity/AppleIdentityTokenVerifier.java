@@ -37,7 +37,7 @@ final class AppleIdentityTokenVerifier implements AppleIdentityVerifier {
 					|| !audiences.contains(audience)
 					|| expiresAt == null
 					|| !expiresAt.isAfter(clock.instant())
-					|| !sameValue(requireText(expectedNonce), nonce)) {
+					|| !sameValue(new Sha256TokenHasher().hash(requireText(expectedNonce)), nonce)) {
 				throw unauthorized();
 			}
 			return new VerifiedAppleIdentity(requireText(jwt.getSubject()));

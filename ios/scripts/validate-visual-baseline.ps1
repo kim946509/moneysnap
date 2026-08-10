@@ -22,7 +22,8 @@ Assert-True (Test-Path -LiteralPath $manifestPath) 'Visual baseline manifest is 
 
 $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
 Assert-True ($manifest.figma.fileKey -eq 'IDNeYlc3584NY9YhsyUQYE') 'Unexpected Figma file key.'
-Assert-True ($manifest.figma.nodeId -eq '9:2') 'Unexpected Figma node ID.'
+Assert-True ($manifest.figma.screens.home.nodeId -eq '9:2') 'Unexpected Home Figma node ID.'
+Assert-True ($manifest.figma.screens.my.nodeId -eq '77:798') 'Unexpected My Figma node ID.'
 Assert-True ($manifest.viewport.width -eq 393 -and $manifest.viewport.height -eq 852) 'Visual viewport must be 393x852.'
 Assert-True ($manifest.bundleIdentifier -eq 'com.ansandy.moneysnap') 'Unexpected Bundle ID.'
 Assert-True ($manifest.simulator.xcode -eq '16.4') 'Visual Xcode baseline must be 16.4.'
@@ -32,10 +33,22 @@ Assert-True ($manifest.comparison.mode -eq 'threshold') 'Visual diff must fail C
 Assert-True ($manifest.comparison.maximumMeanAbsoluteError -gt 0 -and $manifest.comparison.maximumMeanAbsoluteError -le 0.05) 'Visual MAE threshold must be reviewed and no greater than 0.05.'
 Assert-True ($manifest.comparison.maximumMismatchedPixelRatio -gt 0 -and $manifest.comparison.maximumMismatchedPixelRatio -le 0.43) 'Visual mismatched-pixel threshold must be reviewed and no greater than 0.43.'
 
-$referencePath = Join-Path $iosRoot $manifest.figma.reference
-Assert-True (Test-Path -LiteralPath $referencePath) 'Figma reference image is missing.'
-$referenceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $referencePath).Hash.ToLowerInvariant()
-Assert-True ($referenceHash -eq $manifest.figma.sha256) 'Figma reference checksum does not match the manifest.'
+foreach ($screenName in @('home', 'my')) {
+    $screen = $manifest.figma.screens.$screenName
+    $referencePath = Join-Path $iosRoot $screen.reference
+    Assert-True (Test-Path -LiteralPath $referencePath) "$screenName Figma reference image is missing."
+    $referenceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $referencePath).Hash.ToLowerInvariant()
+    Assert-True ($referenceHash -eq $screen.sha256) "$screenName Figma reference checksum does not match the manifest."
+
+    Add-Type -AssemblyName System.Drawing
+    $referenceImage = [System.Drawing.Image]::FromFile($referencePath)
+    try {
+        Assert-True ($referenceImage.Width -eq 393 -and $referenceImage.Height -eq 852) "$screenName Figma reference image must be 393x852."
+    }
+    finally {
+        $referenceImage.Dispose()
+    }
+}
 
 $foodAsset = Join-Path $iosRoot 'MoneySnap\Assets.xcassets\FoodSnap.imageset\food-snap.png'
 $cafeAsset = Join-Path $iosRoot 'MoneySnap\Assets.xcassets\CafeSnap.imageset\cafe-snap.png'
@@ -43,15 +56,6 @@ $fontAsset = Join-Path $iosRoot 'MoneySnap\Resources\Fonts\NotoSansKR-VariableFo
 Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $foodAsset).Hash.ToLowerInvariant() -eq $manifest.assets.foodSnap.sha256) 'Food Figma asset checksum mismatch.'
 Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $cafeAsset).Hash.ToLowerInvariant() -eq $manifest.assets.cafeSnap.sha256) 'Cafe Figma asset checksum mismatch.'
 Assert-True ((Get-FileHash -Algorithm SHA256 -LiteralPath $fontAsset).Hash.ToLowerInvariant() -eq $manifest.assets.notoSansKr.sha256) 'Noto Sans KR checksum mismatch.'
-
-Add-Type -AssemblyName System.Drawing
-$referenceImage = [System.Drawing.Image]::FromFile($referencePath)
-try {
-    Assert-True ($referenceImage.Width -eq 393 -and $referenceImage.Height -eq 852) 'Figma reference image must be 393x852.'
-}
-finally {
-    $referenceImage.Dispose()
-}
 
 $appTab = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\App\AppTab.swift')
 Assert-True ($appTab -match 'enum\s+AppTab\s*:\s*[^\r\n{]*\bSendable\b') 'AppTab must conform to Sendable for Swift 6.'
@@ -66,6 +70,7 @@ Assert-True ($resolver -match 'MONEYSNAP_SIMULATOR_OS') 'Simulator resolver must
 $capture = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'scripts\capture-visual-baseline.sh')
 Assert-True ($capture -match 'simctl\s+io') 'Visual capture must use the iOS Simulator screenshot API.'
 Assert-True ($capture -match 'visual-diff\.swift') 'Visual capture must create overlay and diff evidence.'
+Assert-True ($capture -match 'MONEYSNAP_VISUAL_SCENARIO') 'Visual capture must select the deterministic Home or My scenario.'
 Assert-True ($capture -match '--maximum-mean-absolute-error') 'Visual capture must enforce the reviewed MAE threshold.'
 Assert-True ($capture -match '--maximum-mismatched-pixel-ratio') 'Visual capture must enforce the reviewed mismatched-pixel threshold.'
 
@@ -77,6 +82,8 @@ Assert-True ($workflow -match 'DEVELOPER_DIR:\s*/Applications/Xcode_16\.4\.app/C
 Assert-True ($workflow -match 'MONEYSNAP_SIMULATOR_DEVICE:\s*"?iPhone 16"?') 'iOS CI must pin iPhone 16.'
 Assert-True ($workflow -match 'MONEYSNAP_SIMULATOR_OS:\s*"?18\.5"?') 'iOS CI must pin iOS 18.5.'
 Assert-True ($workflow -match 'capture-visual-baseline\.sh') 'iOS CI must capture visual baseline evidence.'
+Assert-True ($workflow -match 'MONEYSNAP_VISUAL_SCENARIO=home') 'iOS CI must capture the Home visual scenario.'
+Assert-True ($workflow -match 'MONEYSNAP_VISUAL_SCENARIO=my') 'iOS CI must capture the My visual scenario.'
 Assert-True ($workflow -match 'ios-visual-evidence-') 'iOS CI must upload named visual evidence.'
 
 Write-Output 'MoneySnap iOS visual baseline contract: OK'

@@ -17,6 +17,13 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodayCanvasLayout.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapCardViews.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationModels.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationAPIClient.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Authentication\KeychainSessionStore.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationModel.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AppleCredentialButton.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationViews.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Profile\MySettingsView.swift'),
     (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapVisualSystem.swift'),
     (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapTabBar.swift'),
     (Join-Path $iosRoot 'MoneySnap\Info.plist'),
@@ -24,7 +31,11 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\FoodSnap.imageset\food-snap.png'),
     (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\CafeSnap.imageset\cafe-snap.png'),
     (Join-Path $iosRoot 'MoneySnapTests\AppShellTests.swift'),
-    (Join-Path $iosRoot 'MoneySnapTests\TodaySnapViewModelTests.swift')
+    (Join-Path $iosRoot 'MoneySnapTests\TodaySnapViewModelTests.swift'),
+    (Join-Path $iosRoot 'MoneySnapTests\AuthenticationModelTests.swift'),
+    (Join-Path $iosRoot 'MoneySnapTests\AuthenticationAPIClientTests.swift')
+    (Join-Path $iosRoot 'MoneySnapTests\AppleNonceTests.swift')
+    (Join-Path $iosRoot 'MoneySnapTests\KeychainSessionStoreTests.swift')
 )
 
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_) }
@@ -82,10 +93,21 @@ $expectedSourceNames = @(
     'TodaySnapView.swift',
     'TodayCanvasLayout.swift',
     'TodaySnapCardViews.swift',
+    'AuthenticationModels.swift',
+    'AuthenticationAPIClient.swift',
+    'KeychainSessionStore.swift',
+    'AuthenticationModel.swift',
+    'AppleCredentialButton.swift',
+    'AuthenticationViews.swift',
+    'MySettingsView.swift',
     'MoneySnapVisualSystem.swift',
     'MoneySnapTabBar.swift',
     'AppShellTests.swift',
-    'TodaySnapViewModelTests.swift'
+    'TodaySnapViewModelTests.swift',
+    'AuthenticationModelTests.swift',
+    'AuthenticationAPIClientTests.swift'
+    'AppleNonceTests.swift'
+    'KeychainSessionStoreTests.swift'
 )
 foreach ($sourceName in $expectedSourceNames) {
     if ($project -notmatch [regex]::Escape("path = $sourceName;")) {

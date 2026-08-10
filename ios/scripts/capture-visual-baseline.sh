@@ -4,8 +4,17 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ios_dir="$(cd "${script_dir}/.." && pwd)"
 output_dir="${VISUAL_OUTPUT_DIR:-${ios_dir}/build/visual-evidence}"
-reference_path="${ios_dir}/VisualReferences/Figma/home-9-2-393x852.png"
 manifest_path="${ios_dir}/VisualReferences/manifest.json"
+visual_scenario="${MONEYSNAP_VISUAL_SCENARIO:-home}"
+case "${visual_scenario}" in
+  home|my) ;;
+  *)
+    echo "Unsupported visual scenario: ${visual_scenario}" >&2
+    exit 1
+    ;;
+esac
+reference_relative_path="$(plutil -extract "figma.screens.${visual_scenario}.reference" raw -o - "${manifest_path}")"
+reference_path="${ios_dir}/${reference_relative_path}"
 bundle_identifier="com.ansandy.moneysnap"
 viewport_width=393
 viewport_height=852
@@ -23,7 +32,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "${output_dir}"
-cp "${reference_path}" "${output_dir}/figma-home-9-2-393x852.png"
+cp "${reference_path}" "${output_dir}/figma-${visual_scenario}-reference.png"
 
 xcrun simctl boot "${destination_id}" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "${destination_id}" -b
@@ -53,7 +62,8 @@ xcrun simctl status_bar "${destination_id}" override \
   --cellularBars 4 \
   --batteryState charged \
   --batteryLevel 100 >/dev/null 2>&1 || true
-xcrun simctl launch --terminate-running-process "${destination_id}" "${bundle_identifier}"
+SIMCTL_CHILD_MONEYSNAP_VISUAL_SCENARIO="${visual_scenario}" \
+  xcrun simctl launch --terminate-running-process "${destination_id}" "${bundle_identifier}"
 sleep 2
 xcrun simctl io "${destination_id}" screenshot --type=png "${raw_screenshot}"
 
@@ -78,6 +88,7 @@ xcrun swift "${script_dir}/visual-diff.swift" \
   echo "Simulator OS: ${MONEYSNAP_SIMULATOR_OS:-18.5}"
   echo "Simulator UDID: ${destination_id}"
   echo "Viewport: ${viewport_width}x${viewport_height}"
+  echo "Visual scenario: ${visual_scenario}"
   echo "Comparison mode: threshold"
   echo "Maximum mean absolute error: ${maximum_mean_absolute_error}"
   echo "Maximum mismatched pixel ratio: ${maximum_mismatched_pixel_ratio}"

@@ -24,6 +24,17 @@
 		B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000018 /* TodaySnapCardViews.swift */; };
 		B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000019 /* MoneySnapVisualSystem.swift */; };
 		B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000020 /* MoneySnapTabBar.swift */; };
+		B00000000000000000000018 /* AuthenticationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000021 /* AuthenticationModels.swift */; };
+		B00000000000000000000019 /* AuthenticationAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000022 /* AuthenticationAPIClient.swift */; };
+		B00000000000000000000020 /* KeychainSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000023 /* KeychainSessionStore.swift */; };
+		B00000000000000000000021 /* AuthenticationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000024 /* AuthenticationModel.swift */; };
+		B00000000000000000000022 /* AppleCredentialButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000025 /* AppleCredentialButton.swift */; };
+		B00000000000000000000023 /* AuthenticationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000026 /* AuthenticationViews.swift */; };
+		B00000000000000000000024 /* MySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000027 /* MySettingsView.swift */; };
+		B00000000000000000000025 /* AuthenticationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000028 /* AuthenticationModelTests.swift */; };
+		B00000000000000000000026 /* AuthenticationAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000029 /* AuthenticationAPIClientTests.swift */; };
+		B00000000000000000000027 /* AppleNonceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000030 /* AppleNonceTests.swift */; };
+		B00000000000000000000028 /* KeychainSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000031 /* KeychainSessionStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +68,17 @@
 		F00000000000000000000018 /* TodaySnapCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapCardViews.swift; sourceTree = "<group>"; };
 		F00000000000000000000019 /* MoneySnapVisualSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapVisualSystem.swift; sourceTree = "<group>"; };
 		F00000000000000000000020 /* MoneySnapTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneySnapTabBar.swift; sourceTree = "<group>"; };
+		F00000000000000000000021 /* AuthenticationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationModels.swift; sourceTree = "<group>"; };
+		F00000000000000000000022 /* AuthenticationAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationAPIClient.swift; sourceTree = "<group>"; };
+		F00000000000000000000023 /* KeychainSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSessionStore.swift; sourceTree = "<group>"; };
+		F00000000000000000000024 /* AuthenticationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationModel.swift; sourceTree = "<group>"; };
+		F00000000000000000000025 /* AppleCredentialButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleCredentialButton.swift; sourceTree = "<group>"; };
+		F00000000000000000000026 /* AuthenticationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationViews.swift; sourceTree = "<group>"; };
+		F00000000000000000000027 /* MySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MySettingsView.swift; sourceTree = "<group>"; };
+		F00000000000000000000028 /* AuthenticationModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationModelTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000029 /* AuthenticationAPIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationAPIClientTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000030 /* AppleNonceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleNonceTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000031 /* KeychainSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSessionStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,8 +144,10 @@
 		A00000000000000000000006 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				A00000000000000000000013 /* Authentication */,
 				A00000000000000000000009 /* Home */,
 				A00000000000000000000007 /* Placeholder */,
+				A00000000000000000000014 /* Profile */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -141,6 +165,10 @@
 			children = (
 				F00000000000000000000007 /* AppShellTests.swift */,
 				F00000000000000000000010 /* TodaySnapViewModelTests.swift */,
+				F00000000000000000000028 /* AuthenticationModelTests.swift */,
+				F00000000000000000000029 /* AuthenticationAPIClientTests.swift */,
+				F00000000000000000000030 /* AppleNonceTests.swift */,
+				F00000000000000000000031 /* KeychainSessionStoreTests.swift */,
 			);
 			path = MoneySnapTests;
 			sourceTree = "<group>";
@@ -181,6 +209,27 @@
 				F00000000000000000000020 /* MoneySnapTabBar.swift */,
 			);
 			path = VisualSystem;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000013 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000021 /* AuthenticationModels.swift */,
+				F00000000000000000000022 /* AuthenticationAPIClient.swift */,
+				F00000000000000000000023 /* KeychainSessionStore.swift */,
+				F00000000000000000000024 /* AuthenticationModel.swift */,
+				F00000000000000000000025 /* AppleCredentialButton.swift */,
+				F00000000000000000000026 /* AuthenticationViews.swift */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000014 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000027 /* MySettingsView.swift */,
+			);
+			path = Profile;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -296,6 +345,13 @@
 				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
 				B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */,
 				B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */,
+				B00000000000000000000018 /* AuthenticationModels.swift in Sources */,
+				B00000000000000000000019 /* AuthenticationAPIClient.swift in Sources */,
+				B00000000000000000000020 /* KeychainSessionStore.swift in Sources */,
+				B00000000000000000000021 /* AuthenticationModel.swift in Sources */,
+				B00000000000000000000022 /* AppleCredentialButton.swift in Sources */,
+				B00000000000000000000023 /* AuthenticationViews.swift in Sources */,
+				B00000000000000000000024 /* MySettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,6 +361,10 @@
 			files = (
 				B00000000000000000000007 /* AppShellTests.swift in Sources */,
 				B00000000000000000000008 /* TodaySnapViewModelTests.swift in Sources */,
+				B00000000000000000000025 /* AuthenticationModelTests.swift in Sources */,
+				B00000000000000000000026 /* AuthenticationAPIClientTests.swift in Sources */,
+				B00000000000000000000027 /* AppleNonceTests.swift in Sources */,
+				B00000000000000000000028 /* KeychainSessionStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

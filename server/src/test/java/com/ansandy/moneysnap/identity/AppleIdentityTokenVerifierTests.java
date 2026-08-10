@@ -37,13 +37,14 @@ class AppleIdentityTokenVerifierTests {
 	@Test
 	void acceptsAValidAppleIdentityToken() throws Exception {
 		AppleIdentityTokenVerifier verifier = verifier();
+		String rawNonce = "request-nonce";
 
 		VerifiedAppleIdentity identity = verifier.verify(signedToken(
 				"https://appleid.apple.com",
 				"com.ansandy.moneysnap",
 				"apple-subject",
-				"request-nonce",
-				Instant.parse("2099-01-01T00:00:00Z")), "request-nonce");
+				hash(rawNonce),
+				Instant.parse("2099-01-01T00:00:00Z")), rawNonce);
 
 		assertThat(identity.subject()).isEqualTo("apple-subject");
 	}
@@ -54,7 +55,7 @@ class AppleIdentityTokenVerifierTests {
 				"https://attacker.example",
 				"com.ansandy.moneysnap",
 				"apple-subject",
-				"request-nonce",
+				hash("request-nonce"),
 				Instant.parse("2099-01-01T00:00:00Z")), "request-nonce");
 	}
 
@@ -64,7 +65,7 @@ class AppleIdentityTokenVerifierTests {
 				"https://appleid.apple.com",
 				"another.app",
 				"apple-subject",
-				"request-nonce",
+				hash("request-nonce"),
 				Instant.parse("2099-01-01T00:00:00Z")), "request-nonce");
 	}
 
@@ -74,7 +75,7 @@ class AppleIdentityTokenVerifierTests {
 				"https://appleid.apple.com",
 				"com.ansandy.moneysnap",
 				"apple-subject",
-				"request-nonce",
+				hash("request-nonce"),
 				NOW.minusSeconds(1)), "request-nonce");
 	}
 
@@ -84,8 +85,21 @@ class AppleIdentityTokenVerifierTests {
 				"https://appleid.apple.com",
 				"com.ansandy.moneysnap",
 				"apple-subject",
-				"signed-nonce",
+				hash("signed-nonce"),
 				Instant.parse("2099-01-01T00:00:00Z")), "different-nonce");
+	}
+
+	@Test
+	void rejectsAClaimHashReplayedAsTheRawNonce() throws Exception {
+		String rawNonce = "request-nonce";
+		String claimHash = hash(rawNonce);
+
+		assertUnauthorized(signedToken(
+				"https://appleid.apple.com",
+				"com.ansandy.moneysnap",
+				"apple-subject",
+				claimHash,
+				Instant.parse("2099-01-01T00:00:00Z")), claimHash);
 	}
 
 	@Test
@@ -94,7 +108,7 @@ class AppleIdentityTokenVerifierTests {
 				"https://appleid.apple.com",
 				"com.ansandy.moneysnap",
 				"apple-subject",
-				"request-nonce",
+				hash("request-nonce"),
 				Instant.parse("2099-01-01T00:00:00Z"));
 		String[] parts = valid.split("\\.");
 		int changedIndex = parts[2].length() / 2;
@@ -123,6 +137,10 @@ class AppleIdentityTokenVerifierTests {
 				.isInstanceOf(IdentitySessionException.class)
 				.extracting(error -> ((IdentitySessionException) error).failure())
 				.isEqualTo(IdentitySessionFailure.UNAUTHORIZED);
+	}
+
+	private static String hash(String rawNonce) {
+		return new Sha256TokenHasher().hash(rawNonce);
 	}
 
 	private static String signedToken(

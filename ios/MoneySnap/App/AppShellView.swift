@@ -1,15 +1,19 @@
+import Foundation
 import SwiftUI
 
 struct AppShellView: View {
     @Binding var selectedTab: AppTab
     @State private var tabRouter = TabRouter()
+    private let authentication: AuthenticationModel
     private let snapJournalClient: any SnapJournalClient
 
     init(
         selectedTab: Binding<AppTab>,
+        authentication: AuthenticationModel,
         snapJournalClient: any SnapJournalClient = InMemorySnapJournalClient.fixture
     ) {
         _selectedTab = selectedTab
+        self.authentication = authentication
         self.snapJournalClient = snapJournalClient
     }
 
@@ -44,6 +48,8 @@ struct AppShellView: View {
             TodaySnapView(
                 client: snapJournalClient
             )
+        case .profile:
+            MySettingsView(authentication: authentication)
         default:
             PlaceholderView(
                 title: tab.title,
@@ -72,5 +78,12 @@ private struct RoutePlaceholderView: View {
 }
 
 #Preview {
-    AppShellView(selectedTab: .constant(.home))
+    AppShellView(
+        selectedTab: .constant(.home),
+        authentication: AuthenticationModel(
+            api: URLSessionAuthenticationAPI(baseURL: URL(string: "https://example.invalid")!),
+            store: KeychainSessionStore(),
+            initialPhase: .signedOut
+        )
+    )
 }

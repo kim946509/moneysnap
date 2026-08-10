@@ -2,9 +2,18 @@
   "bundleIdentifier": "com.ansandy.moneysnap",
   "figma": {
     "fileKey": "IDNeYlc3584NY9YhsyUQYE",
-    "nodeId": "9:2",
-    "reference": "VisualReferences/Figma/home-9-2-393x852.png",
-    "sha256": "4e821694ff75903e028a3e06208cf5123c7f7fc86c97e8bf9189b7d810491d75"
+    "screens": {
+      "home": {
+        "nodeId": "9:2",
+        "reference": "VisualReferences/Figma/home-9-2-393x852.png",
+        "sha256": "4e821694ff75903e028a3e06208cf5123c7f7fc86c97e8bf9189b7d810491d75"
+      },
+      "my": {
+        "nodeId": "77:798",
+        "reference": "VisualReferences/Figma/my-77-798-393x852.png",
+        "sha256": "06d73207034fbb6a0667e08547a3ae741c17de74d81ab15a41c559b685a59ed8"
+      }
+    }
   },
   "assets": {
     "foodSnap": {
@@ -33,6 +42,6 @@
     "mode": "threshold",
     "maximumMeanAbsoluteError": 0.05,
     "maximumMismatchedPixelRatio": 0.43,
-    "basis": "Reviewed against Figma node 9:2 after WORK-010 layout parity. The full-frame comparison includes deterministic Simulator and Figma device-chrome differences."
+    "basis": "Reviewed against Figma nodes 9:2 and 77:798. The full-frame comparison includes deterministic Simulator and Figma device-chrome differences."
   }
 }

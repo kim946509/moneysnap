@@ -153,7 +153,7 @@ class AppleAuthorizationPersistenceIntegrationTests {
 						.subject(subject)
 						.issueTime(Date.from(NOW.minusSeconds(10)))
 						.expirationTime(Date.from(Instant.parse("2099-01-01T00:00:00Z")))
-						.claim("nonce", nonce)
+						.claim("nonce", new Sha256TokenHasher().hash(nonce))
 						.build());
 		token.sign(new RSASSASigner((RSAPrivateKey) keyPair.getPrivate()));
 		return token.serialize();
