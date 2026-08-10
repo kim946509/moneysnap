@@ -96,9 +96,15 @@ class AppleIdentityTokenVerifierTests {
 				"apple-subject",
 				"request-nonce",
 				Instant.parse("2099-01-01T00:00:00Z"));
-		char replacement = valid.endsWith("A") ? 'B' : 'A';
+		String[] parts = valid.split("\\.");
+		int changedIndex = parts[2].length() / 2;
+		char current = parts[2].charAt(changedIndex);
+		char replacement = current == 'A' ? 'B' : 'A';
+		parts[2] = parts[2].substring(0, changedIndex)
+				+ replacement
+				+ parts[2].substring(changedIndex + 1);
 
-		assertUnauthorized(valid.substring(0, valid.length() - 1) + replacement, "request-nonce");
+		assertUnauthorized(String.join(".", parts), "request-nonce");
 	}
 
 	private static AppleIdentityTokenVerifier verifier() {
