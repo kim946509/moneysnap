@@ -29,9 +29,13 @@ final class IdentitySessionService {
 	}
 
 	SessionTokens signIn(VerifiedAppleIdentity identity) {
+		return signIn(identity, null);
+	}
+
+	SessionTokens signIn(VerifiedAppleIdentity identity, String encryptedAppleRefreshToken) {
 		Objects.requireNonNull(identity);
 		Instant now = clock.instant();
-		UUID userId = store.findOrCreateUser(identity.subject(), now);
+		UUID userId = store.findOrCreateUser(identity.subject(), encryptedAppleRefreshToken, now);
 		SessionTokens issued = issueTokens(now);
 		store.createSession(new NewIdentitySession(
 				UUID.randomUUID(),
@@ -153,7 +157,7 @@ final class IdentitySessionException extends RuntimeException {
 
 interface IdentitySessionStore {
 
-	UUID findOrCreateUser(String appleSubject, Instant now);
+	UUID findOrCreateUser(String appleSubject, String encryptedAppleRefreshToken, Instant now);
 
 	void createSession(NewIdentitySession session);
 

@@ -135,7 +135,8 @@ com.ansandy.moneysnap
 ```text
 users
 apple_identities(user_id, apple_subject, encrypted_apple_refresh_token, created_at, updated_at)
-sessions(id, user_id, token_hash, token_family, expires_at, last_used_at, revoked_at)
+identity_sessions(id, user_id, access_token_hash, access_expires_at, refresh_expires_at, last_used_at, revoked_at)
+identity_refresh_tokens(id, session_id, token_hash, status, expires_at, used_at, created_at)
 snaps(id, owner_id, category, amount_won, local_day, image_id?, created_at, updated_at)
 groups(id, amount_visibility)
 group_memberships(group_id, user_id, role, joined_at)

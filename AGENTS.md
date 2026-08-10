@@ -17,13 +17,13 @@
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
 - SwiftUI + Spring Boot + PostgreSQL + Cloudflare DNS/R2 + Ubuntu Docker/Nginx Proxy Manager 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
 - `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native test·393x852 visual artifact 생성을 통과했다.
-- 첫 기능 슬라이스 `WORK-010`의 Today Snap 읽기 도메인과 Figma Home `9:2` 화면이 완료됐다. 서버·iOS 테스트와 393x852 시각 회귀 임계값(MAE 0.05, 불일치 픽셀 비율 0.43)을 통과하며, 다음 사용자 기능 게이트는 인증 정책 확정이다.
+- 첫 기능 슬라이스 `WORK-010`의 Today Snap 읽기 도메인과 Figma Home `9:2` 화면이 완료됐다. 서버·iOS 테스트와 393x852 시각 회귀 임계값(MAE 0.05, 불일치 픽셀 비율 0.43)을 통과했다.
 - repository는 public이고 draft PR #1이 remote CI 기준점이다. `server-development` environment는 `main` 전용 branch policy와 Ubuntu SSH·Neon secret 11개를 보유하며 Secret Scanning과 Push Protection이 활성화되어 있다.
 - Neon Free에 `moneysnap-dev`와 `moneysnap-prod`가 생성되어 있다. 개발·운영 DB를 공유하지 않는다.
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - development Spring Boot는 개발자 소유 Ubuntu Docker에서 `moneysnap-server`로 실행되며 private host `192.168.1.102:9090`, external network `main`, container management `9091` 계약을 사용한다. `moneysnap-server.ansandy.co.kr`은 Cloudflare DNS와 기존 Nginx Proxy Manager를 거쳐 `/` 200, public actuator 403을 반환한다.
 - 기존 Prometheus는 host publish `127.0.0.1:9092`와 container `9090`을 사용하며 `moneysnap-server:9091` target을 `up=1`로 수집한다. Grafana `monitor.ansandy.co.kr/api/health`는 200이다.
-- 다음 기능 단계는 Sign in with Apple 단독 인증·지속 session·로그아웃·계정 탈퇴다. 실제 Apple 연동에는 explicit App ID와 key activation이 필요하며, 이후 사진 quota를 확정하고 개인 Snap 저장으로 진행한다.
+- 서버의 Sign in with Apple credential 검증·code 교환·AES-GCM refresh token 저장, 15분 access·180일 rotating refresh session, bearer 인증과 현재 session 로그아웃이 완료됐다. 다음 인증 작업은 계정 탈퇴·Apple revoke와 server-to-server event이며, 이어서 iOS AuthenticationServices·Keychain을 연결한다. 실제 Apple 연동에는 explicit App ID와 key activation이 필요하다.
 - 그룹 생성·초대, 그룹 공개 설정 변경, 저장 후 공유 진입처럼 미결정인 제품 정책은 관련 기능의 작업 항목을 `ready`로 바꾸기 전에 확정한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 

@@ -13,7 +13,7 @@
 | 단계 | 사용자 가치 | 서버 범위 | iOS 범위 | 완료 게이트 | 상태 |
 |---|---|---|---|---|---|
 | 1. Today Snap 홈 읽기 기반 | 오늘의 Snap과 총 소비를 한눈에 본다 | 금액·카테고리·일별 합계 도메인 규칙 | Figma `9:2` 홈, fixture client, 로딩 상태 | 서버 단위 테스트, iOS 통합 테스트, 393x852 diff | complete (`WORK-010`) |
-| 2. 인증 기반 | 자신의 기록만 안전하게 다룬다 | Apple credential 검증, rotating session, 로그아웃·탈퇴 | 로그인·Keychain 세션 복구·계정 관리 | 권한·token reuse·탈퇴 테스트, 로그인 화면 diff | ready: 정책 확정 (`WORK-012`) |
+| 2. 인증 기반 | 자신의 기록만 안전하게 다룬다 | Apple credential 검증, rotating session, 로그아웃·탈퇴 | 로그인·Keychain 세션 복구·계정 관리 | 권한·token reuse·탈퇴 테스트, 로그인 화면 diff | active: 서버 로그인·세션 완료 (`WORK-013`, `WORK-014`) |
 | 3. 개인 Snap 저장 | 사진 선택 후 카테고리·금액을 저장한다 | idempotent record command, Flyway schema | PhotosUI, 단계 입력, 저장 완료 | Testcontainers 통합 테스트, 앱 흐름 테스트, 화면별 diff | blocked: 인증·사진 quota·시간대 |
 | 4. 오늘 기록 조회 | 저장한 Snap이 Home에 반영된다 | owner/date 조회 API | URLSession adapter, 새로고침·오류·빈 상태 | 서버 API 통합 테스트, 실제 contract 통합 테스트 | depends on 3 |
 | 5. 수정·삭제 | 내 기록을 고치거나 지운다 | revise/delete command와 소유권 검사 | 상세, 수정, 삭제 확인 | 권한·멱등성·회귀 테스트, 화면 diff | depends on 4 |
@@ -27,4 +27,5 @@
 
 - `WORK-010`: 정책 독립적인 Today Snap 홈 읽기 기반과 Figma 시각 회귀 임계값을 완료했다.
 - `WORK-012`: Sign in with Apple 단독 인증·지속 session·로그아웃·탈퇴 정책을 확정하고 알림을 MVP에서 제외한다.
-- 다음 단계는 별도 작업 항목에서 인증 기반을 TDD로 구현한다.
+- `WORK-013`, `WORK-014`: 서버의 rotating session과 Apple credential 검증·교환·암호화 저장·HTTP bearer 로그아웃 경계를 완료했다.
+- 다음 단계는 계정 탈퇴·Apple revoke와 server-to-server event를 구현한 뒤 iOS AuthenticationServices·Keychain 흐름을 연결한다.

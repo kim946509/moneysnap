@@ -19,10 +19,11 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 	}
 
 	@Override
-	public UUID findOrCreateUser(String appleSubject, Instant now) {
+	public UUID findOrCreateUser(String appleSubject, String encryptedAppleRefreshToken, Instant now) {
 		return transactions.execute(status -> {
 			Optional<UUID> existing = findUser(appleSubject);
 			if (existing.isPresent()) {
+				updateAppleRefreshToken(existing.get(), encryptedAppleRefreshToken, now);
 				return existing.get();
 			}
 
@@ -32,12 +33,15 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					.param("createdAt", Timestamp.from(now))
 					.update();
 			int inserted = jdbc.sql("""
-					INSERT INTO apple_identities (user_id, apple_subject, created_at, updated_at)
-					VALUES (:userId, :subject, :now, :now)
+					INSERT INTO apple_identities (
+						user_id, apple_subject, encrypted_apple_refresh_token, created_at, updated_at
+					)
+					VALUES (:userId, :subject, :encryptedRefreshToken, :now, :now)
 					ON CONFLICT (apple_subject) DO NOTHING
 					""")
 					.param("userId", candidate)
 					.param("subject", appleSubject)
+					.param("encryptedRefreshToken", encryptedAppleRefreshToken)
 					.param("now", Timestamp.from(now))
 					.update();
 			if (inserted == 1) {
@@ -45,6 +49,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			}
 
 			UUID actual = findUser(appleSubject).orElseThrow();
+			updateAppleRefreshToken(actual, encryptedAppleRefreshToken, now);
 			jdbc.sql("DELETE FROM users WHERE id = :id")
 					.param("id", candidate)
 					.update();
@@ -180,6 +185,22 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				.param("subject", appleSubject)
 				.query(UUID.class)
 				.optional();
+	}
+
+	private void updateAppleRefreshToken(UUID userId, String encryptedAppleRefreshToken, Instant now) {
+		if (encryptedAppleRefreshToken == null) {
+			return;
+		}
+		jdbc.sql("""
+				UPDATE apple_identities
+				SET encrypted_apple_refresh_token = :encryptedRefreshToken,
+				    updated_at = :now
+				WHERE user_id = :userId
+				""")
+				.param("userId", userId)
+				.param("encryptedRefreshToken", encryptedAppleRefreshToken)
+				.param("now", Timestamp.from(now))
+				.update();
 	}
 
 	private void insertRefreshToken(UUID sessionId, String tokenHash, Instant expiresAt, Instant now) {
