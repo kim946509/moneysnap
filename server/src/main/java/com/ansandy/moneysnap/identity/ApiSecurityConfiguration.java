@@ -8,17 +8,28 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import tools.jackson.databind.ObjectMapper;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+
 @Configuration(proxyBeanMethods = false)
 class ApiSecurityConfiguration {
 
 	@Bean
 	SecurityFilterChain apiSecurityFilterChain(
 			HttpSecurity http,
-			IdentitySessionService sessions) throws Exception {
+			IdentitySessionService sessions,
+			ObjectMapper objectMapper) throws Exception {
 		http.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(
-						(request, response, exception) -> response.sendError(401)))
+						(request, response, exception) -> {
+							response.setStatus(401);
+							response.setContentType(APPLICATION_JSON_VALUE);
+							objectMapper.writeValue(
+									response.getOutputStream(),
+									ApiErrorResponse.of(ApiErrorCode.SESSION_REJECTED));
+						}))
 				.addFilterBefore(new MoneySnapAuthenticationFilter(sessions), AnonymousAuthenticationFilter.class);
 		http.authorizeHttpRequests(authorize -> authorize
 				.requestMatchers(

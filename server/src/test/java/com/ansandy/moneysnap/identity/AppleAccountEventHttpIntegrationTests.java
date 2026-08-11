@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
@@ -88,7 +89,9 @@ class AppleAccountEventHttpIntegrationTests {
 				new AppleAccountEventException(AppleAccountEventFailure.UNAUTHORIZED));
 
 		mockMvc.perform(eventRequest("invalid-apple-event"))
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("APPLE_EVENT_REJECTED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	@Test
@@ -97,7 +100,9 @@ class AppleAccountEventHttpIntegrationTests {
 				new AppleAccountEventException(AppleAccountEventFailure.UNSUPPORTED_TYPE));
 
 		mockMvc.perform(eventRequest("unsupported-apple-event"))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("APPLE_EVENT_UNSUPPORTED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	@Test
@@ -115,7 +120,9 @@ class AppleAccountEventHttpIntegrationTests {
 		mockMvc.perform(post("/api/v1/auth/apple/events")
 					.contentType("application/json")
 					.content("{}"))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder eventRequest(

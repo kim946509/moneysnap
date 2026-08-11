@@ -90,11 +90,18 @@ private struct LoginView: View {
 private struct SessionRecoveryView: View {
     let authentication: AuthenticationModel
 
+    private var description: String {
+        if authentication.issue == .localSessionPersistenceFailed {
+            return "새 로그인 정보를 안전하게 저장하지 못했어요. 다시 로그인해 주세요."
+        }
+        return "저장된 로그인 정보는 유지했어요. 연결을 확인하고 다시 시도해 주세요."
+    }
+
     var body: some View {
         ContentUnavailableView {
             Label("로그인 상태를 확인할 수 없어요", systemImage: "wifi.exclamationmark")
         } description: {
-            Text("저장된 로그인 정보는 유지했어요. 연결을 확인하고 다시 시도해 주세요.")
+            Text(description)
         } actions: {
             Button("다시 시도") {
                 Task { await authentication.restore() }
@@ -168,7 +175,13 @@ private struct AccountDeletionReauthenticationView: View {
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
 
                 if authentication.issue == .accountDeletionFailed {
-                    Text("계정을 삭제하지 못했어요. 아무 데이터도 지우지 않았습니다.")
+                    Text("계정 삭제 결과를 확인하지 못했어요. 연결을 확인한 뒤 다시 로그인해 주세요.")
+                        .font(.moneySnap(size: 13, weight: .medium))
+                        .foregroundStyle(.red)
+                }
+
+                if authentication.issue == .accountReauthenticationFailed {
+                    Text("Apple 계정을 확인하지 못했어요. 다시 시도해 주세요.")
                         .font(.moneySnap(size: 13, weight: .medium))
                         .foregroundStyle(.red)
                 }

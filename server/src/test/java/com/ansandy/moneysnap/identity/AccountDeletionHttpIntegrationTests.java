@@ -27,6 +27,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
@@ -102,7 +103,9 @@ class AccountDeletionHttpIntegrationTests {
 					.header("Authorization", "Bearer " + session.accessToken())
 					.contentType("application/json")
 					.content(appleReauthenticationBody()))
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("APPLE_REAUTHENTICATION_REJECTED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 
 		then(appleRevoker).shouldHaveNoInteractions();
 	}
@@ -118,7 +121,24 @@ class AccountDeletionHttpIntegrationTests {
 					.header("Authorization", "Bearer " + session.accessToken())
 					.contentType("application/json")
 					.content(appleReauthenticationBody()))
-				.andExpect(status().isBadGateway());
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.code").value("APPLE_REVOCATION_FAILED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
+	}
+
+	@Test
+	void rejectsAMalformedReauthenticationRequestWithTheStableErrorContract() throws Exception {
+		given(appleAuthorization.authorize(any()))
+				.willReturn(authorization("apple-http-delete-subject"));
+		SessionResponse session = signIn();
+
+		mockMvc.perform(delete("/api/v1/account")
+					.header("Authorization", "Bearer " + session.accessToken())
+					.contentType("application/json")
+					.content("{}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	@Test

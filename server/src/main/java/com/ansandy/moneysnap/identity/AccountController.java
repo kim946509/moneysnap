@@ -38,11 +38,13 @@ class AccountController {
 
 	@ExceptionHandler(IdentitySessionException.class)
 	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	void unauthorized() {
+	ApiErrorResponse unauthorized() {
+		return ApiErrorResponse.of(ApiErrorCode.APPLE_REAUTHENTICATION_REJECTED);
 	}
 
 	@ExceptionHandler(AppleRevocationException.class)
 	@ResponseStatus(HttpStatus.BAD_GATEWAY)
-	void revocationFailed() {
+	ApiErrorResponse revocationFailed() {
+		return ApiErrorResponse.of(ApiErrorCode.APPLE_REVOCATION_FAILED);
 	}
 }

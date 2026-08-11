@@ -4,5 +4,204 @@ info:
   version: 0.1.0
   description: Canonical REST contract for the Money Snap iOS MVP.
 servers:
-  - url: /v1
-paths: {}
+  - url: /api/v1
+paths:
+  /auth/apple:
+    post:
+      operationId: signInWithApple
+      summary: Exchange verified Apple credentials for a Money Snap session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleCredentialRequest'
+      responses:
+        '200':
+          description: Authenticated Money Snap session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Rotate a refresh token and issue a new Money Snap session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Rotated Money Snap session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current device session.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Current session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /account:
+    delete:
+      operationId: deleteAccount
+      summary: Delete the authenticated account after Apple reauthentication.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleCredentialRequest'
+      responses:
+        '204':
+          description: Account, user data, and all sessions deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Bearer authentication or Apple reauthentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Apple token revocation failed; the account was preserved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/apple/events:
+    post:
+      operationId: receiveAppleAccountEvent
+      summary: Receive and verify an Apple server-to-server account event.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleAccountEventRequest'
+      responses:
+        '200':
+          description: Event accepted or already processed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque access token
+  responses:
+    BadRequest:
+      description: Request validation or semantics failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication credentials are missing, invalid, expired, or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    AppleCredentialRequest:
+      type: object
+      required:
+        - identityToken
+        - authorizationCode
+        - nonce
+      properties:
+        identityToken:
+          type: string
+          minLength: 1
+          maxLength: 8192
+        authorizationCode:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        nonce:
+          type: string
+          minLength: 1
+          maxLength: 256
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 512
+    AppleAccountEventRequest:
+      type: object
+      required:
+        - payload
+      properties:
+        payload:
+          type: string
+          minLength: 1
+          maxLength: 8192
+    SessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accessToken
+        - accessExpiresAt
+        - refreshToken
+        - refreshExpiresAt
+      properties:
+        accessToken:
+          type: string
+        accessExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshExpiresAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - correlationId
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code.
+          enum:
+            - INVALID_REQUEST
+            - SESSION_REJECTED
+            - APPLE_REAUTHENTICATION_REJECTED
+            - APPLE_REVOCATION_FAILED
+            - APPLE_EVENT_REJECTED
+            - APPLE_EVENT_UNSUPPORTED
+        correlationId:
+          type: string
+          format: uuid
+          description: Identifier used to correlate the failed request with server logs.

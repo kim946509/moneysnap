@@ -124,7 +124,7 @@ com.ansandy.moneysnap
 ## API 경계
 
 - canonical Interface는 `contracts/openapi/moneysnap-v1.yaml`이 소유한다.
-- path는 `/v1`으로 versioning하고 예상 가능한 오류는 안정된 code와 correlation ID를 반환한다.
+- path는 `/api/v1`으로 versioning하고 예상 가능한 오류는 안정된 code와 correlation ID를 반환한다.
 - iOS는 생성되거나 검증된 typed client를 `SnapJournalClient` 뒤에서 사용한다.
 - 존재하지 않는 자원과 접근할 수 없는 자원은 외부에서 구별되지 않는 `NOT_ACCESSIBLE`로 정규화한다.
 - controller는 인증 actor와 request DTO를 application command로 바꾸는 일만 한다. 공개 정책·소유권은 domain/application Module에서 검사한다.

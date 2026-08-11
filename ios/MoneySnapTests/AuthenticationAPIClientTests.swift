@@ -78,6 +78,31 @@ struct AuthenticationAPIClientTests {
     }
 
     @Test
+    func rejectedBearerDuringAccountDeletionBecomesASessionRejection() async {
+        let client = clientReturning(status: 401)
+
+        await #expect(throws: AuthenticationClientError.sessionRejected) {
+            try await client.deleteAccount(
+                accessToken: "rejected-access",
+                credential: .fixture
+            )
+        }
+    }
+
+    @Test
+    func rejectedAppleReauthenticationHasADistinctError() async {
+        let body = Data(#"{"code":"APPLE_REAUTHENTICATION_REJECTED","correlationId":"error-123"}"#.utf8)
+        let client = clientReturning(status: 401, body: body)
+
+        await #expect(throws: AuthenticationClientError.reauthenticationRejected) {
+            try await client.deleteAccount(
+                accessToken: "valid-access",
+                credential: .fixture
+            )
+        }
+    }
+
+    @Test
     func serverFailureBecomesTemporaryUnavailability() async {
         let client = clientReturning(status: 503)
 
@@ -130,6 +155,14 @@ struct AuthenticationAPIClientTests {
         }
         """.utf8)
     }
+}
+
+private extension AppleSignInCredential {
+    static let fixture = AppleSignInCredential(
+        identityToken: "identity-token",
+        authorizationCode: "authorization-code",
+        nonce: "raw-nonce"
+    )
 }
 
 private final class URLProtocolStub: URLProtocol, @unchecked Sendable {

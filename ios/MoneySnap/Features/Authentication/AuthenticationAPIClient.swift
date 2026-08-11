@@ -118,6 +118,10 @@ actor URLSessionAuthenticationAPI: AuthenticationAPI {
             throw AuthenticationClientError.invalidResponse
         }
         if httpResponse.statusCode == 401 {
+            if let error = try? JSONDecoder().decode(ErrorResponse.self, from: data),
+               error.code == .appleReauthenticationRejected {
+                throw AuthenticationClientError.reauthenticationRejected
+            }
             throw AuthenticationClientError.sessionRejected
         }
         guard httpResponse.statusCode == expectedStatus else {
@@ -128,5 +132,15 @@ actor URLSessionAuthenticationAPI: AuthenticationAPI {
 
     private struct RefreshRequest: Encodable {
         let refreshToken: String
+    }
+
+    private struct ErrorResponse: Decodable {
+        let code: Code
+        let correlationId: String
+
+        enum Code: String, Decodable {
+            case appleReauthenticationRejected = "APPLE_REAUTHENTICATION_REJECTED"
+            case sessionRejected = "SESSION_REJECTED"
+        }
     }
 }

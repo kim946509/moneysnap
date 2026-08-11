@@ -50,7 +50,7 @@ struct MySettingsView: View {
                 .font(.moneySnap(size: 12, weight: .bold))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
                 .frame(width: 64, height: 64)
-                .background(Color(red: 1, green: 211.0 / 255, blue: 220.0 / 255), in: Circle())
+                .background(MoneySnapVisualSystem.profileAvatar, in: Circle())
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("김대연")
@@ -58,22 +58,18 @@ struct MySettingsView: View {
                     .foregroundStyle(MoneySnapVisualSystem.ink)
                 Text("오늘 Snap 3개 · 그룹 3개")
                     .font(.moneySnap(size: 13, weight: .medium))
-                    .foregroundStyle(Color(red: 138.0 / 255, green: 141.0 / 255, blue: 153.0 / 255))
+                    .foregroundStyle(MoneySnapVisualSystem.profileSecondaryText)
                 Text("기본 비공개")
                     .font(.moneySnap(size: 11, weight: .bold))
-                    .foregroundStyle(Color(red: 46.0 / 255, green: 48.0 / 255, blue: 56.0 / 255))
+                    .foregroundStyle(MoneySnapVisualSystem.profileBadgeText)
                     .frame(width: 90, height: 24)
-                    .background(Color(red: 240.0 / 255, green: 241.0 / 255, blue: 244.0 / 255), in: Capsule())
+                    .background(MoneySnapVisualSystem.profileNeutralFill, in: Capsule())
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 19)
         .frame(width: 345, height: 112)
-        .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color(red: 239.0 / 255, green: 239.0 / 255, blue: 242.0 / 255))
-        }
+        .profileSurface(cornerRadius: 22)
         .offset(x: 24, y: 82)
     }
 
@@ -111,18 +107,14 @@ struct MySettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.moneySnap(size: 13, weight: .medium))
-                .foregroundStyle(Color(red: 138.0 / 255, green: 141.0 / 255, blue: 153.0 / 255))
+                .foregroundStyle(MoneySnapVisualSystem.profileSecondaryText)
             Text(value)
                 .font(.moneySnap(size: 28, weight: .black))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
         }
         .padding(.horizontal, 17)
         .frame(width: 165, height: 92, alignment: .leading)
-        .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color(red: 239.0 / 255, green: 239.0 / 255, blue: 242.0 / 255))
-        }
+        .profileSurface(cornerRadius: 18)
     }
 
     private func settingsRow(title: String, subtitle: String) -> some View {
@@ -133,19 +125,25 @@ struct MySettingsView: View {
                     .foregroundStyle(MoneySnapVisualSystem.ink)
                 Text(subtitle)
                     .font(.moneySnap(size: 12, weight: .medium))
-                    .foregroundStyle(Color(red: 138.0 / 255, green: 141.0 / 255, blue: 153.0 / 255))
+                    .foregroundStyle(MoneySnapVisualSystem.profileSecondaryText)
             }
             Spacer()
             Text("열기")
                 .font(.moneySnap(size: 13, weight: .bold))
-                .foregroundStyle(Color(red: 138.0 / 255, green: 141.0 / 255, blue: 153.0 / 255))
+                .foregroundStyle(MoneySnapVisualSystem.profileSecondaryText)
         }
         .padding(.horizontal, 17)
         .frame(width: 345, height: 64)
-        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color(red: 239.0 / 255, green: 239.0 / 255, blue: 242.0 / 255))
-        }
+        .profileSurface(cornerRadius: 16)
+    }
+}
+
+private extension View {
+    func profileSurface(cornerRadius: CGFloat) -> some View {
+        background(.white, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(MoneySnapVisualSystem.profileBorder)
+            }
     }
 }

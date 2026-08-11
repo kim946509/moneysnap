@@ -178,7 +178,7 @@ struct AuthenticationModelTests {
     }
 
     @Test
-    func refreshKeepsTheRotatedSessionInMemoryWhenKeychainSaveFails() async throws {
+    func refreshDoesNotAuthenticateWhenKeychainSaveFails() async {
         let rotated = session(access: "rotated-access", refresh: "rotated-refresh")
         let stored = session(accessExpiresIn: -1)
         let model = authenticatedModel(
@@ -187,9 +187,11 @@ struct AuthenticationModelTests {
             session: stored
         )
 
-        _ = try await model.accessTokenForRequest()
+        await #expect(throws: AuthenticationClientError.localSessionPersistenceFailed) {
+            _ = try await model.accessTokenForRequest()
+        }
 
-        #expect(model.phase == .authenticated(rotated))
+        #expect(model.phase == .restoreFailed)
     }
 
     @Test
@@ -202,7 +204,9 @@ struct AuthenticationModelTests {
             session: stored
         )
 
-        _ = try await model.accessTokenForRequest()
+        await #expect(throws: AuthenticationClientError.localSessionPersistenceFailed) {
+            _ = try await model.accessTokenForRequest()
+        }
 
         #expect(try await store.load() == nil)
     }
@@ -271,6 +275,20 @@ struct AuthenticationModelTests {
     }
 
     @Test
+    func appleSignInDoesNotAuthenticateWhenKeychainSaveFails() async {
+        let model = AuthenticationModel(
+            api: StubAuthenticationAPI(signInSession: session(access: "unpersisted-access")),
+            store: MemorySessionStore(failsToSave: true),
+            initialPhase: .signedOut,
+            now: { now }
+        )
+
+        await model.signIn(with: .fixture)
+
+        #expect(model.phase == .signedOut)
+    }
+
+    @Test
     func concurrentAppleSignInRunsOneAuthorizationExchange() async {
         let api = StubAuthenticationAPI(signInDelayNanoseconds: 50_000_000)
         let model = AuthenticationModel(
@@ -324,6 +342,35 @@ struct AuthenticationModelTests {
         await model.logout()
 
         #expect(model.phase == .authenticated(stored) && model.issue == .logoutFailed)
+    }
+
+    @Test
+    func rejectedLogoutSessionReturnsToSignIn() async {
+        let stored = session()
+        let model = authenticatedModel(
+            api: StubAuthenticationAPI(logoutError: .sessionRejected),
+            store: MemorySessionStore(session: stored),
+            session: stored
+        )
+
+        await model.logout()
+
+        #expect(model.phase == .signedOut)
+    }
+
+    @Test
+    func rejectedLogoutSessionClearsTheKeychain() async throws {
+        let stored = session()
+        let store = MemorySessionStore(session: stored)
+        let model = authenticatedModel(
+            api: StubAuthenticationAPI(logoutError: .sessionRejected),
+            store: store,
+            session: stored
+        )
+
+        await model.logout()
+
+        #expect(try await store.load() == nil)
     }
 
     @Test
@@ -466,6 +513,35 @@ struct AuthenticationModelTests {
         await model.deleteAccount(with: .fixture)
 
         #expect(model.phase == .authenticated(stored) && model.issue == .accountDeletionFailed)
+    }
+
+    @Test
+    func rejectedAppleReauthenticationKeepsTheAuthenticatedSession() async {
+        let stored = session()
+        let model = authenticatedModel(
+            api: StubAuthenticationAPI(deleteError: .reauthenticationRejected),
+            store: MemorySessionStore(session: stored),
+            session: stored
+        )
+
+        await model.deleteAccount(with: .fixture)
+
+        #expect(model.phase == .authenticated(stored))
+        #expect(model.issue == .accountReauthenticationFailed)
+    }
+
+    @Test
+    func rejectedBearerDuringAccountDeletionSignsOut() async {
+        let stored = session()
+        let model = authenticatedModel(
+            api: StubAuthenticationAPI(deleteError: .sessionRejected),
+            store: MemorySessionStore(session: stored),
+            session: stored
+        )
+
+        await model.deleteAccount(with: .fixture)
+
+        #expect(model.phase == .signedOut)
     }
 
     @Test

@@ -15,13 +15,30 @@ struct MoneySnapApp: App {
         let scenario: String? = nil
         #endif
         _selectedTab = State(initialValue: scenario == "my" ? .profile : .home)
-        _authentication = State(initialValue: AuthenticationModel(
+        #if DEBUG
+        let model = if scenario == nil {
+            AuthenticationModel(
+                api: URLSessionAuthenticationAPI(
+                    baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!
+                ),
+                store: KeychainSessionStore()
+            )
+        } else {
+            AuthenticationModel(
+                api: VisualAuthenticationAPI(),
+                store: VisualSessionStore(session: .visualFixture),
+                initialPhase: .authenticated(.visualFixture)
+            )
+        }
+        #else
+        let model = AuthenticationModel(
             api: URLSessionAuthenticationAPI(
                 baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!
             ),
-            store: KeychainSessionStore(),
-            initialPhase: scenario == nil ? .restoring : .authenticated(.visualFixture)
-        ))
+            store: KeychainSessionStore()
+        )
+        #endif
+        _authentication = State(initialValue: model)
     }
 
     var body: some Scene {
@@ -33,6 +50,27 @@ struct MoneySnapApp: App {
         }
     }
 }
+
+#if DEBUG
+private actor VisualAuthenticationAPI: AuthenticationAPI {
+    func signIn(with credential: AppleSignInCredential) -> AuthenticationSession { .visualFixture }
+    func refresh(_ refreshToken: String) -> AuthenticationSession { .visualFixture }
+    func logout(accessToken: String) {}
+    func deleteAccount(accessToken: String, credential: AppleSignInCredential) {}
+}
+
+private actor VisualSessionStore: SessionStore {
+    private var session: AuthenticationSession?
+
+    init(session: AuthenticationSession?) {
+        self.session = session
+    }
+
+    func load() -> AuthenticationSession? { session }
+    func save(_ session: AuthenticationSession) { self.session = session }
+    func clear() { session = nil }
+}
+#endif
 
 private extension AuthenticationSession {
     static let visualFixture = AuthenticationSession(

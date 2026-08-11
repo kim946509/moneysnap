@@ -32,15 +32,15 @@ iOS 사용자가 Sign in with Apple 단독으로 로그인하고 Keychain sessio
 
 ## Acceptance criteria
 
-- [ ] 저장된 session이 없으면 Sign in with Apple 단일 액션만 있는 로그인 화면을 표시한다.
-- [ ] 유효한 Keychain access session은 로그인 화면을 노출하지 않고 Home으로 복구한다.
-- [ ] access가 만료되고 refresh가 유효하면 token을 회전·저장한 뒤 Home으로 복구한다.
-- [ ] refresh 401은 Keychain을 지우고 로그인으로 전환하며, network 실패는 credential을 보존한 재시도 화면을 표시한다.
-- [ ] Sign in with Apple credential은 nonce와 함께 서버로 전송되고 성공 session만 Keychain에 저장한다.
-- [ ] 로그아웃 성공 또는 이미 무효인 session은 현재 Keychain session을 지우며 일시적 실패는 로그인 완료로 가장하지 않는다.
-- [ ] 계정 탈퇴는 삭제 범위 안내·Apple 재인증 뒤 실행하며 성공 때만 Keychain을 지운다.
+- [x] 저장된 session이 없으면 Sign in with Apple 단일 액션만 있는 로그인 화면을 표시한다.
+- [x] 유효한 Keychain access session은 로그인 화면을 노출하지 않고 Home으로 복구한다.
+- [x] access가 만료되고 refresh가 유효하면 token을 회전·저장한 뒤 Home으로 복구한다.
+- [x] refresh 401은 Keychain을 지우고 로그인으로 전환하며, network 실패는 credential을 보존한 재시도 화면을 표시한다.
+- [x] Sign in with Apple credential은 nonce와 함께 서버로 전송되고 성공 session만 Keychain에 저장한다.
+- [x] 로그아웃 성공 또는 이미 무효인 session은 현재 Keychain session을 지우며 일시적 실패는 로그인 완료로 가장하지 않는다.
+- [x] 계정 탈퇴는 삭제 범위 안내·Apple 재인증 뒤 실행하며 성공 때만 Keychain을 지운다.
 - [ ] My 화면은 Figma `77:798`의 393x852 레이아웃과 기존 visual threshold를 통과하고 계정 설정이 접근 가능하다.
-- [ ] private key, Apple authorization code·identity token, raw session token을 로그·소스·UserDefaults에 남기지 않는다.
+- [x] private key, Apple authorization code·identity token, raw session token을 로그·소스·UserDefaults에 남기지 않는다.
 
 ## Test seam
 
@@ -63,21 +63,29 @@ git diff --check
 
 - 실행 명령:
   - `cd server; .\gradlew.bat test --tests "*AppleIdentityTokenVerifierTests" --no-daemon --console=plain` (nonce verifier 구현 전·후)
+  - `cd server; .\gradlew.bat test --tests "com.ansandy.moneysnap.identity.AuthenticationHttpIntegrationTests" --tests "com.ansandy.moneysnap.identity.AccountDeletionHttpIntegrationTests" --tests "com.ansandy.moneysnap.identity.AppleAccountEventHttpIntegrationTests" --no-daemon --console=plain` (오류 계약 구현 전·후)
+  - `cd server; .\gradlew.bat test --tests "com.ansandy.moneysnap.identity.AppleIdentityTokenVerifierTests" --tests "com.ansandy.moneysnap.identity.AppleAuthorizationPersistenceIntegrationTests" --no-daemon --console=plain`
+  - `cd server; .\gradlew.bat test --tests "com.ansandy.moneysnap.identity.ApiErrorResponseTests" --no-daemon --console=plain` (correlation ID log 구현 전·후)
   - `cd server; .\gradlew.bat test --no-daemon --console=plain`
   - `cd server; .\gradlew.bat bootJar --no-daemon --console=plain`
   - `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
   - `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
+  - `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
+  - OpenAPI YAML parse (`openapi=3.1.0`, paths 5, schemas 5)
   - `git diff --check`
 - 결과:
   - claim hash를 raw nonce로 재전송하는 테스트가 구현 전 2건 실패했고 raw nonce SHA-256 검증 구현 후 verifier 7건 통과
-  - 서버 전체 88 tests 통과
+  - 안정된 오류 `code`와 `correlationId` 구현 전 인증 HTTP 통합테스트 7건 실패, 구현 후 대상 21건 통과
+  - production hasher와 독립된 nonce fixture 검증 9건 통과
+  - correlation ID가 응답과 안전한 서버 로그에 동일하게 연결되는 단위테스트가 구현 전 실패, 구현 후 통과
+  - 서버 전체 90 tests, 실패·오류·skip 0 통과
   - server production `bootJar` 생성 통과
-  - iOS project·Home/My visual baseline 정적 계약 통과
+  - iOS project·Home/My visual baseline·CI/CD 정적 계약과 OpenAPI YAML parse 통과
   - whitespace 오류 없음
   - macOS native test와 Home/My screenshot diff는 remote CI 대기
 - 리뷰:
   - spec/standards 1차 리뷰의 실행 중 refresh, remote deletion/local cleanup, fractional `Instant`, 탈퇴 확인 순서, nonce replay, actor reentrancy, URLProtocol race, release visual seam finding을 TDD로 수정
-  - 최종 재리뷰 대기
+  - 최종 spec 재리뷰에서 비시각 AC·scope·wire contract 위반 없음; standards 재리뷰의 OpenAPI unknown-field 불일치와 추적 불가능한 correlation ID를 실제 decoding 계약과 안전한 server log로 해소
 
 ## Agent rules impact
 
@@ -88,10 +96,10 @@ git diff --check
 ## Code Review Graph
 
 - 코드 변경 여부: yes
-- graph action: `e504df7` 기준 incremental update 완료 (24 files, 165 nodes, 1,102 edges updated)
-- base: `e504df7`
+- graph action: `9eba7e0` 기준 staged incremental update 완료 (24 files, 신규 9 nodes·36 edges 반영)
+- base: `9eba7e0`
 - risk: high 예상 (credential persistence, authentication state gate, destructive account deletion)
-- findings와 처리 결과: risk medium `0.60`; 도구의 Swift test linkage 미지원으로 view/model을 일반 test gap으로 보고했으며, 보안·상태 전이는 model/API/Keychain/nonce 테스트와 server verifier 테스트로 보강했다. 최종 수정 후 재증분 update 예정.
+- findings와 처리 결과: risk medium `0.60`; 도구가 visual 전용 in-memory adapter와 Swift test linkage를 일반 test gap으로 보고했으며, 해당 경로는 model/API/Keychain/nonce 테스트와 remote Home/My visual CI로 검증한다. nonce fixture tautology와 API 오류 계약 finding은 독립 fixture, canonical OpenAPI, controller/security contract test로 해소했다.
 
 ## Decisions and risks
 

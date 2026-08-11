@@ -47,6 +47,8 @@ class AppleAuthorizationPersistenceIntegrationTests {
 
 	private static final Instant NOW = Instant.parse("2026-08-10T12:00:00Z");
 	private static final String CLIENT_ID = "com.ansandy.moneysnap";
+	private static final String RAW_NONCE = "request-nonce";
+	private static final String NONCE_CLAIM = "727e77cae7f89d57cb097b3ddcf620b00abc397d1984003bf453f08324342110";
 	private static final URI TOKEN_URI = URI.create("https://appleid.apple.com/auth/token");
 
 	@Container
@@ -89,14 +91,13 @@ class AppleAuthorizationPersistenceIntegrationTests {
 
 	@Test
 	void storesOnlyCiphertextAfterARealAppleAuthorizationFlow() throws Exception {
-		String nonce = "request-nonce";
 		String rawRefreshToken = "raw-apple-refresh-token";
-		expectAppleExchange("apple-subject", nonce, rawRefreshToken);
+		expectAppleExchange("apple-subject", rawRefreshToken);
 
 		VerifiedAppleAuthorization authorization = adapter().authorize(new AppleAuthorizationRequest(
-				signedIdentityToken("apple-subject", nonce),
+				signedIdentityToken("apple-subject"),
 				"single-use-code",
-				nonce));
+				RAW_NONCE));
 		sessions.signIn(authorization.identity(), authorization.encryptedRefreshToken());
 
 		String stored = jdbc.sql("SELECT encrypted_apple_refresh_token FROM apple_identities")
@@ -109,13 +110,12 @@ class AppleAuthorizationPersistenceIntegrationTests {
 
 	@Test
 	void rejectsDifferentSubjectsAcrossTheAppleExchange() throws Exception {
-		String nonce = "request-nonce";
-		expectAppleExchange("different-subject", nonce, "raw-apple-refresh-token");
+		expectAppleExchange("different-subject", "raw-apple-refresh-token");
 
 		assertThatThrownBy(() -> adapter().authorize(new AppleAuthorizationRequest(
-				signedIdentityToken("client-subject", nonce),
+				signedIdentityToken("client-subject"),
 				"single-use-code",
-				nonce)))
+				RAW_NONCE)))
 				.isInstanceOf(IdentitySessionException.class)
 				.extracting(error -> ((IdentitySessionException) error).failure())
 				.isEqualTo(IdentitySessionFailure.UNAUTHORIZED);
@@ -133,18 +133,18 @@ class AppleAuthorizationPersistenceIntegrationTests {
 				cipher);
 	}
 
-	private void expectAppleExchange(String subject, String nonce, String refreshToken) throws Exception {
+	private void expectAppleExchange(String subject, String refreshToken) throws Exception {
 		appleEndpoint.expect(once(), requestTo(TOKEN_URI))
 				.andRespond(withSuccess("""
 						{
 						  "id_token": "%s",
 						  "refresh_token": "%s"
 						}
-						""".formatted(signedIdentityToken(subject, nonce), refreshToken),
+						""".formatted(signedIdentityToken(subject), refreshToken),
 						MediaType.APPLICATION_JSON));
 	}
 
-	private static String signedIdentityToken(String subject, String nonce) throws Exception {
+	private static String signedIdentityToken(String subject) throws Exception {
 		SignedJWT token = new SignedJWT(
 				new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("apple-test-key").build(),
 				new JWTClaimsSet.Builder()
@@ -153,7 +153,7 @@ class AppleAuthorizationPersistenceIntegrationTests {
 						.subject(subject)
 						.issueTime(Date.from(NOW.minusSeconds(10)))
 						.expirationTime(Date.from(Instant.parse("2099-01-01T00:00:00Z")))
-						.claim("nonce", new Sha256TokenHasher().hash(nonce))
+						.claim("nonce", NONCE_CLAIM)
 						.build());
 		token.sign(new RSASSASigner((RSAPrivateKey) keyPair.getPrivate()));
 		return token.serialize();

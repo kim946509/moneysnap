@@ -138,9 +138,9 @@ final class AuthenticationModel {
             )
             await completeLocalSignOut()
         } catch AuthenticationClientError.sessionRejected {
-            if phase != .signedOut {
-                issue = .accountDeletionFailed
-            }
+            await completeLocalSignOut()
+        } catch AuthenticationClientError.reauthenticationRejected {
+            issue = .accountReauthenticationFailed
         } catch {
             issue = .accountDeletionFailed
         }
@@ -151,7 +151,7 @@ final class AuthenticationModel {
     }
 
     func reportAccountDeletionAuthorizationFailure() {
-        issue = .accountDeletionFailed
+        issue = .accountReauthenticationFailed
     }
 
     func clearIssue() {
@@ -173,13 +173,15 @@ final class AuthenticationModel {
         }
         let task = Task {
             let refreshed = try await api.refresh(session.refreshToken)
-            phase = .authenticated(refreshed)
             do {
                 try await store.save(refreshed)
             } catch {
                 try? await store.clear()
+                phase = .restoreFailed
                 issue = .localSessionPersistenceFailed
+                throw AuthenticationClientError.localSessionPersistenceFailed
             }
+            phase = .authenticated(refreshed)
             return refreshed
         }
         refreshTask = task

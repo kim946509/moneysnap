@@ -32,11 +32,14 @@ class AppleAccountEventController {
 	}
 
 	@ExceptionHandler(AppleAccountEventException.class)
-	ResponseEntity<Void> invalidEvent(AppleAccountEventException exception) {
+	ResponseEntity<ApiErrorResponse> invalidEvent(AppleAccountEventException exception) {
 		HttpStatus status = exception.failure() == AppleAccountEventFailure.UNSUPPORTED_TYPE
 				? HttpStatus.BAD_REQUEST
 				: HttpStatus.UNAUTHORIZED;
-		return ResponseEntity.status(status).build();
+		ApiErrorCode code = exception.failure() == AppleAccountEventFailure.UNSUPPORTED_TYPE
+				? ApiErrorCode.APPLE_EVENT_UNSUPPORTED
+				: ApiErrorCode.APPLE_EVENT_REJECTED;
+		return ResponseEntity.status(status).body(ApiErrorResponse.of(code));
 	}
 
 	private record AppleAccountEventRequest(

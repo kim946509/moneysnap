@@ -50,7 +50,8 @@ class AuthenticationController {
 
 	@ExceptionHandler(IdentitySessionException.class)
 	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	void unauthorized() {
+	ApiErrorResponse unauthorized() {
+		return ApiErrorResponse.of(ApiErrorCode.SESSION_REJECTED);
 	}
 
 	private record RefreshRequest(@NotBlank @Size(max = 512) String refreshToken) {

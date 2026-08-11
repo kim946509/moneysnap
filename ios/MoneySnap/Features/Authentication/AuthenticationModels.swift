@@ -24,12 +24,15 @@ enum AuthenticationIssue: Equatable, Sendable {
     case signInFailed
     case logoutFailed
     case accountDeletionFailed
+    case accountReauthenticationFailed
     case localSessionCleanupFailed
     case localSessionPersistenceFailed
 }
 
 enum AuthenticationClientError: Error, Equatable, Sendable {
     case sessionRejected
+    case reauthenticationRejected
+    case localSessionPersistenceFailed
     case temporarilyUnavailable
     case invalidResponse
 }

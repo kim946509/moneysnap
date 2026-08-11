@@ -99,7 +99,9 @@ class AuthenticationHttpIntegrationTests {
 				.andExpect(status().isOk());
 
 		mockMvc.perform(refreshRequest(signedIn.refreshToken()))
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("SESSION_REJECTED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	@Test
@@ -110,7 +112,9 @@ class AuthenticationHttpIntegrationTests {
 
 		mockMvc.perform(post("/api/v1/auth/logout")
 					.header("Authorization", "Bearer " + signedIn.accessToken()))
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("SESSION_REJECTED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	@Test
@@ -162,7 +166,9 @@ class AuthenticationHttpIntegrationTests {
 				.willThrow(new IdentitySessionException(IdentitySessionFailure.UNAUTHORIZED));
 
 		mockMvc.perform(appleSignInRequest())
-				.andExpect(status().isUnauthorized());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("SESSION_REJECTED"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	@Test
@@ -184,7 +190,9 @@ class AuthenticationHttpIntegrationTests {
 		mockMvc.perform(post("/api/v1/auth/apple")
 					.contentType("application/json")
 					.content("{}"))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+				.andExpect(jsonPath("$.correlationId").isNotEmpty());
 	}
 
 	private org.springframework.test.web.servlet.ResultActions signIn() throws Exception {
