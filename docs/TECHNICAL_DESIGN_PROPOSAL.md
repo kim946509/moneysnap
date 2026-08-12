@@ -2,7 +2,7 @@
 
 > 상태: revised baseline
 >
-> 기준일: 2026-08-09
+> 기준일: 2026-08-13
 >
 > 사용자 확정: iOS 전용, Spring Boot backend, Cloudflare 사용, Figma 고정밀 구현, 소규모 단계 무료 우선
 
@@ -13,7 +13,7 @@
 - iOS: SwiftUI native, Swift Concurrency, Observation, PhotosUI, URLSession, SpriteKit
 - API: Java 21 LTS, Spring Boot 4.1 계열, Gradle, REST/JSON, OpenAPI 3.1
 - 데이터: Neon PostgreSQL 18 dev/prod 분리, Flyway, Spring Data JPA
-- 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned PUT/GET
+- 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, exact-bound presigned PUT 또는 bounded backend upload fallback, short-lived presigned GET
 - 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
 - iOS CI: Apple Developer Program에 포함된 Xcode Cloud 월 25시간, 단 최초 workflow와 화면 조정에는 Mac/Xcode 필요
 - 디자인 검증: Figma frame node별 393x852 reference와 SwiftUI snapshot overlay/diff
@@ -71,17 +71,19 @@ Neon Free 한도는 project당 storage 0.5GB, 월 100 CU-hour와 5GB public netw
 
 ### R2 사진 보관
 
-R2 bucket은 private로 유지한다. iOS가 Spring Boot에 upload intent를 보내면 서버가 인증·quota·MIME·size를 검사하고 단일 object에 대한 짧은 presigned PUT을 발급한다. 업로드 후 서버가 metadata를 확인한 뒤에만 Snap에 연결할 `ImageRef`를 활성화한다.
+R2 bucket은 private로 유지한다. iOS는 방향 보정·EXIF 제거 JPEG를 최대 변 `1600px`, `2,097,152 bytes` 이하로 만들고, Spring Boot에 exact byte size, `image/jpeg`와 SHA-256을 보낸다. 서버는 최근 24시간 completed+nonexpired pending 20건과 active+pending `7,000,000,000 bytes`를 transaction으로 예약한 뒤 10분 upload intent를 발급한다.
 
-사진 byte는 Spring Boot와 Tunnel을 통과하지 않는다. iOS에서 최대 변 축소, 압축과 위치 EXIF 제거를 먼저 수행한다. DB에는 permanent URL이 아니라 opaque image ID와 object key만 저장한다. download도 현재 owner/membership을 확인한 뒤 짧은 signed GET을 발급한다.
+direct PUT은 exact length·type·checksum을 실제 R2 contract test에서 강제할 수 있을 때만 사용한다. 강제할 수 없으면 unrestricted grant를 노출하지 않고 Spring Boot가 `2,097,153 bytes`에서 중단하는 bounded stream으로 전달한다. complete도 object metadata만 믿지 않고 bounded read로 signature·dimension·size·checksum·EXIF 제거를 검증한 뒤에만 `ImageRef`를 활성화한다.
+
+DB에는 permanent URL이 아니라 opaque image ID와 object key만 저장한다. download도 현재 owner/membership을 확인한 뒤 짧은 signed GET을 발급한다. expired·failed reservation과 invalid·orphan object는 cleanup job으로 회수한다.
 
 R2 Standard 무료 범위는 2026-08-08 resource 생성 시 월 10GB, Class A 100만, Class B 1,000만, 인터넷 egress 무료로 다시 확인했다. APAC에 private Standard bucket `moneysnap-media-dev`, `moneysnap-media-prod`를 만들었고 원격 PUT/GET/DELETE 검증을 통과했다.
 
 ### Cloudflare free guardrail
 
 - R2 Standard 외의 Images transform, Data Catalog, R2 SQL, Queue, Workers AI는 꺼 둔다.
-- 최대 이미지 크기와 사용자별 일일 upload 수를 server grant에서 강제한다.
-- 활성 media 추적량 6GB에 경고, 7GB에 신규 upload kill switch를 적용하고 읽기·삭제는 유지한다.
+- 사진 최대 변 `1600px`, `2,097,152 bytes`와 최근 24시간 completed+nonexpired pending 20건을 server grant에서 강제한다. 삭제는 이 24시간 quota를 환급하지 않는다.
+- active bytes와 nonexpired pending reserved bytes를 합산해 6GB에 경고하고 신규 예약 포함 `7,000,000,000 bytes`를 넘기지 않는다. 경계 도달 시 신규 사진 grant만 차단하고 읽기·삭제·사진 없는 Snap은 유지한다.
 - 월 operation 사용량을 dashboard와 내부 counter로 대조한다.
 - Cloudflare budget alert는 $1 이상 낮은 값으로 두되 hard cap이 아니고 최대 하루 늦게 도착할 수 있음을 운영 문서에 표시한다.
 - 승인된 R2 dev/prod bucket 외의 과금 가능 resource 생성, DNS/Tunnel 변경, secret 등록과 Containers 전환은 실행 전에 승인 경계를 다시 확인한다.
@@ -123,24 +125,25 @@ Apple Developer 계정 결제가 되어 있으므로 Xcode Cloud 월 25시간은
 
 ### Phase 1 — 개인 Snap vertical slice
 
-1. `SnapJournal.record` 실패 테스트와 PostgreSQL migration
+1. 사진 없는 category+amount `SnapJournal.record` 실패 테스트와 PostgreSQL migration
 2. Figma 홈 `9:2` static fixture snapshot
-3. 금액 입력 `153:4156`, 사진 선택·압축, R2 in-memory Adapter
+3. 금액 입력 `153:4156`과 no-photo 단계형 입력
 4. record 성공 후 오늘 캔버스 반영
 5. SpriteKit physics와 reduce-motion
 
 ### Phase 2 — 실제 media와 수정·삭제
 
-1. private R2 upload grant와 complete 검증
-2. Snap 상세 `77:582`의 가격·카테고리 수정과 삭제
-3. orphan/delete cleanup와 복구 테스트
-4. R2 quota·kill switch 검증
+1. camera 1장·PhotosUI 최대 3장, 사진별 순차 Snap과 private R2 upload grant
+2. JPEG 정규화, exact PUT 또는 bounded fallback과 complete content 검증
+3. Snap 상세 `77:582`의 가격·카테고리 수정과 삭제
+4. orphan/delete cleanup와 복구 테스트
+5. 24시간 quota·7GB guardrail 검증
 
 ### Phase 3 — group 공유
 
-1. 그룹 생성·초대·공개 설정 정책을 제품 문서에서 먼저 확정
-2. 저장 후 별도 share command와 membership authorization
-3. visible/hidden DTO 보안 회귀 테스트
+1. owner/member 최대 20명, immutable amount visibility와 168시간 단일 active 초대
+2. Home에서 개인 Snap 한 건을 group 한 곳에 보내는 별도 share command와 membership authorization
+3. visible/hidden DTO와 no-photo placeholder·최신 `sharedAt` 대표 Snap 보안 회귀 테스트
 4. 그룹 목록 `75:86`, 상세 `77:163` snapshot/XCUITest
 
 ### Phase 4 — 폐쇄형 무료 TestFlight
@@ -165,9 +168,6 @@ Apple Developer 계정 결제가 되어 있으므로 Xcode Cloud 월 25시간은
 ## 다음 구현 전 결정 게이트
 
 - interactive Mac을 로컬/원격 중 어떤 방식으로 확보할지
-- Sign in with Apple 단일 인증과 tester allowlist 정책
-- 사진 최대 변, 최대 byte, 일일 Snap quota
-- snapshot과 XCUITest에 사용할 고정 Simulator 기종·iOS 17.x patch baseline
-- 기존 `ansandy.co.kr` zone에서 사용할 API hostname과 dev/prod DNS route
+- public App Store 전환 시 현재 self-hosted origin을 Cloudflare Containers 또는 다른 managed JVM origin으로 옮길지
 
-이 항목은 architecture의 방향을 바꾸지 않지만 macOS native 검증 또는 해당 feature를 `ready`로 전환하기 전에 확정해야 한다.
+기록·사진·그룹 정책, Simulator baseline과 development API hostname은 이미 확정됐다. 위 항목은 interactive pixel tuning 또는 public readiness gate 전에만 다시 결정한다.

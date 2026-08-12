@@ -13,7 +13,7 @@
 - CRITICAL: 외부 시스템 변경, 배포, 삭제, 비용 발생 작업은 실행 전에 승인 경계를 확인할 것
 
 ## 현재 프로젝트 단계
-- 현재 단계는 **public repository remote CI와 iOS visual baseline 활성화, development CD·Apple activation 전**이다.
+- 현재 단계는 **iOS 인증 기반과 MVP 세부 정책 완료, Stage 3 개인 Snap 구현 하네스 준비 중**이다. development CD와 실제 Apple activation은 아직 수행하지 않는다.
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
 - SwiftUI + Spring Boot + PostgreSQL + Cloudflare DNS/R2 + Ubuntu Docker/Nginx Proxy Manager 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
 - `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native test·393x852 visual artifact 생성을 통과했다.
@@ -23,8 +23,8 @@
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - development Spring Boot는 개발자 소유 Ubuntu Docker에서 `moneysnap-server`로 실행되며 private host `192.168.1.102:9090`, external network `main`, container management `9091` 계약을 사용한다. `moneysnap-server.ansandy.co.kr`은 Cloudflare DNS와 기존 Nginx Proxy Manager를 거쳐 `/` 200, public actuator 403을 반환한다.
 - 기존 Prometheus는 host publish `127.0.0.1:9092`와 container `9090`을 사용하며 `moneysnap-server:9091` target을 `up=1`로 수집한다. Grafana `monitor.ansandy.co.kr/api/health`는 200이다.
-- 서버의 Sign in with Apple credential 검증·code 교환·AES-GCM refresh token 저장, 15분 access·180일 rotating refresh session, bearer 인증·현재 session 로그아웃, 재인증 계정 탈퇴, Apple server-to-server event 검증·중복 방지·session 폐기·계정 삭제가 완료됐다. 다음 인증 작업은 iOS AuthenticationServices·Keychain 연결이다. 실제 Apple 연동에는 explicit App ID와 key activation이 필요하다.
-- 그룹 생성·초대, 그룹 공개 설정 변경, 저장 후 공유 진입처럼 미결정인 제품 정책은 관련 기능의 작업 항목을 `ready`로 바꾸기 전에 확정한다.
+- 서버의 Sign in with Apple 전체 경계와 iOS AuthenticationServices·Keychain 지속 session, 로그아웃·재인증 탈퇴 UI가 완료됐다. GitHub-hosted Xcode 16.4 Simulator에서 native 59 tests와 Home/My 393x852 visual evidence가 통과했다. 실제 Apple credential 연동은 explicit App ID와 key activation이 필요하다.
+- `WORK-019`에서 금액·`localDay`, private 사진 quota, 그룹·초대·불변 공개 설정, 저장 후 단일-group 공유와 profile fallback 정책을 2026-08-13 승인 기준으로 확정했다. Stage 3·6·7·8은 해당 runtime AC를 각 기능 테스트로 검증한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 
 ## 제품 기준 문서
@@ -66,7 +66,14 @@
 - 로그아웃은 현재 device session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session·사용자 데이터를 삭제하고 Apple token을 revoke한다.
 - 점심·저녁 리마인더를 포함한 로컬 알림과 APNs 원격 알림은 MVP에서 제외한다.
 - Snap은 항상 개인 기록으로 먼저 저장하며 group 공유를 같은 command에 넣지 않는다.
+- Snap 금액은 `1...999,999,999 KRW` 정수다. `localDay`는 server `Clock`과 제출된 tzdb region `ZoneId` 또는 `UTC`로 current day·직전 day만 허용하고 저장 후 바꾸지 않으며 numeric offset·short alias는 거부한다.
+- Stage 3은 사진 없는 category+amount 개인 Snap을 먼저 완성하고 Stage 6에서 camera·PhotosUI·private R2를 연결한다. Snap당 active image는 최대 1개이며 JPEG 최대 변 `1600px`, `2,097,152 bytes`, EXIF 제거를 요구한다.
+- 사진 grant는 최근 24시간 completed+nonexpired pending 20건과 active+pending `7,000,000,000 bytes` storage guardrail을 원자적으로 적용한다. direct PUT이 exact length·type·checksum을 강제하지 못하면 unrestricted grant 대신 backend bounded stream을 사용한다.
+- 그룹은 owner 한 명과 member, owner 포함 최대 20명이고 이름은 trim 후 1~30 grapheme cluster다. amount visibility는 생성 시 고정하며 초대는 최소 128-bit entropy·hash-only·168시간·group당 active 하나다.
+- 그룹 삭제·member 탈퇴·제거는 share 관계만 삭제하고 개인 Snap을 보존한다. owner 계정 탈퇴는 owned group/share를 삭제한 뒤 account cascade가 owner 개인 데이터를 삭제한다.
+- 공유는 durable 개인 Snap의 Home action에서 한 Snap→한 group으로만 실행한다. skip·취소·실패는 개인 save를 rollback하지 않고, 사진 없는 공유·대표 Snap은 category별 고정 placeholder와 최신 `sharedAt`을 사용한다.
 - 금액 비공개 group response에는 금액과 금액 기반 크기·정렬 필드를 포함하지 않는다. client-side hide로 구현하지 않는다.
+- Apple 이름이 첫 로그인에서 유효하게 제공되면 display name으로 저장하고, 없으면 `MoneySnap 사용자`를 사용한다. 이름 편집과 profile 사진은 MVP에서 제외하며 기본 avatar는 첫 grapheme 또는 MoneySnap mark다.
 - 사진 bucket은 private다. iOS에 R2 credential이나 permanent object URL을 넣지 않고 backend 권한 검사 후 짧은 PUT/GET grant만 사용한다.
 - 기존 Cloudflare account-wide R2 token을 재사용하지 않는다. Spring Boot media Adapter를 만들 때 dev/prod bucket별 최소 권한 credential을 생성해 저장소 밖 secret으로 주입한다.
 - Figma frame node와 393x852 screenshot을 화면 구현의 source of truth로 사용하며 macOS snapshot diff 없이 UI 작업을 완료 처리하지 않는다.
