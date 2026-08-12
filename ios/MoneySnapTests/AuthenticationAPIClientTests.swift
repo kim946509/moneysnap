@@ -15,7 +15,7 @@ struct AuthenticationAPIClientTests {
         ))
 
         let request = try #require(URLProtocolStub.recordedRequest())
-        let body = try #require(request.httpBody)
+        let body = try #require(URLProtocolStub.recordedBody())
         let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
         #expect(request.httpMethod == "POST")
         #expect(request.url?.path == "/api/v1/auth/apple")
@@ -32,7 +32,7 @@ struct AuthenticationAPIClientTests {
 
         _ = try await client.refresh("refresh-token")
 
-        let body = try #require(URLProtocolStub.recordedRequest()?.httpBody)
+        let body = try #require(URLProtocolStub.recordedBody())
         let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
         #expect(json == ["refreshToken": "refresh-token"])
     }
@@ -63,9 +63,16 @@ struct AuthenticationAPIClientTests {
         )
 
         let request = try #require(URLProtocolStub.recordedRequest())
+        let body = try #require(URLProtocolStub.recordedBody())
+        let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
         #expect(request.httpMethod == "DELETE")
         #expect(request.url?.path == "/api/v1/account")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer access-token")
+        #expect(json == [
+            "identityToken": "identity-token",
+            "authorizationCode": "authorization-code",
+            "nonce": "raw-nonce"
+        ])
     }
 
     @Test
@@ -176,12 +183,16 @@ private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
         state.recordedRequest()
     }
 
+    static func recordedBody() -> Data? {
+        state.recordedBody()
+    }
+
     override class func canInit(with request: URLRequest) -> Bool { true }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        Self.state.record(request)
+        Self.state.record(request, body: Self.readBody(from: request))
         let stub = Self.state.response()
         let response = HTTPURLResponse(
             url: request.url!,
@@ -197,11 +208,35 @@ private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+
+    private static func readBody(from request: URLRequest) -> Data? {
+        if let body = request.httpBody {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            return nil
+        }
+        stream.open()
+        defer { stream.close() }
+        var body = Data()
+        var buffer = [UInt8](repeating: 0, count: 4_096)
+        while true {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 {
+                return nil
+            }
+            if count == 0 {
+                return body
+            }
+            body.append(contentsOf: buffer.prefix(count))
+        }
+    }
 }
 
 private final class URLProtocolState: @unchecked Sendable {
     private let lock = NSLock()
     private var request: URLRequest?
+    private var requestBody: Data?
     private var status = 200
     private var body = Data()
 
@@ -209,20 +244,28 @@ private final class URLProtocolState: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         request = nil
+        requestBody = nil
         self.status = status
         self.body = body
     }
 
-    func record(_ request: URLRequest) {
+    func record(_ request: URLRequest, body: Data?) {
         lock.lock()
         defer { lock.unlock() }
         self.request = request
+        requestBody = body
     }
 
     func recordedRequest() -> URLRequest? {
         lock.lock()
         defer { lock.unlock() }
         return request
+    }
+
+    func recordedBody() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return requestBody
     }
 
     func response() -> (status: Int, body: Data) {

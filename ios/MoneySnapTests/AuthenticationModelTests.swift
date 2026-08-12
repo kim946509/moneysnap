@@ -238,6 +238,7 @@ struct AuthenticationModelTests {
         let model = AuthenticationModel(
             api: StubAuthenticationAPI(signInSession: signedIn),
             store: MemorySessionStore(),
+            initialPhase: .signedOut,
             now: { now }
         )
 
@@ -253,6 +254,7 @@ struct AuthenticationModelTests {
         let model = AuthenticationModel(
             api: StubAuthenticationAPI(signInSession: signedIn),
             store: store,
+            initialPhase: .signedOut,
             now: { now }
         )
 
@@ -266,6 +268,7 @@ struct AuthenticationModelTests {
         let model = AuthenticationModel(
             api: StubAuthenticationAPI(signInError: .sessionRejected),
             store: MemorySessionStore(),
+            initialPhase: .signedOut,
             now: { now }
         )
 
@@ -294,6 +297,7 @@ struct AuthenticationModelTests {
         let model = AuthenticationModel(
             api: api,
             store: MemorySessionStore(),
+            initialPhase: .signedOut,
             now: { now }
         )
 

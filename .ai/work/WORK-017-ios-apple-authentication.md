@@ -82,7 +82,10 @@ git diff --check
   - server production `bootJar` 생성 통과
   - iOS project·Home/My visual baseline·CI/CD 정적 계약과 OpenAPI YAML parse 통과
   - whitespace 오류 없음
-  - macOS native test와 Home/My screenshot diff는 remote CI 대기
+  - remote iOS CI run `31544943204` failed before visual capture: model sign-in fixture 4건, URLSession request-body assertion 2건, Keychain `-34018` 3건
+  - model fixture는 명시적 `.signedOut`, URLProtocol stub은 `httpBody`/`httpBodyStream` 양쪽을 기록하도록 수정했으며 macOS 재검증 대기
+  - Keychain `-34018`은 Simulator test에서 `CODE_SIGNING_ALLOWED=NO`로 application identifier entitlement가 없어 발생한 하네스 실패로 확인했고, 2026-08-13 사용자 승인 뒤 WORK-018에서 해당 override를 제거함
+  - macOS native test와 Home/My screenshot diff는 수정 revision의 원격 재실행 전이므로 미완료
 - 리뷰:
   - spec/standards 1차 리뷰의 실행 중 refresh, remote deletion/local cleanup, fractional `Instant`, 탈퇴 확인 순서, nonce replay, actor reentrancy, URLProtocol race, release visual seam finding을 TDD로 수정
   - 최종 spec 재리뷰에서 비시각 AC·scope·wire contract 위반 없음; standards 재리뷰의 OpenAPI unknown-field 불일치와 추적 불가능한 correlation ID를 실제 decoding 계약과 안전한 server log로 해소
@@ -96,10 +99,10 @@ git diff --check
 ## Code Review Graph
 
 - 코드 변경 여부: yes
-- graph action: `9eba7e0` 기준 staged incremental update 완료 (24 files, 신규 9 nodes·36 edges 반영)
-- base: `9eba7e0`
+- graph action: `593e527` 기준 incremental update 완료 (전체 변경 13 files 재파싱, 30 nodes·119 edges 갱신); 원격 하네스 검증 후 최종 update 예정
+- base: `593e527`
 - risk: high 예상 (credential persistence, authentication state gate, destructive account deletion)
-- findings와 처리 결과: risk medium `0.60`; 도구가 visual 전용 in-memory adapter와 Swift test linkage를 일반 test gap으로 보고했으며, 해당 경로는 model/API/Keychain/nonce 테스트와 remote Home/My visual CI로 검증한다. nonce fixture tautology와 API 오류 계약 finding은 독립 fixture, canonical OpenAPI, controller/security contract test로 해소했다.
+- findings와 처리 결과: 변경한 Swift test 2 files의 risk medium `0.60`; 도구가 Swift Testing 선언과 test-only URLProtocol stub을 17개 일반 test gap으로 분류했으나 모두 실행 대상 테스트/fixture 자체다. 실제 held-out 경계는 remote native suite와 Home/My visual CI로 검증한다. nonce fixture tautology와 API 오류 계약 finding은 독립 fixture, canonical OpenAPI, controller/security contract test로 해소했다.
 
 ## Decisions and risks
 
