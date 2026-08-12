@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   simulator-test:
-    name: Build and test without signing
+    name: Build and test with Simulator ad-hoc signing
     runs-on: macos-15
     timeout-minutes: 30
     env:

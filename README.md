@@ -115,7 +115,7 @@ bash ios/scripts/test.sh
 bash ios/scripts/capture-visual-baseline.sh
 ```
 
-두 번째 명령은 `app`, `reference`, `overlay`, `diff`, `report` artifact를 만들며 검토된 threshold를 넘으면 실패합니다. signing, archive와 TestFlight는 Apple activation 이후 Xcode Cloud가 담당합니다.
+두 번째 명령은 `app`, `reference`, `overlay`, `diff`, `report` artifact를 만들며 검토된 threshold를 넘으면 실패합니다. 배포 signing, archive와 TestFlight는 Apple activation 이후 Xcode Cloud가 담당합니다.
 
 ### 저장소 계약 검증
 
@@ -141,7 +141,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1
 | Workflow | Trigger | 결과 |
 |---|---|---|
 | [Server CI/CD](.github/workflows/server-ci-cd.yml) | server/contract PR, `main`, manual | test, JAR, immutable Docker image; `main`만 Ubuntu development deploy |
-| [iOS CI](.github/workflows/ios-ci.yml) | iOS/contract PR, `main`, manual | unsigned native test, 393x852 visual evidence |
+| [iOS CI](.github/workflows/ios-ci.yml) | iOS/contract PR, `main`, manual | Simulator ad-hoc signed native test, unsigned 393x852 visual build |
 | Xcode Cloud | Apple workflow | managed signing, archive, internal TestFlight 예정 |
 
 운영 계약과 rollback 경계는 [CI/CD 문서](docs/CI_CD.md), 실제 리소스와 secret 이름은 [인프라 문서](infra/README.md)를 참고하세요.

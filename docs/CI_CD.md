@@ -10,7 +10,7 @@
 |---|---|---|---|
 | server CI | GitHub-hosted `ubuntu-latest` | server·API contract 관련 pull request, `main` push, manual | Java 21 test, production JAR, immutable Docker image와 SHA-256 archive |
 | server development CD | GitHub-hosted `ubuntu-latest` → SSH Ubuntu Docker host | server CI가 성공한 `main` push만 | checksum 검증, `9090` origin 교체, container health gate, 실패 시 이전 image rollback |
-| iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | signing 없는 고정 Simulator build/test, 393x852 visual evidence, 실패 `.xcresult` |
+| iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | Simulator ad-hoc signed native test, unsigned 393x852 visual build, 실패 `.xcresult` |
 | iOS CD | Xcode Cloud | Apple workflow에서 승인한 branch/release condition | Apple-managed signing, archive, internal TestFlight |
 | DNS/NPM·모니터링 | 승인된 infrastructure 작업 | hostname, proxy 또는 scrape 설정 변경 | Cloudflare DNS, Nginx Proxy Manager, Prometheus·Grafana |
 
@@ -74,7 +74,7 @@ Repository는 public이며 Secret Scanning과 Push Protection을 활성화한다
 
 ## iOS CI와 Xcode Cloud
 
-GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple credential 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 `bash ios/scripts/test.sh`를 실행한다. 앱을 393x852로 캡처해 Figma 홈 `9:2` reference, overlay, diff와 수치 report를 7일 보관한다.
+GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple 개발 credential·provisioning 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 Xcode 기본 ad-hoc 서명으로 `bash ios/scripts/test.sh`를 실행한다. Keychain을 쓰지 않는 unsigned build로 앱을 393x852로 캡처해 Figma 홈 `9:2` reference, overlay, diff와 수치 report를 7일 보관한다.
 
 TestFlight CD는 Xcode Cloud가 소유한다. 최초 Mac/Xcode activation 때 pull request test workflow와 main internal TestFlight workflow를 만든다. Bundle ID는 `com.ansandy.moneysnap`이며 Apple credential은 GitHub server environment에 넣지 않는다.
 

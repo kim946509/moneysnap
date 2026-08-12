@@ -30,7 +30,7 @@
 
 ## 준비된 CI/CD lane
 
-- `.github/workflows/ios-ci.yml`: `macos-15`에서 signing 없이 Simulator build/test를 실행하고 실패 `.xcresult`만 짧게 보관한다.
+- `.github/workflows/ios-ci.yml`: `macos-15`에서 Apple credential·provisioning 없이 Xcode 기본 ad-hoc 서명으로 native test를 실행하고, visual build는 signing을 비활성화하며 실패 `.xcresult`만 짧게 보관한다.
 - `ios/ci_scripts/ci_post_clone.sh`: Xcode Cloud clone 뒤 Xcode version과 `MoneySnap.xcodeproj`/shared scheme을 확인한다.
 - Xcode Cloud pull request workflow: test만 실행한다.
 - Xcode Cloud main release workflow: test 성공 후 archive하고 internal TestFlight group에만 post-action 배포한다.

@@ -9,7 +9,7 @@ iOS 17+, Swift 6, SwiftUI와 Swift Testing 기반의 native app scaffold다.
 - `MoneySnapTests`: public app-shell behavior를 검증하는 Swift Testing target
 - `MoneySnap.xcodeproj`: app·unit test target과 shared `MoneySnap` scheme
 
-최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple Developer의 explicit App ID와 signing team 연결은 아직 등록하지 않았으며 별도 Apple activation 작업에서 진행한다.
+최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple Developer의 explicit App ID와 배포 signing team 연결은 아직 등록하지 않았으며 별도 Apple activation 작업에서 진행한다.
 
 ## Windows 검증
 
@@ -33,7 +33,7 @@ bash ios/scripts/capture-visual-baseline.sh
 
 ## CI/CD
 
-- `.github/workflows/ios-ci.yml`: iOS 또는 OpenAPI contract 변경 시 GitHub-hosted `macos-15`에서 signing 없는 native test와 visual evidence 생성을 실행한다.
+- `.github/workflows/ios-ci.yml`: iOS 또는 OpenAPI contract 변경 시 GitHub-hosted `macos-15`에서 Apple credential·provisioning 없이 Xcode 기본 ad-hoc 서명으로 native test를 실행하고, unsigned build로 visual evidence를 생성한다.
 - 실패한 GitHub run만 `.xcresult`를 3일 artifact로 보관한다.
 - 모든 성공한 visual lane은 app/reference/overlay/diff/report를 7일 artifact로 보관한다.
 - `ci_scripts/ci_post_clone.sh`: Xcode Cloud post-clone project/toolchain 검증이다.

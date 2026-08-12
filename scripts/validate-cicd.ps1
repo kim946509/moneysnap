@@ -115,7 +115,10 @@ Require-Match $iosWorkflow 'if:\s*failure\(\)' 'failure-only diagnostics upload'
 Require-FullActionShaPins -Content $iosWorkflow -Description 'iOS workflow'
 
 $iosTest = Get-Content -LiteralPath $iosTestPath -Raw
-Require-Match $iosTest 'CODE_SIGNING_ALLOWED=NO' 'signing-free iOS test command'
+$unsignedNativeTestOverride = '(?i)\bCODE_SIGNING_ALLOWED\s*(?:=|:)\s*["'']?NO["'']?\b'
+if ($iosTest -match $unsignedNativeTestOverride -or $iosWorkflow -match $unsignedNativeTestOverride) {
+    throw 'Native iOS tests must keep Xcode Simulator ad-hoc signing enabled for Keychain entitlements'
+}
 Require-Match $iosTest 'RESULT_BUNDLE_PATH' 'optional iOS result bundle output'
 
 $dockerfile = Get-Content -LiteralPath $dockerfilePath -Raw
