@@ -75,6 +75,9 @@ final class MoneySnapUITests: XCTestCase {
 
         let add = app.buttons["tab.add"]
         XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(add.frame.height, 44)
+        XCTAssertTrue(add.isHittable)
         add.tap()
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["tab.home"].isSelected)

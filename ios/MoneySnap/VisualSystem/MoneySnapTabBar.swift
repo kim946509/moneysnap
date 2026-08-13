@@ -28,6 +28,8 @@ struct MoneySnapTabBar: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, minHeight: 58)
+                .contentShape(Rectangle())
                 .accessibilityIdentifier("tab.\(tab.rawValue)")
                 .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
             }

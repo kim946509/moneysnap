@@ -42,7 +42,7 @@ final class AuthenticationModel {
                 phase = .authenticated(stored)
                 return
             }
-            _ = try await refresh(stored)
+            _ = try await refresh(stored, while: .restoring)
         } catch AuthenticationClientError.sessionRejected {
             await completeLocalSignOut()
         } catch {
@@ -93,7 +93,7 @@ final class AuthenticationModel {
             return session.accessToken
         }
         do {
-            let refreshed = try await refresh(session)
+            let refreshed = try await refresh(session, while: .authenticated(session))
             return refreshed.accessToken
         } catch AuthenticationClientError.sessionRejected {
             await completeLocalSignOut()
@@ -173,13 +173,16 @@ final class AuthenticationModel {
         }
     }
 
-    private func refresh(_ session: AuthenticationSession) async throws -> AuthenticationSession {
+    private func refresh(
+        _ session: AuthenticationSession,
+        while expectedPhase: AuthenticationPhase
+    ) async throws -> AuthenticationSession {
         if let refreshTask {
             return try await refreshTask.value
         }
         let task = Task {
             let refreshed = try await api.refresh(session.refreshToken)
-            guard phase == .authenticated(session) else {
+            guard phase == expectedPhase else {
                 throw AuthenticationClientError.sessionRejected
             }
             do {
@@ -190,7 +193,7 @@ final class AuthenticationModel {
                 issue = .localSessionPersistenceFailed
                 throw AuthenticationClientError.localSessionPersistenceFailed
             }
-            guard phase == .authenticated(session) else {
+            guard phase == expectedPhase else {
                 try? await store.clear()
                 throw AuthenticationClientError.sessionRejected
             }
