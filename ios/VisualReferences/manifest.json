@@ -1,5 +1,9 @@
 {
   "bundleIdentifier": "com.ansandy.moneysnap",
+  "scenarios": [
+    "home",
+    "my"
+  ],
   "figma": {
     "fileKey": "IDNeYlc3584NY9YhsyUQYE",
     "screens": {

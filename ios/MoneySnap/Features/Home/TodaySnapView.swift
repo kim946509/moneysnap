@@ -23,6 +23,7 @@ struct TodaySnapView: View {
                 )
             }
         }
+        .accessibilityIdentifier("screen.home")
         .task { await viewModel.load() }
     }
 }
@@ -131,6 +132,7 @@ private struct TodaySnapContent: View {
                 .foregroundStyle(MoneySnapVisualSystem.secondaryText)
                 .offset(x: 28, y: 521)
             Text(summary.totalAmount.wonText)
+                .accessibilityIdentifier("home.total")
                 .font(.moneySnap(size: 64, weight: .black))
                 .foregroundStyle(.black)
                 .frame(height: 78, alignment: .topLeading)
@@ -160,6 +162,8 @@ private extension Collection {
     }
 }
 
+#if DEBUG
 #Preview {
-    TodaySnapView(client: InMemorySnapJournalClient.fixture)
+    TodaySnapView(client: VisualTestSupport.snapJournalClient)
 }
+#endif

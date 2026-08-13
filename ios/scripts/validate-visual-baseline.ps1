@@ -33,7 +33,15 @@ Assert-True ($manifest.comparison.mode -eq 'threshold') 'Visual diff must fail C
 Assert-True ($manifest.comparison.maximumMeanAbsoluteError -gt 0 -and $manifest.comparison.maximumMeanAbsoluteError -le 0.05) 'Visual MAE threshold must be reviewed and no greater than 0.05.'
 Assert-True ($manifest.comparison.maximumMismatchedPixelRatio -gt 0 -and $manifest.comparison.maximumMismatchedPixelRatio -le 0.43) 'Visual mismatched-pixel threshold must be reviewed and no greater than 0.43.'
 
-foreach ($screenName in @('home', 'my')) {
+$scenarioNames = @($manifest.scenarios)
+Assert-True ($scenarioNames.Count -eq 2) 'Visual manifest must contain exactly Home and My scenarios.'
+Assert-True ($scenarioNames[0] -eq 'home' -and $scenarioNames[1] -eq 'my') 'Visual scenarios must keep the reviewed home, my order.'
+$screenNames = @($manifest.figma.screens.PSObject.Properties.Name)
+$orderedScreenSet = ($screenNames | Sort-Object) -join ','
+$orderedScenarioSet = ($scenarioNames | Sort-Object) -join ','
+Assert-True ($orderedScreenSet -eq $orderedScenarioSet) 'Visual scenario and Figma screen sets must match exactly.'
+
+foreach ($screenName in $scenarioNames) {
     $screen = $manifest.figma.screens.$screenName
     $referencePath = Join-Path $iosRoot $screen.reference
     Assert-True (Test-Path -LiteralPath $referencePath) "$screenName Figma reference image is missing."
@@ -73,8 +81,24 @@ Assert-True ($capture -match 'visual-diff\.swift') 'Visual capture must create o
 Assert-True ($capture -match 'MONEYSNAP_VISUAL_SCENARIO') 'Visual capture must select the deterministic Home or My scenario.'
 Assert-True ($capture -match '--maximum-mean-absolute-error') 'Visual capture must enforce the reviewed MAE threshold.'
 Assert-True ($capture -match '--maximum-mismatched-pixel-ratio') 'Visual capture must enforce the reviewed mismatched-pixel threshold.'
+Assert-True ([regex]::Matches($capture, '(?m)^xcodebuild\s+\\?$').Count -eq 1) 'Visual capture must build the app exactly once.'
+Assert-True ([regex]::Matches($capture, 'simctl\s+install').Count -eq 1) 'Visual capture must install the app exactly once.'
+Assert-True ($capture -match 'for\s+visual_scenario\s+in') 'Visual capture must iterate through the ordered manifest scenarios.'
+Assert-True ($capture -match 'visual_failures') 'Visual capture must aggregate scenario failures after capturing all evidence.'
+
+$visualSupport = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\App\VisualTestSupport.swift')
+foreach ($scenarioName in $scenarioNames) {
+    Assert-True ($visualSupport -match "case\s+$([regex]::Escape($scenarioName))\b") "Visual DEBUG allowlist is missing scenario $scenarioName."
+}
 
 $todayView = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift')
+Assert-True ($todayView -match 'accessibilityIdentifier\("screen\.home"\)') 'Home screen accessibility identifier is missing.'
+Assert-True ($todayView -match 'accessibilityIdentifier\("home\.total"\)') 'Home total accessibility identifier is missing.'
+$myView = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\Features\Profile\MySettingsView.swift')
+Assert-True ($myView -match 'accessibilityIdentifier\("screen\.my"\)') 'My screen accessibility identifier is missing.'
+$tabBar = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapTabBar.swift')
+Assert-True ($tabBar -match 'accessibilityIdentifier\("tab\.\\\(tab\.rawValue\)"\)') 'Tab buttons must expose stable tab.<name> identifiers.'
+
 Assert-True ($todayView -match 'HStack\(spacing:\s*28\)\s*\{\s*ForEach\(summary\.recentEntries\)') 'Recent Snap rows must use the Figma 28-point two-column gap.'
 
 $workflow = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot '.github\workflows\ios-ci.yml')
@@ -82,8 +106,8 @@ Assert-True ($workflow -match 'DEVELOPER_DIR:\s*/Applications/Xcode_16\.4\.app/C
 Assert-True ($workflow -match 'MONEYSNAP_SIMULATOR_DEVICE:\s*"?iPhone 16"?') 'iOS CI must pin iPhone 16.'
 Assert-True ($workflow -match 'MONEYSNAP_SIMULATOR_OS:\s*"?18\.5"?') 'iOS CI must pin iOS 18.5.'
 Assert-True ($workflow -match 'capture-visual-baseline\.sh') 'iOS CI must capture visual baseline evidence.'
-Assert-True ($workflow -match 'MONEYSNAP_VISUAL_SCENARIO=home') 'iOS CI must capture the Home visual scenario.'
-Assert-True ($workflow -match 'MONEYSNAP_VISUAL_SCENARIO=my') 'iOS CI must capture the My visual scenario.'
+Assert-True ([regex]::Matches($workflow, 'capture-visual-baseline\.sh').Count -eq 1) 'iOS CI must invoke the build-once visual runner exactly once.'
+Assert-True ($workflow -notmatch 'MONEYSNAP_VISUAL_SCENARIO=(?:home|my)') 'iOS CI must let the manifest drive the ordered scenarios.'
 Assert-True ($workflow -match 'ios-visual-evidence-') 'iOS CI must upload named visual evidence.'
 
 Write-Output 'MoneySnap iOS visual baseline contract: OK'

@@ -16,6 +16,7 @@ struct MySettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .accessibilityIdentifier("screen.my")
         .sheet(isPresented: $presentsAccountSettings) {
             AccountSettingsView(authentication: authentication)
         }

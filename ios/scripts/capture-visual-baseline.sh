@@ -5,25 +5,30 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ios_dir="$(cd "${script_dir}/.." && pwd)"
 output_dir="${VISUAL_OUTPUT_DIR:-${ios_dir}/build/visual-evidence}"
 manifest_path="${ios_dir}/VisualReferences/manifest.json"
-visual_scenario="${MONEYSNAP_VISUAL_SCENARIO:-home}"
-case "${visual_scenario}" in
-  home|my) ;;
-  *)
-    echo "Unsupported visual scenario: ${visual_scenario}" >&2
-    exit 1
-    ;;
-esac
-reference_relative_path="$(plutil -extract "figma.screens.${visual_scenario}.reference" raw -o - "${manifest_path}")"
-reference_path="${ios_dir}/${reference_relative_path}"
 bundle_identifier="com.ansandy.moneysnap"
 viewport_width=393
 viewport_height=852
 destination_id="$(bash "${script_dir}/resolve-simulator.sh")"
 derived_data="$(mktemp -d)"
-raw_screenshot="${output_dir}/app-native.png"
-app_screenshot="${output_dir}/app-393x852.png"
 maximum_mean_absolute_error="$(plutil -extract comparison.maximumMeanAbsoluteError raw -o - "${manifest_path}")"
 maximum_mismatched_pixel_ratio="$(plutil -extract comparison.maximumMismatchedPixelRatio raw -o - "${manifest_path}")"
+visual_scenarios=()
+visual_failures=()
+
+while IFS= read -r visual_scenario; do
+  if [[ -n "${visual_scenario}" ]]; then
+    visual_scenarios+=("${visual_scenario}")
+  fi
+done < <(
+  plutil -extract scenarios json -o - "${manifest_path}" \
+    | tr -d '[]" ' \
+    | tr ',' '\n'
+)
+
+if [[ "${#visual_scenarios[@]}" -eq 0 ]]; then
+  echo "Visual manifest contains no scenarios." >&2
+  exit 1
+fi
 
 cleanup() {
   xcrun simctl shutdown "${destination_id}" >/dev/null 2>&1 || true
@@ -32,7 +37,6 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "${output_dir}"
-cp "${reference_path}" "${output_dir}/figma-${visual_scenario}-reference.png"
 
 xcrun simctl boot "${destination_id}" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "${destination_id}" -b
@@ -62,34 +66,62 @@ xcrun simctl status_bar "${destination_id}" override \
   --cellularBars 4 \
   --batteryState charged \
   --batteryLevel 100 >/dev/null 2>&1 || true
-SIMCTL_CHILD_MONEYSNAP_VISUAL_SCENARIO="${visual_scenario}" \
-  xcrun simctl launch --terminate-running-process "${destination_id}" "${bundle_identifier}"
-sleep 2
-xcrun simctl io "${destination_id}" screenshot --type=png "${raw_screenshot}"
 
-sips -z "${viewport_height}" "${viewport_width}" "${raw_screenshot}" --out "${app_screenshot}" >/dev/null
-pixel_width="$(sips -g pixelWidth "${app_screenshot}" | awk '/pixelWidth/ {print $2}')"
-pixel_height="$(sips -g pixelHeight "${app_screenshot}" | awk '/pixelHeight/ {print $2}')"
-if [[ "${pixel_width}" != "${viewport_width}" || "${pixel_height}" != "${viewport_height}" ]]; then
-  echo "Captured app screenshot must be ${viewport_width}x${viewport_height}, got ${pixel_width}x${pixel_height}." >&2
+capture_scenario() {
+  local visual_scenario="$1"
+  local scenario_output_dir="${output_dir}/${visual_scenario}"
+  local reference_relative_path
+  local reference_path
+  local raw_screenshot="${scenario_output_dir}/app-native.png"
+  local app_screenshot="${scenario_output_dir}/app-393x852.png"
+  local pixel_width
+  local pixel_height
+
+  reference_relative_path="$(plutil -extract "figma.screens.${visual_scenario}.reference" raw -o - "${manifest_path}")" || return 1
+  reference_path="${ios_dir}/${reference_relative_path}"
+  mkdir -p "${scenario_output_dir}"
+  cp "${reference_path}" "${scenario_output_dir}/figma-${visual_scenario}-reference.png" || return 1
+
+  SIMCTL_CHILD_MONEYSNAP_VISUAL_SCENARIO="${visual_scenario}" \
+    xcrun simctl launch --terminate-running-process "${destination_id}" "${bundle_identifier}" || return 1
+  sleep 2
+  xcrun simctl io "${destination_id}" screenshot --type=png "${raw_screenshot}" || return 1
+
+  sips -z "${viewport_height}" "${viewport_width}" "${raw_screenshot}" --out "${app_screenshot}" >/dev/null || return 1
+  pixel_width="$(sips -g pixelWidth "${app_screenshot}" | awk '/pixelWidth/ {print $2}')"
+  pixel_height="$(sips -g pixelHeight "${app_screenshot}" | awk '/pixelHeight/ {print $2}')"
+  if [[ "${pixel_width}" != "${viewport_width}" || "${pixel_height}" != "${viewport_height}" ]]; then
+    echo "Captured app screenshot must be ${viewport_width}x${viewport_height}, got ${pixel_width}x${pixel_height}." >&2
+    return 1
+  fi
+
+  {
+    xcodebuild -version
+    echo "Simulator device: ${MONEYSNAP_SIMULATOR_DEVICE:-iPhone 16}"
+    echo "Simulator OS: ${MONEYSNAP_SIMULATOR_OS:-18.5}"
+    echo "Simulator UDID: ${destination_id}"
+    echo "Viewport: ${viewport_width}x${viewport_height}"
+    echo "Visual scenario: ${visual_scenario}"
+    echo "Comparison mode: threshold"
+    echo "Maximum mean absolute error: ${maximum_mean_absolute_error}"
+    echo "Maximum mismatched pixel ratio: ${maximum_mismatched_pixel_ratio}"
+  } > "${scenario_output_dir}/environment.txt"
+
+  xcrun swift "${script_dir}/visual-diff.swift" \
+    --reference "${reference_path}" \
+    --actual "${app_screenshot}" \
+    --output-dir "${scenario_output_dir}" \
+    --maximum-mean-absolute-error "${maximum_mean_absolute_error}" \
+    --maximum-mismatched-pixel-ratio "${maximum_mismatched_pixel_ratio}"
+}
+
+for visual_scenario in "${visual_scenarios[@]}"; do
+  if ! capture_scenario "${visual_scenario}"; then
+    visual_failures+=("${visual_scenario}")
+  fi
+done
+
+if [[ "${#visual_failures[@]}" -gt 0 ]]; then
+  echo "Visual scenarios failed: ${visual_failures[*]}" >&2
   exit 1
 fi
-
-xcrun swift "${script_dir}/visual-diff.swift" \
-  --reference "${reference_path}" \
-  --actual "${app_screenshot}" \
-  --output-dir "${output_dir}" \
-  --maximum-mean-absolute-error "${maximum_mean_absolute_error}" \
-  --maximum-mismatched-pixel-ratio "${maximum_mismatched_pixel_ratio}"
-
-{
-  xcodebuild -version
-  echo "Simulator device: ${MONEYSNAP_SIMULATOR_DEVICE:-iPhone 16}"
-  echo "Simulator OS: ${MONEYSNAP_SIMULATOR_OS:-18.5}"
-  echo "Simulator UDID: ${destination_id}"
-  echo "Viewport: ${viewport_width}x${viewport_height}"
-  echo "Visual scenario: ${visual_scenario}"
-  echo "Comparison mode: threshold"
-  echo "Maximum mean absolute error: ${maximum_mean_absolute_error}"
-  echo "Maximum mismatched pixel ratio: ${maximum_mismatched_pixel_ratio}"
-} > "${output_dir}/environment.txt"

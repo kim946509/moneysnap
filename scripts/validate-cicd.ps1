@@ -48,6 +48,7 @@ function Require-FullActionShaPins {
 $workflowPath = Require-File '.github/workflows/server-ci-cd.yml'
 $iosWorkflowPath = Require-File '.github/workflows/ios-ci.yml'
 $iosTestPath = Require-File 'ios/scripts/test.sh'
+$iosVisualPath = Require-File 'ios/scripts/capture-visual-baseline.sh'
 $dockerfilePath = Require-File 'server/Dockerfile'
 $composePath = Require-File 'infra/ubuntu/compose.yaml'
 $deployPath = Require-File 'infra/ubuntu/deploy.sh'
@@ -114,6 +115,9 @@ $iosWorkflow = Get-Content -LiteralPath $iosWorkflowPath -Raw
 Require-Match $iosWorkflow 'runs-on:\s*macos-15' 'pinned GitHub-hosted macOS runner image'
 Require-Match $iosWorkflow 'bash\s+ios\/scripts\/test\.sh' 'native Swift test command'
 Require-Match $iosWorkflow 'RESULT_BUNDLE_PATH' 'failed test result bundle contract'
+if ([regex]::Matches($iosWorkflow, 'capture-visual-baseline\.sh').Count -ne 1) {
+    throw 'iOS workflow must invoke the build-once visual runner exactly once'
+}
 Require-Match $iosWorkflow 'if:\s*failure\(\)' 'failure-only diagnostics upload'
 Require-FullActionShaPins -Content $iosWorkflow -Description 'iOS workflow'
 
@@ -123,6 +127,13 @@ if ($iosTest -match $unsignedNativeTestOverride -or $iosWorkflow -match $unsigne
     throw 'Native iOS tests must keep Xcode Simulator ad-hoc signing enabled for Keychain entitlements'
 }
 Require-Match $iosTest 'RESULT_BUNDLE_PATH' 'optional iOS result bundle output'
+
+$iosVisual = Get-Content -LiteralPath $iosVisualPath -Raw
+if ([regex]::Matches($iosVisual, '(?m)^xcodebuild\s+\\?$').Count -ne 1 -or
+    [regex]::Matches($iosVisual, 'simctl\s+install').Count -ne 1) {
+    throw 'Visual runner must build and install the app exactly once'
+}
+Require-Match $iosVisual 'visual_failures' 'aggregate visual scenario failures'
 
 $dockerfile = Get-Content -LiteralPath $dockerfilePath -Raw
 Require-Match $dockerfile '^FROM\s+[^\s]+@sha256:[0-9a-f]{64}' 'digest-pinned Java runtime image'

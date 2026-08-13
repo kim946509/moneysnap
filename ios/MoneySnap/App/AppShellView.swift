@@ -10,7 +10,7 @@ struct AppShellView: View {
     init(
         selectedTab: Binding<AppTab>,
         authentication: AuthenticationModel,
-        snapJournalClient: any SnapJournalClient = InMemorySnapJournalClient.fixture
+        snapJournalClient: any SnapJournalClient
     ) {
         _selectedTab = selectedTab
         self.authentication = authentication
@@ -77,13 +77,12 @@ private struct RoutePlaceholderView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     AppShellView(
         selectedTab: .constant(.home),
-        authentication: AuthenticationModel(
-            api: URLSessionAuthenticationAPI(baseURL: URL(string: "https://example.invalid")!),
-            store: KeychainSessionStore(),
-            initialPhase: .signedOut
-        )
+        authentication: VisualTestSupport.authenticatedModel(),
+        snapJournalClient: VisualTestSupport.snapJournalClient
     )
 }
+#endif

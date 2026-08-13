@@ -27,7 +27,7 @@ struct TodaySnapViewModelTests {
 
         do {
             _ = try TodaySnapSummary(
-                day: .figmaReference,
+                day: SnapDay(year: 2026, month: 6, day: 3, weekday: .wednesday),
                 entries: [first, second],
                 featuredEntryIDs: [],
                 recentEntryIDs: []
@@ -40,7 +40,7 @@ struct TodaySnapViewModelTests {
 
     @Test
     func canvasSizeIsDerivedFromTheAmountRatio() {
-        let summary = TodaySnapSummary.figmaHome
+        let summary = VisualTestSupport.homeSummary
         let largest = TodayCanvasLayout.imageSize(
             for: summary.featuredEntries[0],
             maximumAmount: summary.featuredEntries[0].amount
@@ -56,7 +56,7 @@ struct TodaySnapViewModelTests {
 
     @Test
     func loadsTheFigmaHomeFixtureThroughTheJournalClient() async {
-        let viewModel = TodaySnapViewModel(client: InMemorySnapJournalClient.fixture)
+        let viewModel = TodaySnapViewModel(client: VisualTestSupport.snapJournalClient)
 
         #expect(viewModel.state == .loading)
         await viewModel.load()

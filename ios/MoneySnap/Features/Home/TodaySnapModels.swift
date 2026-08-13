@@ -57,8 +57,6 @@ struct SnapDay: Equatable, Sendable {
     var displayLabel: String {
         "\(month)월 \(day)일 \(weekday.rawValue)"
     }
-
-    static let figmaReference = SnapDay(year: 2026, month: 6, day: 3, weekday: .wednesday)
 }
 
 enum SnapArtwork: String, Equatable, Sendable {

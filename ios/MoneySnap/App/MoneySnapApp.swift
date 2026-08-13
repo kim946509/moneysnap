@@ -6,77 +6,65 @@ import SwiftUI
 struct MoneySnapApp: App {
     @State private var selectedTab: AppTab
     @State private var authentication: AuthenticationModel
+    private let snapJournalClient: any SnapJournalClient
+    #if DEBUG
+    private let invalidVisualScenario: String?
+    #endif
 
     init() {
         #if DEBUG
-        let requestedScenario = ProcessInfo.processInfo.environment["MONEYSNAP_VISUAL_SCENARIO"]
-        let scenario = requestedScenario.flatMap { ["home", "my"].contains($0) ? $0 : nil }
-        #else
-        let scenario: String? = nil
-        #endif
-        _selectedTab = State(initialValue: scenario == "my" ? .profile : .home)
-        #if DEBUG
-        let model = if scenario == nil {
-            AuthenticationModel(
-                api: URLSessionAuthenticationAPI(
-                    baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!
-                ),
-                store: KeychainSessionStore()
-            )
-        } else {
-            AuthenticationModel(
-                api: VisualAuthenticationAPI(),
-                store: VisualSessionStore(session: .visualFixture),
-                initialPhase: .authenticated(.visualFixture)
-            )
+        switch VisualTestSupport.resolve(environment: ProcessInfo.processInfo.environment) {
+        case .live:
+            _selectedTab = State(initialValue: .initial)
+            _authentication = State(initialValue: Self.liveAuthenticationModel())
+            snapJournalClient = UnavailableSnapJournalClient()
+            invalidVisualScenario = nil
+        case let .scenario(scenario):
+            _selectedTab = State(initialValue: scenario.initialTab)
+            _authentication = State(initialValue: VisualTestSupport.authenticatedModel())
+            snapJournalClient = VisualTestSupport.snapJournalClient
+            invalidVisualScenario = nil
+        case let .invalid(scenario):
+            _selectedTab = State(initialValue: .initial)
+            _authentication = State(initialValue: VisualTestSupport.failClosedModel())
+            snapJournalClient = UnavailableSnapJournalClient()
+            invalidVisualScenario = scenario
         }
         #else
-        let model = AuthenticationModel(
+        _selectedTab = State(initialValue: .initial)
+        _authentication = State(initialValue: Self.liveAuthenticationModel())
+        snapJournalClient = UnavailableSnapJournalClient()
+        #endif
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            #if DEBUG
+            if let invalidVisualScenario {
+                VisualLaunchFailureView(scenario: invalidVisualScenario)
+            } else {
+                appRoot
+            }
+            #else
+            appRoot
+            #endif
+        }
+    }
+
+    private var appRoot: some View {
+        AuthenticationGateView(
+            authentication: authentication,
+            selectedTab: $selectedTab,
+            snapJournalClient: snapJournalClient
+        )
+    }
+
+    private static func liveAuthenticationModel() -> AuthenticationModel {
+        AuthenticationModel(
             api: URLSessionAuthenticationAPI(
                 baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!
             ),
             store: KeychainSessionStore()
         )
-        #endif
-        _authentication = State(initialValue: model)
     }
-
-    var body: some Scene {
-        WindowGroup {
-            AuthenticationGateView(
-                authentication: authentication,
-                selectedTab: $selectedTab
-            )
-        }
-    }
-}
-
-#if DEBUG
-private actor VisualAuthenticationAPI: AuthenticationAPI {
-    func signIn(with credential: AppleSignInCredential) -> AuthenticationSession { .visualFixture }
-    func refresh(_ refreshToken: String) -> AuthenticationSession { .visualFixture }
-    func logout(accessToken: String) {}
-    func deleteAccount(accessToken: String, credential: AppleSignInCredential) {}
-}
-
-private actor VisualSessionStore: SessionStore {
-    private var session: AuthenticationSession?
-
-    init(session: AuthenticationSession?) {
-        self.session = session
-    }
-
-    func load() -> AuthenticationSession? { session }
-    func save(_ session: AuthenticationSession) { self.session = session }
-    func clear() { session = nil }
-}
-#endif
-
-private extension AuthenticationSession {
-    static let visualFixture = AuthenticationSession(
-        accessToken: "visual-access-token",
-        accessExpiresAt: Date.distantFuture,
-        refreshToken: "visual-refresh-token",
-        refreshExpiresAt: Date.distantFuture
-    )
 }

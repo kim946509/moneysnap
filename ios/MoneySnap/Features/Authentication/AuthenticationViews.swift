@@ -3,6 +3,7 @@ import SwiftUI
 struct AuthenticationGateView: View {
     let authentication: AuthenticationModel
     @Binding var selectedTab: AppTab
+    let snapJournalClient: any SnapJournalClient
 
     var body: some View {
         Group {
@@ -20,7 +21,8 @@ struct AuthenticationGateView: View {
             case .authenticated:
                 AppShellView(
                     selectedTab: $selectedTab,
-                    authentication: authentication
+                    authentication: authentication,
+                    snapJournalClient: snapJournalClient
                 )
             }
         }

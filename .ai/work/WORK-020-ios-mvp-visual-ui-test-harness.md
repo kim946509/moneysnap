@@ -1,6 +1,6 @@
 ---
 id: WORK-020
-status: ready
+status: verify
 depends_on: [WORK-018]
 owner: codex
 ---
@@ -33,13 +33,13 @@ Home·My로 검증되는 확장 가능한 393x852 visual evidence·XCUITest 기�
 ## Acceptance criteria
 
 - [ ] `MoneySnapUITests` target이 iPhone 16/iOS 18.5 Simulator에서 Home과 My 최소 flow를 실행한다.
-- [ ] visual launch parser, allowlist, fake auth/session과 Home fixture adapter 전체가 하나의 `#if DEBUG` support 경계 안에 있고 release build에는 존재하지 않는다. 일반 launch는 fixture가 아닌 명시적 live/unavailable adapter를 사용한다.
+- [x] visual launch parser, allowlist, fake auth/session과 Home fixture adapter 전체가 하나의 `#if DEBUG` support 경계 안에 있고 release build에는 존재하지 않는다. 일반 launch는 fixture가 아닌 명시적 live/unavailable adapter를 사용한다.
 - [ ] 비어 있지 않은 unknown visual scenario는 live path로 fallback하지 않고 DEBUG launch를 fail-closed하며, 환경 변수가 없을 때만 정상 live path를 사용한다.
-- [ ] manifest의 ordered scenario 목록과 exact Figma node ID, 393x852 PNG, SHA-256 집합이 일치한다.
+- [x] manifest의 ordered scenario 목록과 exact Figma node ID, 393x852 PNG, SHA-256 집합이 일치한다.
 - [ ] capture runner는 app을 한 번 build·install하고 Home/My별 reference/app/overlay/diff/report를 모두 생성한다. 한 scenario가 threshold를 넘더라도 나머지 evidence를 만든 뒤 마지막에 non-zero로 종료한다.
-- [ ] 기존 Home/My MAE `0.05`, mismatched pixel ratio `0.43` 상한을 완화하지 않는다.
+- [x] 기존 Home/My MAE `0.05`, mismatched pixel ratio `0.43` 상한을 완화하지 않는다.
 - [ ] Home/My fixture가 외부 Apple·Neon·R2와 credential 없이 재현된다.
-- [ ] Windows validator가 UI-testing target·scheme, DEBUG gate, scenario/checksum 집합, build-once runner와 workflow 단일 호출을 검증한다.
+- [x] Windows validator가 UI-testing target·scheme, DEBUG gate, scenario/checksum 집합, build-once runner와 workflow 단일 호출을 검증한다.
 - [ ] macOS native lane이 unit+UI test와 Home/My visual threshold를 모두 통과한다.
 
 ## Test seam
@@ -64,26 +64,40 @@ git diff --check
 
 - 실행 명령:
   - current harness inspection
+  - RED: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
+  - RED: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
+  - RED: `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
+  - GREEN: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
+  - GREEN: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
+  - GREEN: `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
+  - `bash -n ios/scripts/capture-visual-baseline.sh`
+  - `bash -n ios/scripts/test.sh`
+  - `git diff --check`
 - 결과:
   - `MoneySnapUITests` target/scheme 연결 없음
   - `AuthenticationSession.visualFixture`와 Home fixture adapter가 release source에 남아 있음
   - manifest에 explicit ordered scenarios가 없고 workflow가 Home/My runner를 각각 호출함
   - Figma Starter MCP 호출 한도로 category·amount component 추가 조회 대기
+  - RED: `VisualTestSupport.swift`·`MoneySnapUITests.swift` 없음, manifest scenarios 없음, workflow runner 2회 호출을 각각 검출했다.
+  - GREEN: 세 Windows validator가 모두 `OK`, 두 Bash script syntax check와 `git diff --check`가 exit 0이다.
+  - macOS native/pixel 검증은 Windows에서 실행하지 않고 remote CI evidence를 기다린다.
 - 리뷰: 2026-08-13 사용자가 고정 하네스 변경을 명시적으로 승인함
+- TDD seam: Windows static validator -> DEBUG launch interface -> XCUITest public UI -> build-once visual runner 순으로 red-green한다.
+- 독립 Standards/Spec 재검토: 초기 undefined DEBUG adapter, internal import, Swift 6 XCUITest MainActor 결손을 수정하고 validator를 보강했으며 최종 finding 0건이다.
 
 ## Agent rules impact
 
 - 영향 여부: yes
 - 근거: 실제 iOS 검증 명령이 실행하는 held-out scenario와 UI test gate가 확대된다.
-- 처리 결과: 사용자 승인 후 기준 검증 문서와 `AGENTS.md` 명령 설명을 동기화한다.
+- 처리 결과: `docs/CI_CD.md`, `docs/ARCHITECTURE.md`, `ios/README.md`를 먼저 갱신하고 `AGENTS.md`의 macOS unit+UI/build-once 검증 명령 설명을 동기화했다.
 
 ## Code Review Graph
 
 - 코드 변경 여부: yes
-- graph action: 구현 시작 직전 HEAD를 고정하고 구현 후 iOS changed-files 기준 incremental update 예정
-- base: 구현 시작 직전 고정
+- graph action: `get_minimal_context` → incremental update(25 files, 94 nodes/690 edges) → `get_minimal_context` → standard `detect_changes`
+- base: `ee5c0b9` (WORK-022 완료 evidence commit 직후의 고정 review 기준점; 구현 시작 SHA는 `2ea4760`)
 - risk: high (held-out evaluation integrity, release test seam exposure)
-- findings와 처리 결과: 승인 후 하네스 구현 변경과 기능 소스 변경을 분리해 각각 검토한다.
+- findings와 처리 결과: 독립 review가 찾은 `InMemorySnapJournalClient` 정의 누락, `@testable import`, XCUITest `@MainActor` 결손을 모두 수정했다. manifest와 중복된 shell allowlist도 제거했고 최종 Standards 0건, Spec 0건이다. graph의 42개 gap은 XCTest/XCUITest source를 일반 production node로 분류한 false positive이며 실제 launch parser unit test와 Home→My/unknown XCUITest가 추가됐다. macOS evidence만 남아 있다.
 
 ## Decisions and risks
 

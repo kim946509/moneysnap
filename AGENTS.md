@@ -55,7 +55,7 @@
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned URL
 - 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
 - 서버 CI/CD: GitHub-hosted Ubuntu test/package → pinned SSH Ubuntu Docker development deploy
-- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 test/393x852 visual evidence → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
+- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 unit+UI test/393x852 visual evidence → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
 - CRITICAL: 표준 Workers는 Spring Boot runtime이 아니며 D1은 JPA datasource로 사용하지 않는다.
 - CRITICAL: Cloudflare Containers는 무료가 아니므로 월 최소 5 USD와 초과 과금 승인 전에는 활성화하거나 배포하지 않는다.
 - CRITICAL: 상시 Docker Compose PostgreSQL을 추가하지 않는다. 개발은 Neon dev, 운영은 Neon prod를 사용하며 테스트만 일회성 Testcontainers로 격리한다.
@@ -130,7 +130,7 @@
 - CI/CD repository 계약 검증: `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
 - Ubuntu Docker deployment 동작 검증: `bash server/scripts/test-docker-deployment.sh`
 - Ubuntu Compose 계약 검증: `MONEYSNAP_IMAGE=moneysnap-server:validation MONEYSNAP_ENV_FILE=/path/to/runtime.env docker compose -f infra/ubuntu/compose.yaml config --quiet`
-- macOS native iOS 검증: `bash ios/scripts/test.sh` (GitHub-hosted Xcode 16.4·iPhone 16·iOS 18.5에서 통과)
-- macOS visual evidence 생성: `bash ios/scripts/capture-visual-baseline.sh` (393x852 app/reference/overlay/diff/report 생성 검증 완료)
+- macOS native iOS 검증: `bash ios/scripts/test.sh` (unit+non-parallel UI test, GitHub-hosted Xcode 16.4·iPhone 16·iOS 18.5)
+- macOS visual evidence 생성: `bash ios/scripts/capture-visual-baseline.sh` (앱을 한 번 build/install하고 manifest 순서의 모든 393x852 app/reference/overlay/diff/report를 생성한 뒤 실패를 집계)
 - 현재 AI 환경 문서 변경의 기본 검증 명령: `git diff --check`
 - 현재 필수 AI 환경 경로 검증 명령: `$required = @('AGENTS.md','CONTEXT.md','.ai/README.md','.ai/harness.yaml','.ai/GRAPHS.md','.ai/LOOPS.md','.ai/templates/work-item.md','docs/AI_ENVIRONMENT.md'); $missing = $required | Where-Object { -not (Test-Path -LiteralPath $_) }; if ($missing) { $missing; exit 1 }`

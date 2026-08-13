@@ -27,6 +27,7 @@ struct MoneySnapTabBar: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("tab.\(tab.rawValue)")
             }
         }
         .padding(.horizontal, 5)

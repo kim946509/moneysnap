@@ -48,9 +48,7 @@ jobs:
         run: bash ios/scripts/test.sh
 
       - name: Capture Figma visual evidence
-        run: |
-          VISUAL_OUTPUT_DIR="${RUNNER_TEMP}/MoneySnapVisual/Home" MONEYSNAP_VISUAL_SCENARIO=home bash ios/scripts/capture-visual-baseline.sh
-          VISUAL_OUTPUT_DIR="${RUNNER_TEMP}/MoneySnapVisual/My" MONEYSNAP_VISUAL_SCENARIO=my bash ios/scripts/capture-visual-baseline.sh
+        run: VISUAL_OUTPUT_DIR="${RUNNER_TEMP}/MoneySnapVisual" bash ios/scripts/capture-visual-baseline.sh
 
       - name: Upload visual evidence
         if: always()
