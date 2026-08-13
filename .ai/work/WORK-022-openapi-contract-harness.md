@@ -1,6 +1,6 @@
 ---
 id: WORK-022
-status: verify
+status: done
 depends_on: [WORK-019]
 owner: codex
 ---
@@ -35,10 +35,10 @@ canonical `contracts/openapi/moneysnap-v1.yaml`의 문법·reference·schema와 
 - [x] canonical server base는 실제 route와 같은 `/api/v1`이고 operation ID는 중복되지 않는다.
 - [x] 각 operation의 request·success·모든 문서화된 error example이 해당 schema를 통과한다.
 - [x] 공용 ErrorResponse는 정확히 `code`, `correlationId`를 요구하고 enum drift를 CI가 거부한다.
-- [ ] runtime HTTP integration test가 success/error JSON의 exact field set을 검증하고 canonical example과 iOS fixture가 같은 wire shape를 사용한다. (server green, macOS native consumer pending)
+- [x] runtime HTTP integration test가 success/error JSON의 exact field set을 검증하고 canonical example과 iOS fixture가 같은 wire shape를 사용한다.
 - [x] auth와 신규 Snap contract 중 하나를 의도적으로 깨뜨리면 validator가 red가 되는 held-out 검증을 기록한다.
 - [x] parser dependency는 버전을 고정하고 code generation·runtime dependency로 production artifact에 포함하지 않는다.
-- [ ] canonical example은 repository 밖 URL을 참조하지 않고 `contracts/examples/v1/**` 안의 한 벌만 서버·iOS 테스트 resource로 사용한다. (containment/server/static green, macOS resource loading pending)
+- [x] canonical example은 repository 밖 URL을 참조하지 않고 `contracts/examples/v1/**` 안의 한 벌만 서버·iOS 테스트 resource로 사용한다.
 
 ## Test seam
 
@@ -78,7 +78,9 @@ git diff --check
   - GREEN: targeted `OpenApiContractTests` 9개와 `ApiErrorResponseTests`, 인증 HTTP integration 3개 class가 통과함.
   - GREEN: Docker engine ready 상태의 server full test 18 suites/103 tests, failure/error/skip 0, 52초 통과. `bootJar` 8초 통과.
   - GREEN: iOS project/visual baseline, CI/CD repository validator와 `git diff --check` 통과.
-  - REMOTE BOUNDARY: iOS canonical fixture consumer test는 Windows에서 Xcode 실행 불가. push 후 GitHub macOS native lane에서 확인 필요
+  - REMOTE GREEN: GitHub Actions iOS CI run `31654189010`, exact head `2ea476014f6731f83e330814ddfa57cd14e5a47a`, native 59 tests와 canonical fixture `CpResource`/decode 통과, `** TEST SUCCEEDED **`.
+  - REMOTE GREEN: Home MAE `0.0453833335`, mismatch `0.4141251239`; My MAE `0.0301637864`, mismatch `0.2252027858`. 둘 다 기존 `0.05`/`0.43` threshold 통과.
+  - REMOTE ARTIFACT: `ios-visual-evidence-2ea476014f6731f83e330814ddfa57cd14e5a47a`, 2,775,684 bytes, 14 files, artifact ID `9163917801`, SHA-256 `8780c0b4b616cd8778a8ff415ed9035bde1c2ca681f78e7a0b817a0d12e811f5`.
 - 리뷰: 2026-08-13 사용자가 held-out contract 하네스와 test-only dependency·iOS test resource·CI 고정 앵커 변경을 명시적으로 승인함
 
 ## Agent rules impact
