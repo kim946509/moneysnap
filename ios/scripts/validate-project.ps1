@@ -1,11 +1,16 @@
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'validate-pbx-object-ids.ps1')
+
 $iosRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $projectFile = Join-Path $iosRoot 'MoneySnap.xcodeproj\project.pbxproj'
 $schemeFile = Join-Path $iosRoot 'MoneySnap.xcodeproj\xcshareddata\xcschemes\MoneySnap.xcscheme'
 $requiredFiles = @(
     $projectFile,
     $schemeFile,
+    (Join-Path $iosRoot 'scripts\validate-pbx-object-ids.ps1'),
+    (Join-Path $iosRoot 'scripts\test-validate-pbx-object-ids.ps1'),
+    (Join-Path $iosRoot 'scripts\test-validate-visual-baseline.ps1'),
     (Join-Path $iosRoot 'MoneySnap\App\MoneySnapApp.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\VisualTestSupport.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\AppShellView.swift'),
@@ -18,6 +23,9 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodayCanvasLayout.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapCardViews.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapRecordModels.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapCaptureModel.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapCaptureView.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationModels.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationAPIClient.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\KeychainSessionStore.swift'),
@@ -35,6 +43,8 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnapTests\TodaySnapViewModelTests.swift'),
     (Join-Path $iosRoot 'MoneySnapTests\AuthenticationModelTests.swift'),
     (Join-Path $iosRoot 'MoneySnapTests\AuthenticationAPIClientTests.swift')
+    (Join-Path $iosRoot 'MoneySnapTests\SnapCaptureModelTests.swift')
+    (Join-Path $iosRoot 'MoneySnapTests\SnapJournalClientTests.swift')
     (Join-Path $iosRoot 'MoneySnapTests\AppleNonceTests.swift')
     (Join-Path $iosRoot 'MoneySnapTests\KeychainSessionStoreTests.swift')
     (Join-Path $iosRoot 'MoneySnapUITests\MoneySnapUITests.swift')
@@ -42,6 +52,8 @@ $requiredFiles = @(
     (Join-Path $iosRoot '..\contracts\examples\v1\identity\session-response.json')
     (Join-Path $iosRoot '..\contracts\examples\v1\identity\refresh-request.json')
     (Join-Path $iosRoot '..\contracts\examples\v1\identity\error-apple-reauthentication-rejected.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\record-request.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\record-response.json')
 )
 
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_) }
@@ -74,23 +86,12 @@ if ($project -notmatch 'path = \.\./\.\./contracts/examples/v1/identity;' -or
     $project -notmatch 'identity in Resources') {
     throw 'Canonical identity fixtures must be included in the MoneySnapTests resource phase.'
 }
-
-$definitionMatches = [regex]::Matches(
-    $project,
-    '(?m)^\s*([A-F0-9]{24})(?: /\*.*?\*/)? = \{\r?\n\s*isa ='
-)
-$definitionIDs = @($definitionMatches | ForEach-Object { $_.Groups[1].Value })
-if ($definitionIDs.Count -ne @($definitionIDs | Select-Object -Unique).Count) {
-    throw 'Duplicate PBX object definitions were found.'
+if ($project -notmatch 'path = \.\./\.\./contracts/examples/v1/snaps;' -or
+    $project -notmatch 'snaps in Resources') {
+    throw 'Canonical Snap fixtures must be included in the MoneySnapTests resource phase.'
 }
 
-$invalidObjectIDs = [regex]::Matches($project, '(?m)^\s*([A-Z0-9]{24})') |
-    ForEach-Object { $_.Groups[1].Value } |
-    Where-Object { $_ -notmatch '^[A-F0-9]{24}$' } |
-    Select-Object -Unique
-if ($invalidObjectIDs) {
-    throw "Invalid PBX object identifiers: $($invalidObjectIDs -join ', ')"
-}
+Assert-PbxObjectIdentifiers -Project $project
 
 $expectedSourceNames = @(
     'MoneySnapApp.swift',
@@ -105,6 +106,9 @@ $expectedSourceNames = @(
     'TodaySnapView.swift',
     'TodayCanvasLayout.swift',
     'TodaySnapCardViews.swift',
+    'SnapRecordModels.swift',
+    'SnapCaptureModel.swift',
+    'SnapCaptureView.swift',
     'AuthenticationModels.swift',
     'AuthenticationAPIClient.swift',
     'KeychainSessionStore.swift',
@@ -118,6 +122,8 @@ $expectedSourceNames = @(
     'TodaySnapViewModelTests.swift',
     'AuthenticationModelTests.swift',
     'AuthenticationAPIClientTests.swift'
+    'SnapCaptureModelTests.swift'
+    'SnapJournalClientTests.swift'
     'AppleNonceTests.swift'
     'KeychainSessionStoreTests.swift'
     'MoneySnapUITests.swift'
@@ -192,6 +198,17 @@ if ($assets.info.author -ne 'xcode' -or $assets.info.version -ne 1) {
 $infoPlist = [xml](Get-Content -LiteralPath (Join-Path $iosRoot 'MoneySnap\Info.plist') -Raw)
 if ($infoPlist.plist.dict.array.string -notcontains 'NotoSansKR-VariableFont_wght.ttf') {
     throw 'Noto Sans KR must be registered in UIAppFonts.'
+}
+
+$powerShellPath = (Get-Process -Id $PID).Path
+foreach ($regressionProbe in @(
+    (Join-Path $iosRoot 'scripts\test-validate-pbx-object-ids.ps1'),
+    (Join-Path $iosRoot 'scripts\test-validate-visual-baseline.ps1')
+)) {
+    & $powerShellPath -NoProfile -ExecutionPolicy Bypass -File $regressionProbe
+    if ($LASTEXITCODE -ne 0) {
+        throw "iOS validator regression probe failed: $regressionProbe"
+    }
 }
 
 Write-Output 'MoneySnap iOS project static validation: OK'

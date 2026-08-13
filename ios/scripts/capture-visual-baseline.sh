@@ -72,12 +72,21 @@ capture_scenario() {
   local scenario_output_dir="${output_dir}/${visual_scenario}"
   local reference_relative_path
   local reference_path
+  local figma_node_id
+  local source_reference_sha256
   local raw_screenshot="${scenario_output_dir}/app-native.png"
   local app_screenshot="${scenario_output_dir}/app-393x852.png"
   local pixel_width
   local pixel_height
+  local visual_diff_crop_arguments=()
+  local crop_x
+  local crop_y
+  local crop_width
+  local crop_height
 
   reference_relative_path="$(plutil -extract "figma.screens.${visual_scenario}.reference" raw -o - "${manifest_path}")" || return 1
+  figma_node_id="$(plutil -extract "figma.screens.${visual_scenario}.nodeId" raw -o - "${manifest_path}")" || return 1
+  source_reference_sha256="$(plutil -extract "figma.screens.${visual_scenario}.sha256" raw -o - "${manifest_path}")" || return 1
   reference_path="${ios_dir}/${reference_relative_path}"
   mkdir -p "${scenario_output_dir}"
   cp "${reference_path}" "${scenario_output_dir}/figma-${visual_scenario}-reference.png" || return 1
@@ -102,17 +111,37 @@ capture_scenario() {
     echo "Simulator UDID: ${destination_id}"
     echo "Viewport: ${viewport_width}x${viewport_height}"
     echo "Visual scenario: ${visual_scenario}"
+    echo "Figma node ID: ${figma_node_id}"
+    echo "Source reference SHA-256: ${source_reference_sha256}"
     echo "Comparison mode: threshold"
     echo "Maximum mean absolute error: ${maximum_mean_absolute_error}"
     echo "Maximum mismatched pixel ratio: ${maximum_mismatched_pixel_ratio}"
   } > "${scenario_output_dir}/environment.txt"
 
+  if crop_x="$(plutil -extract "figma.screens.${visual_scenario}.comparisonCrop.x" raw -o - "${manifest_path}" 2>/dev/null)"; then
+    crop_y="$(plutil -extract "figma.screens.${visual_scenario}.comparisonCrop.y" raw -o - "${manifest_path}")" || return 1
+    crop_width="$(plutil -extract "figma.screens.${visual_scenario}.comparisonCrop.width" raw -o - "${manifest_path}")" || return 1
+    crop_height="$(plutil -extract "figma.screens.${visual_scenario}.comparisonCrop.height" raw -o - "${manifest_path}")" || return 1
+    visual_diff_crop_arguments=(
+      --crop-x "${crop_x}"
+      --crop-y "${crop_y}"
+      --crop-width "${crop_width}"
+      --crop-height "${crop_height}"
+    )
+    echo "Comparison crop: x=${crop_x}, y=${crop_y}, width=${crop_width}, height=${crop_height}" \
+      >> "${scenario_output_dir}/environment.txt"
+  fi
+
   xcrun swift "${script_dir}/visual-diff.swift" \
     --reference "${reference_path}" \
     --actual "${app_screenshot}" \
     --output-dir "${scenario_output_dir}" \
+    --scenario "${visual_scenario}" \
+    --figma-node-id "${figma_node_id}" \
+    --source-reference-sha256 "${source_reference_sha256}" \
     --maximum-mean-absolute-error "${maximum_mean_absolute_error}" \
-    --maximum-mismatched-pixel-ratio "${maximum_mismatched_pixel_ratio}"
+    --maximum-mismatched-pixel-ratio "${maximum_mismatched_pixel_ratio}" \
+    "${visual_diff_crop_arguments[@]}"
 }
 
 for visual_scenario in "${visual_scenarios[@]}"; do

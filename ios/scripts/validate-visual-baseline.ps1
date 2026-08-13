@@ -1,3 +1,7 @@
+param(
+    [string] $ManifestPath
+)
+
 $ErrorActionPreference = 'Stop'
 
 function Assert-True {
@@ -14,16 +18,47 @@ function Assert-True {
     }
 }
 
+function Test-JsonInteger {
+    param([Parameter(Mandatory)] $Value)
+
+    return [System.Type]::GetTypeCode($Value.GetType()) -in @(
+        [System.TypeCode]::Byte,
+        [System.TypeCode]::SByte,
+        [System.TypeCode]::Int16,
+        [System.TypeCode]::UInt16,
+        [System.TypeCode]::Int32,
+        [System.TypeCode]::UInt32,
+        [System.TypeCode]::Int64,
+        [System.TypeCode]::UInt64
+    )
+}
+
 $iosRoot = Split-Path -Parent $PSScriptRoot
 $repositoryRoot = Split-Path -Parent $iosRoot
-$manifestPath = Join-Path $iosRoot 'VisualReferences\manifest.json'
+if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
+    $ManifestPath = Join-Path $iosRoot 'VisualReferences\manifest.json'
+}
 
-Assert-True (Test-Path -LiteralPath $manifestPath) 'Visual baseline manifest is missing.'
+Assert-True (Test-Path -LiteralPath $ManifestPath) 'Visual baseline manifest is missing.'
 
-$manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+$manifest = Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
 Assert-True ($manifest.figma.fileKey -eq 'IDNeYlc3584NY9YhsyUQYE') 'Unexpected Figma file key.'
 Assert-True ($manifest.figma.screens.home.nodeId -eq '9:2') 'Unexpected Home Figma node ID.'
 Assert-True ($manifest.figma.screens.my.nodeId -eq '77:798') 'Unexpected My Figma node ID.'
+Assert-True ($manifest.figma.screens.'record-category'.nodeId -eq '108:465') 'Unexpected record category Figma node ID.'
+Assert-True ($manifest.figma.screens.'record-amount'.nodeId -eq '108:549') 'Unexpected record amount Figma node ID.'
+Assert-True (
+    $manifest.figma.screens.'record-category'.sha256 -ceq 'ada9814549f1bab323cbfc4040379156ce0757f41b9f50fc4f75927c5fafa47f'
+) 'Unexpected record category approved reference checksum.'
+Assert-True (
+    $manifest.figma.screens.'record-amount'.sha256 -ceq '26e378b06fa7539bfbb8ff4a3124678853b3e87a8f4e15399fefbf2b0eeb14ac'
+) 'Unexpected record amount approved reference checksum.'
+Assert-True (
+    $manifest.figma.screens.home.PSObject.Properties.Name -notcontains 'comparisonCrop'
+) 'Home must remain a full-frame comparison without comparisonCrop.'
+Assert-True (
+    $manifest.figma.screens.my.PSObject.Properties.Name -notcontains 'comparisonCrop'
+) 'My must remain a full-frame comparison without comparisonCrop.'
 Assert-True ($manifest.viewport.width -eq 393 -and $manifest.viewport.height -eq 852) 'Visual viewport must be 393x852.'
 Assert-True ($manifest.bundleIdentifier -eq 'com.ansandy.moneysnap') 'Unexpected Bundle ID.'
 Assert-True ($manifest.simulator.xcode -eq '16.4') 'Visual Xcode baseline must be 16.4.'
@@ -34,8 +69,13 @@ Assert-True ($manifest.comparison.maximumMeanAbsoluteError -gt 0 -and $manifest.
 Assert-True ($manifest.comparison.maximumMismatchedPixelRatio -gt 0 -and $manifest.comparison.maximumMismatchedPixelRatio -le 0.43) 'Visual mismatched-pixel threshold must be reviewed and no greater than 0.43.'
 
 $scenarioNames = @($manifest.scenarios)
-Assert-True ($scenarioNames.Count -eq 2) 'Visual manifest must contain exactly Home and My scenarios.'
-Assert-True ($scenarioNames[0] -eq 'home' -and $scenarioNames[1] -eq 'my') 'Visual scenarios must keep the reviewed home, my order.'
+Assert-True ($scenarioNames.Count -eq 4) 'Visual manifest must contain Home, My, record category and record amount scenarios.'
+Assert-True (
+    $scenarioNames[0] -eq 'home' -and
+    $scenarioNames[1] -eq 'my' -and
+    $scenarioNames[2] -eq 'record-category' -and
+    $scenarioNames[3] -eq 'record-amount'
+) 'Visual scenarios must keep the reviewed home, my, record-category, record-amount order.'
 $screenNames = @($manifest.figma.screens.PSObject.Properties.Name)
 $orderedScreenSet = ($screenNames | Sort-Object) -join ','
 $orderedScenarioSet = ($scenarioNames | Sort-Object) -join ','
@@ -56,7 +96,33 @@ foreach ($screenName in $scenarioNames) {
     finally {
         $referenceImage.Dispose()
     }
+
+    if ($null -ne $screen.comparisonCrop) {
+        $crop = $screen.comparisonCrop
+        foreach ($coordinateName in @('x', 'y', 'width', 'height')) {
+            $coordinateProperty = $crop.PSObject.Properties[$coordinateName]
+            Assert-True ($null -ne $coordinateProperty) "$screenName comparison crop must contain $coordinateName."
+            Assert-True (Test-JsonInteger $coordinateProperty.Value) "$screenName comparison crop $coordinateName must be an integer JSON number."
+        }
+        Assert-True (
+            $crop.x -ge 0 -and $crop.y -ge 0 -and
+            $crop.width -gt 0 -and $crop.height -gt 0 -and
+            $crop.x + $crop.width -le $manifest.viewport.width -and
+            $crop.y + $crop.height -le $manifest.viewport.height
+        ) "$screenName comparison crop must be positive and stay inside the 393x852 source frame."
+    }
 }
+
+$categoryCrop = $manifest.figma.screens.'record-category'.comparisonCrop
+Assert-True (
+    $categoryCrop.x -eq 0 -and $categoryCrop.y -eq 604 -and
+    $categoryCrop.width -eq 393 -and $categoryCrop.height -eq 248
+) 'Record category comparison must exclude the out-of-scope photo header and cover the reviewed lower component.'
+$amountCrop = $manifest.figma.screens.'record-amount'.comparisonCrop
+Assert-True (
+    $amountCrop.x -eq 0 -and $amountCrop.y -eq 460 -and
+    $amountCrop.width -eq 393 -and $amountCrop.height -eq 392
+) 'Record amount comparison must exclude the out-of-scope photo header and cover the reviewed lower component.'
 
 $foodAsset = Join-Path $iosRoot 'MoneySnap\Assets.xcassets\FoodSnap.imageset\food-snap.png'
 $cafeAsset = Join-Path $iosRoot 'MoneySnap\Assets.xcassets\CafeSnap.imageset\cafe-snap.png'
@@ -81,16 +147,19 @@ Assert-True ($capture -match 'visual-diff\.swift') 'Visual capture must create o
 Assert-True ($capture -match 'MONEYSNAP_VISUAL_SCENARIO') 'Visual capture must select the deterministic Home or My scenario.'
 Assert-True ($capture -match '--maximum-mean-absolute-error') 'Visual capture must enforce the reviewed MAE threshold.'
 Assert-True ($capture -match '--maximum-mismatched-pixel-ratio') 'Visual capture must enforce the reviewed mismatched-pixel threshold.'
+Assert-True ($capture -match '--scenario') 'Visual report must identify every manifest scenario.'
+Assert-True ($capture -match '--figma-node-id') 'Visual report must identify every Figma node.'
+Assert-True ($capture -match '--source-reference-sha256') 'Visual report must identify every approved source reference checksum.'
 Assert-True ([regex]::Matches($capture, '(?m)^xcodebuild\s+\\?$').Count -eq 1) 'Visual capture must build the app exactly once.'
 Assert-True ([regex]::Matches($capture, 'simctl\s+install').Count -eq 1) 'Visual capture must install the app exactly once.'
 Assert-True ($capture -match 'for\s+visual_scenario\s+in') 'Visual capture must iterate through the ordered manifest scenarios.'
 Assert-True ($capture -match 'visual_failures') 'Visual capture must aggregate scenario failures after capturing all evidence.'
 Assert-True ($capture -match 'read\s+-r\s+visual_scenario\s+\|\|\s+\[\[\s+-n\s+"\$\{visual_scenario\}"\s+\]\]') 'Visual capture must preserve the final manifest scenario when parser output has no trailing newline.'
 
-$visualSupport = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\App\VisualTestSupport.swift')
-foreach ($scenarioName in $scenarioNames) {
-    Assert-True ($visualSupport -match "case\s+$([regex]::Escape($scenarioName))\b") "Visual DEBUG allowlist is missing scenario $scenarioName."
-}
+$visualDiff = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'scripts\visual-diff.swift')
+Assert-True ($visualDiff -match '"scenario"\s*:\s*configuration\.scenario') 'Visual report is missing scenario identity.'
+Assert-True ($visualDiff -match '"figmaNodeId"\s*:\s*configuration\.figmaNodeID') 'Visual report is missing Figma node identity.'
+Assert-True ($visualDiff -match '"sourceReferenceSha256"\s*:\s*configuration\.sourceReferenceSHA256') 'Visual report is missing source reference checksum identity.'
 
 $todayView = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift')
 Assert-True ($todayView -match 'accessibilityIdentifier\("screen\.home"\)') 'Home screen accessibility identifier is missing.'

@@ -2,7 +2,9 @@
   "bundleIdentifier": "com.ansandy.moneysnap",
   "scenarios": [
     "home",
-    "my"
+    "my",
+    "record-category",
+    "record-amount"
   ],
   "figma": {
     "fileKey": "IDNeYlc3584NY9YhsyUQYE",
@@ -16,6 +18,28 @@
         "nodeId": "77:798",
         "reference": "VisualReferences/Figma/my-77-798-393x852.png",
         "sha256": "06d73207034fbb6a0667e08547a3ae741c17de74d81ab15a41c559b685a59ed8"
+      },
+      "record-category": {
+        "nodeId": "108:465",
+        "reference": "VisualReferences/Figma/record-category-108-465-393x852.png",
+        "sha256": "ada9814549f1bab323cbfc4040379156ce0757f41b9f50fc4f75927c5fafa47f",
+        "comparisonCrop": {
+          "x": 0,
+          "y": 604,
+          "width": 393,
+          "height": 248
+        }
+      },
+      "record-amount": {
+        "nodeId": "108:549",
+        "reference": "VisualReferences/Figma/record-amount-108-549-393x852.png",
+        "sha256": "26e378b06fa7539bfbb8ff4a3124678853b3e87a8f4e15399fefbf2b0eeb14ac",
+        "comparisonCrop": {
+          "x": 0,
+          "y": 460,
+          "width": 393,
+          "height": 392
+        }
       }
     }
   },
@@ -46,6 +70,6 @@
     "mode": "threshold",
     "maximumMeanAbsoluteError": 0.05,
     "maximumMismatchedPixelRatio": 0.43,
-    "basis": "Reviewed against Figma nodes 9:2 and 77:798. The full-frame comparison includes deterministic Simulator and Figma device-chrome differences."
+    "basis": "Home and My use reviewed full-frame comparisons against nodes 9:2 and 77:798. Record category and amount retain full official nodes 108:465 and 108:549 as provenance while comparing only their approved lower-component crops, which exclude the Stage 6 photo header."
   }
 }
