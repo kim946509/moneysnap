@@ -23,7 +23,6 @@ struct TodaySnapView: View {
                 )
             }
         }
-        .accessibilityIdentifier("screen.home")
         .task { await viewModel.load() }
     }
 }
@@ -51,6 +50,7 @@ private struct TodaySnapContent: View {
                 Text("Today Snap")
                     .font(.moneySnap(size: 22, weight: .bold))
                     .foregroundStyle(MoneySnapVisualSystem.ink)
+                    .accessibilityIdentifier("screen.home")
                 Text(summary.day.displayLabel)
                     .font(.moneySnap(size: 13, weight: .medium))
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)

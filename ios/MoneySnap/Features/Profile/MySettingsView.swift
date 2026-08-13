@@ -16,7 +16,6 @@ struct MySettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .accessibilityIdentifier("screen.my")
         .sheet(isPresented: $presentsAccountSettings) {
             AccountSettingsView(authentication: authentication)
         }
@@ -28,6 +27,7 @@ struct MySettingsView: View {
                 Text("My")
                     .font(.moneySnap(size: 22, weight: .bold))
                     .foregroundStyle(MoneySnapVisualSystem.ink)
+                    .accessibilityIdentifier("screen.my")
                 Text("내 기록과 설정")
                     .font(.moneySnap(size: 13, weight: .medium))
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
