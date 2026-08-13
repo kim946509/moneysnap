@@ -67,6 +67,7 @@
 - 로그아웃은 현재 device session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session·사용자 데이터를 삭제하고 Apple token을 revoke한다.
 - 점심·저녁 리마인더를 포함한 로컬 알림과 APNs 원격 알림은 MVP에서 제외한다.
 - Snap은 항상 개인 기록으로 먼저 저장하며 group 공유를 같은 command에 넣지 않는다.
+- Apple 인증·event request는 future field를 허용하지만 Snap·group·share 상태 변경 command는 선언되지 않은 field를 국소적으로 거부한다. `clientMutationId`는 actor 범위의 1~128자 nonblank opaque key이며 commit-unknown retry에서 바꾸지 않는다.
 - Snap 금액은 `1...999,999,999 KRW` 정수다. `localDay`는 server `Clock`과 제출된 tzdb region `ZoneId` 또는 `UTC`로 current day·직전 day만 허용하고 저장 후 바꾸지 않으며 numeric offset·short alias는 거부한다.
 - Stage 3은 사진 없는 category+amount 개인 Snap을 먼저 완성하고 Stage 6에서 camera·PhotosUI·private R2를 연결한다. Snap당 active image는 최대 1개이며 JPEG 최대 변 `1600px`, `2,097,152 bytes`, EXIF 제거를 요구한다.
 - 사진 grant는 최근 24시간 completed+nonexpired pending 20건과 active+pending `7,000,000,000 bytes` storage guardrail을 원자적으로 적용한다. direct PUT이 exact length·type·checksum을 강제하지 못하면 unrestricted grant 대신 backend bounded stream을 사용한다.

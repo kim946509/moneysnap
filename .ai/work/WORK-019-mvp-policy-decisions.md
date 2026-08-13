@@ -51,7 +51,7 @@ WORK-019의 체크는 정책 채택만 증명한다. 다음 runtime 조건은 �
 
 - 금액은 KRW 정수 `1...999,999,999`만 허용한다.
 - `localDay`는 server `Clock` instant를 제출한 tzdb region `ZoneId` 또는 `UTC`로 변환한 current day·직전 day만 허용한다. numeric offset과 short alias, 미래와 2일 이전은 거부하고 저장 후 바꾸지 않는다.
-- 같은 actor·`clientMutationId`·동일 payload replay는 날짜 재검증보다 먼저 최초 결과를 반환하고 payload conflict와 동시 요청은 원자적으로 판정한다.
+- `clientMutationId`는 actor 범위의 `1...128`자 nonblank opaque string이며 서버는 UUID로 제한하거나 의미를 해석하지 않는다. 같은 actor·`clientMutationId`·동일 payload replay는 날짜 재검증보다 먼저 최초 결과를 반환하고 payload conflict와 동시 요청은 원자적으로 판정한다.
 - record command는 group·visibility·image를 받지 않고 category+amount 개인 Snap을 먼저 durable save한다.
 
 ### Stage 6 — private 사진

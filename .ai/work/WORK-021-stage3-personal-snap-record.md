@@ -33,7 +33,7 @@ owner: codex
 
 ## Acceptance criteria
 
-- [ ] bearer user가 `clientMutationId`, `localDay`, tzdb region `timeZone`, `category`, `amountWon`을 보내면 `201`, stable Snap ID, 같은 ID의 `Location`과 정확한 개인 Snap representation을 받는다.
+- [ ] bearer user가 `1...128`자 nonblank opaque `clientMutationId`, `localDay`, tzdb region `timeZone`, `category`, `amountWon`을 보내면 `201`, stable Snap ID, 같은 ID의 `Location`과 정확한 개인 Snap representation을 받는다. iOS는 새 command에 UUID 문자열을 쓰지만 server는 UUID 형식을 요구하지 않는다.
 - [ ] response에는 `ownerId`, `sessionId`, `groupId`, `visibility`, raw token 또는 아직 존재하지 않는 image URL이 포함되지 않는다.
 - [ ] 금액은 `1...999,999,999`, category는 확정 enum, time zone은 tzdb available region ID 또는 `UTC`이고, 날짜는 그 zone에서 server current day 또는 직전 day일 때만 저장된다.
 - [ ] numeric offset·timezone short alias·미래·2일 이전·malformed body는 `400 INVALID_REQUEST`와 `correlationId`로 거부되고 어떤 Snap도 만들지 않는다.

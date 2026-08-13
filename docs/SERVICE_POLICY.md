@@ -32,6 +32,8 @@ Money Snap은 복잡한 가계부가 아니라 가볍게 쓰는 소셜 소비 �
 
 가격은 `1...999,999,999 KRW` 범위의 양의 정수만 저장한다. 부동소수점, 0, 음수와 범위를 넘는 값은 허용하지 않는다.
 
+상태 변경 command의 `clientMutationId`는 actor 범위의 `1...128`자 nonblank opaque string이다. 서버는 값의 내부 형식을 해석하거나 UUID로 제한하지 않고 멱등성 key로만 사용한다. iOS는 새 command를 만들 때 UUID 문자열을 생성하지만 commit 결과를 알 수 없는 retry에서는 같은 값을 유지한다. Snap·group·share command는 operation schema에 없는 owner, group, visibility, image 또는 임의 field를 거부한다.
+
 사용자는 기록할 때 기기의 tzdb region time zone ID와 `localDay`를 보낸다. 서버는 자체 `Clock`의 현재 instant를 제출된 zone으로 변환해 current day 또는 직전 day인 경우만 허용한다. `UTC`는 허용하지만 `+09:00` 같은 numeric offset과 `KST`, `PST` 같은 short alias는 거부한다. 미래와 2일 이전 날짜도 저장하지 않는다. 저장된 `localDay`는 소유자가 기록한 calendar label이며 이후 수정하거나 그룹 공유 시 바꾸지 않는다.
 
 카메라는 한 기록 세션에서 1장, 앨범은 최대 3장을 선택할 수 있다. 앨범에서 여러 이미지를 선택한 경우 각 이미지를 별도 Snap 후보로 보고, 현재 이미지의 카테고리와 가격을 입력해 개인 Snap으로 저장한 뒤 다음 이미지로 넘어간다. 한 Snap에는 active image를 최대 1개만 연결한다. 여러 이미지의 금액과 카테고리를 한 화면에서 동시에 편집하는 대량 입력표는 MVP에서 만들지 않는다.

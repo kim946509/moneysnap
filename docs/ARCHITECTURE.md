@@ -135,7 +135,7 @@ com.ansandy.moneysnap
 ## API 경계
 
 - canonical Interface는 `contracts/openapi/moneysnap-v1.yaml`이 소유한다.
-- wire example은 `contracts/examples/v1/**` 한 벌을 OpenAPI, server provider test와 iOS consumer test가 함께 사용한다. request decoding은 기존 tolerant 정책을 유지하고 response와 공용 error는 schema의 exact field set을 지킨다.
+- wire example은 `contracts/examples/v1/**` 한 벌을 OpenAPI, server provider test와 iOS consumer test가 함께 사용한다. Apple 인증·event request는 호환성을 위해 future field를 허용한다. 상태를 변경하는 Snap·group·share command는 operation schema에 선언되지 않은 field를 국소적으로 거부한다. 전역 Jackson strict mode는 사용하지 않으며 response와 공용 error는 schema의 exact field set을 지킨다.
 - path는 `/api/v1`으로 versioning하고 예상 가능한 오류는 안정된 code와 correlation ID를 반환한다.
 - iOS는 생성되거나 검증된 typed client를 `SnapJournalClient` 뒤에서 사용한다.
 - 존재하지 않는 자원과 접근할 수 없는 자원은 외부에서 구별되지 않는 `NOT_ACCESSIBLE`로 정규화한다.
