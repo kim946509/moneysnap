@@ -175,8 +175,8 @@ private struct Harness {
         client = URLSessionSnapJournalClient(
             baseURL: URL(string: "https://moneysnap.example")!,
             session: URLSession(configuration: configuration),
-            accessToken: tokenState.nextToken,
-            sessionRejected: tokenState.reject
+            accessToken: { try await tokenState.nextToken() },
+            sessionRejected: { token in await tokenState.reject(token) }
         )
     }
 }
