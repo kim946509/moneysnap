@@ -162,6 +162,10 @@ private struct InMemorySnapJournalClient: SnapJournalClient {
 private actor RecordFeatureSnapJournalClient: SnapJournalClient {
     let summary: TodaySnapSummary
 
+    init(summary: TodaySnapSummary) {
+        self.summary = summary
+    }
+
     func fetchToday() async throws -> TodaySnapSummary { summary }
 
     func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
@@ -178,6 +182,10 @@ private actor RecordFeatureSnapJournalClient: SnapJournalClient {
 private actor RecordRetrySnapJournalClient: SnapJournalClient {
     let summary: TodaySnapSummary
     private var attempts = 0
+
+    init(summary: TodaySnapSummary) {
+        self.summary = summary
+    }
 
     func fetchToday() async throws -> TodaySnapSummary { summary }
 
