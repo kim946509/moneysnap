@@ -85,6 +85,7 @@ Assert-True ([regex]::Matches($capture, '(?m)^xcodebuild\s+\\?$').Count -eq 1) '
 Assert-True ([regex]::Matches($capture, 'simctl\s+install').Count -eq 1) 'Visual capture must install the app exactly once.'
 Assert-True ($capture -match 'for\s+visual_scenario\s+in') 'Visual capture must iterate through the ordered manifest scenarios.'
 Assert-True ($capture -match 'visual_failures') 'Visual capture must aggregate scenario failures after capturing all evidence.'
+Assert-True ($capture -match 'read\s+-r\s+visual_scenario\s+\|\|\s+\[\[\s+-n\s+"\$\{visual_scenario\}"\s+\]\]') 'Visual capture must preserve the final manifest scenario when parser output has no trailing newline.'
 
 $visualSupport = Get-Content -Raw -LiteralPath (Join-Path $iosRoot 'MoneySnap\App\VisualTestSupport.swift')
 foreach ($scenarioName in $scenarioNames) {

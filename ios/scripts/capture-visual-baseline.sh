@@ -15,7 +15,7 @@ maximum_mismatched_pixel_ratio="$(plutil -extract comparison.maximumMismatchedPi
 visual_scenarios=()
 visual_failures=()
 
-while IFS= read -r visual_scenario; do
+while IFS= read -r visual_scenario || [[ -n "${visual_scenario}" ]]; do
   if [[ -n "${visual_scenario}" ]]; then
     visual_scenarios+=("${visual_scenario}")
   fi
