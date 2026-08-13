@@ -6,35 +6,41 @@ import Testing
 struct AuthenticationAPIClientTests {
     @Test
     func signInUsesTheAppleAuthenticationEndpointAndEnvelope() async throws {
-        let client = clientReturning(status: 200, body: sessionJSON)
+        let client = clientReturning(status: 200, body: try canonicalFixture("session-response"))
+        let credentialFixture = try #require(
+            JSONSerialization.jsonObject(with: try canonicalFixture("apple-credential-request"))
+                as? [String: String]
+        )
+        let credential = AppleSignInCredential(
+            identityToken: try #require(credentialFixture["identityToken"]),
+            authorizationCode: try #require(credentialFixture["authorizationCode"]),
+            nonce: try #require(credentialFixture["nonce"])
+        )
 
-        _ = try await client.signIn(with: AppleSignInCredential(
-            identityToken: "identity-token",
-            authorizationCode: "authorization-code",
-            nonce: "raw-nonce"
-        ))
+        _ = try await client.signIn(with: credential)
 
         let request = try #require(URLProtocolStub.recordedRequest())
         let body = try #require(URLProtocolStub.recordedBody())
         let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
         #expect(request.httpMethod == "POST")
         #expect(request.url?.path == "/api/v1/auth/apple")
-        #expect(json == [
-            "identityToken": "identity-token",
-            "authorizationCode": "authorization-code",
-            "nonce": "raw-nonce"
-        ])
+        #expect(json == credentialFixture)
     }
 
     @Test
     func refreshUsesTheRefreshTokenEnvelope() async throws {
-        let client = clientReturning(status: 200, body: sessionJSON)
+        let client = clientReturning(status: 200, body: try canonicalFixture("session-response"))
+        let fixture = try #require(
+            JSONSerialization.jsonObject(with: try canonicalFixture("refresh-request"))
+                as? [String: String]
+        )
+        let refreshToken = try #require(fixture["refreshToken"])
 
-        _ = try await client.refresh("refresh-token")
+        _ = try await client.refresh(refreshToken)
 
         let body = try #require(URLProtocolStub.recordedBody())
         let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
-        #expect(json == ["refreshToken": "refresh-token"])
+        #expect(json == fixture)
     }
 
     @Test
@@ -97,8 +103,8 @@ struct AuthenticationAPIClientTests {
     }
 
     @Test
-    func rejectedAppleReauthenticationHasADistinctError() async {
-        let body = Data(#"{"code":"APPLE_REAUTHENTICATION_REJECTED","correlationId":"error-123"}"#.utf8)
+    func rejectedAppleReauthenticationHasADistinctError() async throws {
+        let body = try canonicalFixture("error-apple-reauthentication-rejected")
         let client = clientReturning(status: 401, body: body)
 
         await #expect(throws: AuthenticationClientError.reauthenticationRejected) {
@@ -123,8 +129,8 @@ struct AuthenticationAPIClientTests {
     }
 
     @Test
-    func decodesSpringInstantWithFractionalSeconds() async throws {
-        let client = clientReturning(status: 200, body: fractionalSessionJSON)
+    func decodesSpringInstantsWithAndWithoutFractionalSeconds() async throws {
+        let client = clientReturning(status: 200, body: try canonicalFixture("session-response"))
 
         let session = try await client.refresh("refresh-token")
 
@@ -141,28 +147,21 @@ struct AuthenticationAPIClientTests {
         )
     }
 
-    private var sessionJSON: Data {
-        Data("""
-        {
-          "accessToken": "access-token",
-          "accessExpiresAt": "2026-08-10T12:15:00Z",
-          "refreshToken": "refresh-token",
-          "refreshExpiresAt": "2027-02-06T12:00:00Z"
-        }
-        """.utf8)
+    private func canonicalFixture(_ name: String) throws -> Data {
+        let url = Bundle(for: FixtureBundleToken.self).url(
+            forResource: name,
+            withExtension: "json"
+        ) ?? Bundle(for: FixtureBundleToken.self).url(
+            forResource: name,
+            withExtension: "json",
+            subdirectory: "identity"
+        )
+        return try Data(contentsOf: try #require(url))
     }
 
-    private var fractionalSessionJSON: Data {
-        Data("""
-        {
-          "accessToken": "access-token",
-          "accessExpiresAt": "2026-08-10T12:15:00.123456Z",
-          "refreshToken": "refresh-token",
-          "refreshExpiresAt": "2027-02-06T12:00:00.123456Z"
-        }
-        """.utf8)
-    }
 }
+
+private final class FixtureBundleToken {}
 
 private extension AppleSignInCredential {
     static let fixture = AppleSignInCredential(

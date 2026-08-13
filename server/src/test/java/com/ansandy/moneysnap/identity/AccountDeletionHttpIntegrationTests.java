@@ -15,6 +15,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -29,6 +30,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.json;
+import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.assertExactResponse;
 
 @Testcontainers
 @AutoConfigureMockMvc
@@ -99,13 +102,16 @@ class AccountDeletionHttpIntegrationTests {
 						authorization("different-apple-subject"));
 		SessionResponse session = signIn();
 
-		mockMvc.perform(delete("/api/v1/account")
+		MvcResult result = mockMvc.perform(delete("/api/v1/account")
 					.header("Authorization", "Bearer " + session.accessToken())
 					.contentType("application/json")
 					.content(appleReauthenticationBody()))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.code").value("APPLE_REAUTHENTICATION_REJECTED"))
-				.andExpect(jsonPath("$.correlationId").isNotEmpty());
+				.andExpect(jsonPath("$.correlationId").isNotEmpty())
+				.andReturn();
+
+		assertExactFields(result, "error-apple-reauthentication-rejected.json");
 
 		then(appleRevoker).shouldHaveNoInteractions();
 	}
@@ -117,13 +123,16 @@ class AccountDeletionHttpIntegrationTests {
 		willThrow(new AppleRevocationException()).given(appleRevoker).revoke(anyString());
 		SessionResponse session = signIn();
 
-		mockMvc.perform(delete("/api/v1/account")
+		MvcResult result = mockMvc.perform(delete("/api/v1/account")
 					.header("Authorization", "Bearer " + session.accessToken())
 					.contentType("application/json")
 					.content(appleReauthenticationBody()))
 				.andExpect(status().isBadGateway())
 				.andExpect(jsonPath("$.code").value("APPLE_REVOCATION_FAILED"))
-				.andExpect(jsonPath("$.correlationId").isNotEmpty());
+				.andExpect(jsonPath("$.correlationId").isNotEmpty())
+				.andReturn();
+
+		assertExactFields(result, "error-apple-revocation-failed.json");
 	}
 
 	@Test
@@ -132,13 +141,16 @@ class AccountDeletionHttpIntegrationTests {
 				.willReturn(authorization("apple-http-delete-subject"));
 		SessionResponse session = signIn();
 
-		mockMvc.perform(delete("/api/v1/account")
+		MvcResult result = mockMvc.perform(delete("/api/v1/account")
 					.header("Authorization", "Bearer " + session.accessToken())
 					.contentType("application/json")
 					.content("{}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-				.andExpect(jsonPath("$.correlationId").isNotEmpty());
+				.andExpect(jsonPath("$.correlationId").isNotEmpty())
+				.andReturn();
+
+		assertExactFields(result, "error-invalid-request.json");
 	}
 
 	@Test
@@ -183,13 +195,12 @@ class AccountDeletionHttpIntegrationTests {
 	}
 
 	private static String appleReauthenticationBody() {
-		return """
-				{
-				  "identityToken": "apple-identity-token",
-				  "authorizationCode": "single-use-code",
-				  "nonce": "request-nonce"
-				}
-				""";
+		return json("apple-credential-request.json");
+	}
+
+	private static void assertExactFields(MvcResult result, String fixture) throws Exception {
+		String response = new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+		assertExactResponse(response, fixture);
 	}
 
 	private static String privateKeyPem() {

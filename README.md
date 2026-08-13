@@ -63,7 +63,7 @@ flowchart LR
 ```text
 ios/                 SwiftUI app, Xcode project, Swift tests, Figma visual references
 server/              Spring Boot modular monolith, Gradle, Docker image
-contracts/openapi/   versioned server/iOS HTTP contract
+contracts/           versioned OpenAPI contract and canonical server/iOS JSON examples
 infra/               Neon, Cloudflare, Apple, Ubuntu deployment contracts
 docs/                product, policy, architecture, UI and CI/CD sources of truth
 .ai/                 work items, loops and project-local AI harness
@@ -82,6 +82,8 @@ cd server
 ```
 
 production JAR은 `server/build/libs/moneysnap-server.jar`로 생성됩니다.
+
+기본 `test`에는 OpenAPI 3.1 parse/reference, `/api/v1`, operation ID, Draft 2020-12 example schema와 runtime error enum drift를 검사하는 semantic contract gate가 포함됩니다. canonical JSON은 `contracts/examples/v1/**` 한 벌을 서버와 iOS consumer test가 함께 사용합니다.
 
 ### 서버 실행
 

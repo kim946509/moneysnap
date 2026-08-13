@@ -49,6 +49,7 @@
 ## 기술 스택
 - MVP 플랫폼: native iOS 전용, iOS 17+, Swift 6, SwiftUI, Swift Concurrency, Observation, AuthenticationServices, Keychain, PhotosUI, URLSession, SpriteKit
 - API: Java 21 LTS, Spring Boot 4.1.0, Gradle 9.5.1, REST/JSON, OpenAPI 3.1
+- API contract gate: test-only Swagger Parser `2.1.45`, NetworkNT JSON Schema Validator `3.0.6`, canonical `contracts/examples/v1/**`; 기본 server `test`와 iOS native test가 동일 fixture를 검증
 - 데이터: Neon PostgreSQL 18, dev/prod project 분리, Flyway, Spring Data JPA
 - DB 테스트: 테스트 실행 중에만 PostgreSQL 18 Testcontainers 사용
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned URL
@@ -122,6 +123,7 @@
 ## 명령어
 - CRITICAL: 존재하지 않거나 실행하지 않은 명령을 검증 증거로 기록하지 말 것
 - 서버 전체 테스트: `cd server; .\gradlew.bat test --no-daemon --console=plain`
+- OpenAPI semantic contract 테스트: `cd server; .\gradlew.bat test --tests "com.ansandy.moneysnap.contract.OpenApiContractTests" --no-daemon --console=plain`
 - 서버 production JAR 생성: `cd server; .\gradlew.bat bootJar --no-daemon --console=plain`
 - Windows iOS project 정적 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
 - Windows iOS visual baseline 계약 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`

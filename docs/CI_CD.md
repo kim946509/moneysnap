@@ -24,6 +24,7 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 - 모든 외부 action은 전체 commit SHA로 고정하고 Dependabot으로 갱신한다.
 - pull request CI는 Neon, SSH, R2 또는 Cloudflare secret을 받지 않는다.
 - `contracts/**` 변경도 server와 iOS lane을 함께 실행한다.
+- server 기본 `test`는 `contracts/openapi/moneysnap-v1.yaml`과 `contracts/examples/v1/**`의 semantic OpenAPI 3.1/Draft 2020-12 gate를 실행하고, iOS native test는 같은 canonical fixture resource를 decode한다.
 - test와 `bootJar`가 통과한 뒤 digest-pinned Java runtime으로 Docker image를 만든다.
 - image는 `docker save`와 gzip으로 고정하고 SHA-256 manifest와 함께 7일 보관한다.
 - deployment job은 `push`와 `refs/heads/main`을 동시에 검사하고 `server-development` environment를 요구한다.

@@ -33,6 +33,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.json;
+import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.jsonWithStringProperty;
+import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.assertExactResponse;
 
 @Testcontainers
 @AutoConfigureMockMvc
@@ -71,12 +74,15 @@ class AuthenticationHttpIntegrationTests {
 
 	@Test
 	void signsInWithAppleAndReturnsAMoneySnapSession() throws Exception {
-		signIn()
+		MvcResult result = signIn()
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.accessToken").isNotEmpty())
 				.andExpect(jsonPath("$.accessExpiresAt").isNotEmpty())
 				.andExpect(jsonPath("$.refreshToken").isNotEmpty())
-				.andExpect(jsonPath("$.refreshExpiresAt").isNotEmpty());
+				.andExpect(jsonPath("$.refreshExpiresAt").isNotEmpty())
+				.andReturn();
+
+		assertExactResponse(responseJson(result), "session-response.json");
 	}
 
 	@Test
@@ -187,12 +193,38 @@ class AuthenticationHttpIntegrationTests {
 
 	@Test
 	void rejectsAMalformedAppleRequest() throws Exception {
-		mockMvc.perform(post("/api/v1/auth/apple")
+		MvcResult result = mockMvc.perform(post("/api/v1/auth/apple")
 					.contentType("application/json")
 					.content("{}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-				.andExpect(jsonPath("$.correlationId").isNotEmpty());
+				.andExpect(jsonPath("$.correlationId").isNotEmpty())
+				.andReturn();
+
+		assertExactResponse(responseJson(result), "error-invalid-request.json");
+	}
+
+	@Test
+	void toleratesFutureFieldsInAnAppleCredentialRequest() throws Exception {
+		given(appleAuthorization.authorize(any())).willReturn(new VerifiedAppleAuthorization(
+				new VerifiedAppleIdentity("apple-future-field-subject"),
+				"v1.encrypted-apple-refresh"));
+
+		mockMvc.perform(post("/api/v1/auth/apple")
+					.contentType("application/json")
+					.content(jsonWithStringProperty(
+							"apple-credential-request.json", "futureField", "ignored")))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void canonicalRefreshRequestToleratesFutureFieldsBeforeSemanticRejection() throws Exception {
+		mockMvc.perform(post("/api/v1/auth/refresh")
+					.contentType("application/json")
+					.content(jsonWithStringProperty(
+							"refresh-request.json", "futureField", "ignored")))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.code").value("SESSION_REJECTED"));
 	}
 
 	private org.springframework.test.web.servlet.ResultActions signIn() throws Exception {
@@ -205,20 +237,16 @@ class AuthenticationHttpIntegrationTests {
 	private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder appleSignInRequest() {
 		return post("/api/v1/auth/apple")
 				.contentType("application/json")
-				.content("""
-						{
-						  "identityToken": "apple-identity-token",
-						  "authorizationCode": "single-use-code",
-						  "nonce": "request-nonce"
-						}
-						""");
+				.content(json("apple-credential-request.json"));
 	}
 
 	private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder refreshRequest(
 			String refreshToken) {
 		return post("/api/v1/auth/refresh")
 				.contentType("application/json")
-				.content("{\"refreshToken\":\"%s\"}".formatted(refreshToken));
+				.content("refresh-token".equals(refreshToken)
+						? json("refresh-request.json")
+						: "{\"refreshToken\":\"%s\"}".formatted(refreshToken));
 	}
 
 	private static SessionResponse responseOf(MvcResult result) {
@@ -226,6 +254,10 @@ class AuthenticationHttpIntegrationTests {
 		return new SessionResponse(
 				JsonPath.read(content, "$.accessToken"),
 				JsonPath.read(content, "$.refreshToken"));
+	}
+
+	private static String responseJson(MvcResult result) {
+		return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
 	}
 
 	private record SessionResponse(String accessToken, String refreshToken) {

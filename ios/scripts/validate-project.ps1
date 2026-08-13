@@ -36,6 +36,10 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnapTests\AuthenticationAPIClientTests.swift')
     (Join-Path $iosRoot 'MoneySnapTests\AppleNonceTests.swift')
     (Join-Path $iosRoot 'MoneySnapTests\KeychainSessionStoreTests.swift')
+    (Join-Path $iosRoot '..\contracts\examples\v1\identity\apple-credential-request.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\identity\session-response.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\identity\refresh-request.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\identity\error-apple-reauthentication-rejected.json')
 )
 
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_) }
@@ -62,6 +66,10 @@ if ($project -match 'DEVELOPMENT_TEAM = [A-Z0-9]+;') {
 }
 if ($project -notmatch 'ENABLE_TESTABILITY = YES;') {
     throw 'The Debug app target must support @testable integration tests.'
+}
+if ($project -notmatch 'path = \.\./\.\./contracts/examples/v1/identity;' -or
+    $project -notmatch 'identity in Resources') {
+    throw 'Canonical identity fixtures must be included in the MoneySnapTests resource phase.'
 }
 
 $definitionMatches = [regex]::Matches(

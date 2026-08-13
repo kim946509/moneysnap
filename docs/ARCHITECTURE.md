@@ -135,6 +135,7 @@ com.ansandy.moneysnap
 ## API 경계
 
 - canonical Interface는 `contracts/openapi/moneysnap-v1.yaml`이 소유한다.
+- wire example은 `contracts/examples/v1/**` 한 벌을 OpenAPI, server provider test와 iOS consumer test가 함께 사용한다. request decoding은 기존 tolerant 정책을 유지하고 response와 공용 error는 schema의 exact field set을 지킨다.
 - path는 `/api/v1`으로 versioning하고 예상 가능한 오류는 안정된 code와 correlation ID를 반환한다.
 - iOS는 생성되거나 검증된 typed client를 `SnapJournalClient` 뒤에서 사용한다.
 - 존재하지 않는 자원과 접근할 수 없는 자원은 외부에서 구별되지 않는 `NOT_ACCESSIBLE`로 정규화한다.
@@ -220,7 +221,7 @@ Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한
 - R2는 `InMemoryObjectStoreAdapter`로 domain test를 실행하고, 실제 R2-compatible contract test는 승인된 integration 환경에서 분리한다.
 - 실제 R2-compatible test는 exact PUT length·type·checksum, `2,097,153 bytes` overflow, complete content verification과 invalid object cleanup을 검증한다. exact boundary를 강제할 수 없으면 backend bounded fallback이 같은 실패 테스트를 통과해야 한다.
 - group integration test는 owner 포함 20명 capacity, single active 168시간 invite, reissue revoke, join replay/atomicity와 visibility 불변을 검증한다.
-- OpenAPI schema와 controller response의 contract test를 둔다.
+- 기본 Gradle `test`에서 OpenAPI 3.1 parse/reference, `/api/v1`, nonblank unique operation ID, Draft 2020-12 schema와 format assertion, canonical external fixture containment, 공용 ErrorResponse/runtime enum drift를 검증한다. controller success/error exact field set과 iOS decode도 같은 fixture를 사용한다.
 
 ### iOS
 

@@ -17,6 +17,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AppleCredentialRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/apple-credential-request.json
       responses:
         '200':
           description: Authenticated Money Snap session.
@@ -24,6 +27,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/session-response.json
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -39,6 +45,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RefreshRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/refresh-request.json
       responses:
         '200':
           description: Rotated Money Snap session.
@@ -46,6 +55,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/session-response.json
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -73,6 +85,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AppleCredentialRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/apple-credential-request.json
       responses:
         '204':
           description: Account, user data, and all sessions deleted.
@@ -84,12 +99,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                sessionRejected:
+                  externalValue: ../examples/v1/identity/error-session-rejected.json
+                appleReauthenticationRejected:
+                  externalValue: ../examples/v1/identity/error-apple-reauthentication-rejected.json
         '502':
           description: Apple token revocation failed; the account was preserved.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/error-apple-revocation-failed.json
   /auth/apple/events:
     post:
       operationId: receiveAppleAccountEvent
@@ -101,13 +124,32 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AppleAccountEventRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/apple-account-event-request.json
       responses:
         '200':
           description: Event accepted or already processed.
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Request validation failed or the verified event type is unsupported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  externalValue: ../examples/v1/identity/error-invalid-request.json
+                unsupportedEvent:
+                  externalValue: ../examples/v1/identity/error-apple-event-unsupported.json
         '401':
-          $ref: '#/components/responses/Unauthorized'
+          description: The Apple server-to-server event could not be verified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/error-apple-event-rejected.json
 components:
   securitySchemes:
     bearerAuth:
@@ -121,12 +163,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            canonical:
+              externalValue: ../examples/v1/identity/error-invalid-request.json
     Unauthorized:
       description: Authentication credentials are missing, invalid, expired, or revoked.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            canonical:
+              externalValue: ../examples/v1/identity/error-session-rejected.json
   schemas:
     AppleCredentialRequest:
       type: object

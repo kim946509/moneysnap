@@ -55,6 +55,9 @@ $prometheusJobPath = Require-File 'infra/ubuntu/prometheus-moneysnap-job.yaml'
 $deploymentTestPath = Require-File 'server/scripts/test-docker-deployment.sh'
 $xcodeHookPath = Require-File 'ios/ci_scripts/ci_post_clone.sh'
 $dependabotPath = Require-File '.github/dependabot.yml'
+Require-File 'contracts/openapi/moneysnap-v1.yaml' | Out-Null
+Require-File 'contracts/examples/v1/identity/session-response.json' | Out-Null
+Require-File 'server/src/test/java/com/ansandy/moneysnap/contract/OpenApiContractTests.java' | Out-Null
 
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 Require-Match $workflow '(?m)^\s*pull_request:\s*$' 'pull request trigger'

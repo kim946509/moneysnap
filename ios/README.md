@@ -6,14 +6,14 @@ iOS 17+, Swift 6, SwiftUI와 Swift Testing 기반의 native app scaffold다.
 
 - `MoneySnap/App`: app entry, current tab baseline과 tab별 navigation state
 - `MoneySnap/Features`: Figma vertical slice를 추가할 feature 위치
-- `MoneySnapTests`: public app-shell behavior를 검증하는 Swift Testing target
+- `MoneySnapTests`: public app-shell behavior와 `contracts/examples/v1/**` canonical HTTP fixture decode를 검증하는 Swift Testing target
 - `MoneySnap.xcodeproj`: app·unit test target과 shared `MoneySnap` scheme
 
 최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple Developer의 explicit App ID와 배포 signing team 연결은 아직 등록하지 않았으며 별도 Apple activation 작업에서 진행한다.
 
 ## Windows 검증
 
-Windows에는 SwiftUI SDK와 Xcode가 없으므로 project reference, target, deployment target, bundle ID와 asset metadata만 결정론적으로 검사한다.
+Windows에는 SwiftUI SDK와 Xcode가 없으므로 project reference, target, deployment target, bundle ID, asset metadata와 canonical identity fixture test resource 연결을 결정론적으로 검사한다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-project.ps1
