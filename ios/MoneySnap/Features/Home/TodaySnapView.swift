@@ -1,11 +1,8 @@
 import SwiftUI
 
 struct TodaySnapView: View {
-    @State private var viewModel: TodaySnapViewModel
-
-    init(client: any SnapJournalClient) {
-        _viewModel = State(initialValue: TodaySnapViewModel(client: client))
-    }
+    let viewModel: TodaySnapViewModel
+    let onRecord: () -> Void
 
     var body: some View {
         ZStack {
@@ -15,12 +12,16 @@ struct TodaySnapView: View {
             case .loading:
                 ProgressView()
             case let .content(summary):
-                TodaySnapContent(summary: summary)
+                TodaySnapContent(summary: summary, onRecord: onRecord)
             case .failure:
-                ContentUnavailableView(
-                    "오늘 기록을 불러오지 못했어요",
-                    systemImage: "exclamationmark.arrow.triangle.2.circlepath"
-                )
+                ContentUnavailableView {
+                    Label("오늘 기록을 불러오지 못했어요", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                        .accessibilityIdentifier("screen.home")
+                } actions: {
+                    Button("기록하기", action: onRecord)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityIdentifier("home.record")
+                }
             }
         }
         .task { await viewModel.load() }
@@ -29,13 +30,14 @@ struct TodaySnapView: View {
 
 private struct TodaySnapContent: View {
     let summary: TodaySnapSummary
+    let onRecord: () -> Void
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
                 header(availableWidth: proxy.size.width)
                 featuredCards(availableWidth: proxy.size.width)
-                recordButtonAppearance(availableWidth: proxy.size.width)
+                recordButton(availableWidth: proxy.size.width)
                 pageIndicator(availableWidth: proxy.size.width)
                 totalSection
                 recentSection
@@ -96,21 +98,24 @@ private struct TodaySnapContent: View {
         }
     }
 
-    private func recordButtonAppearance(availableWidth: CGFloat) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "plus")
-                .font(.system(size: 14, weight: .bold))
-                .frame(width: 28, height: 28)
-                .foregroundStyle(.white)
-                .background(.white.opacity(0.18), in: Circle())
-            Text("기록하기")
-                .font(.moneySnap(size: 20, weight: .bold))
+    private func recordButton(availableWidth: CGFloat) -> some View {
+        Button(action: onRecord) {
+            HStack(spacing: 10) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(width: 28, height: 28)
+                    .foregroundStyle(.white)
+                    .background(.white.opacity(0.18), in: Circle())
+                Text("기록하기")
+                    .font(.moneySnap(size: 20, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(width: 165, height: 64)
+            .background(MoneySnapVisualSystem.charcoal, in: Capsule())
+            .shadow(color: .black.opacity(0.18), radius: 14, y: 10)
         }
-        .foregroundStyle(.white)
-        .frame(width: 165, height: 64)
-        .background(MoneySnapVisualSystem.charcoal, in: Capsule())
-        .shadow(color: .black.opacity(0.18), radius: 14, y: 10)
-        .accessibilityHidden(true)
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home.record")
         .position(x: availableWidth / 2, y: 436)
     }
 
@@ -164,6 +169,9 @@ private extension Collection {
 
 #if DEBUG
 #Preview {
-    TodaySnapView(client: VisualTestSupport.snapJournalClient)
+    TodaySnapView(
+        viewModel: TodaySnapViewModel(client: VisualTestSupport.snapJournalClient),
+        onRecord: {}
+    )
 }
 #endif

@@ -42,6 +42,10 @@ struct FeaturedSnapCard: View {
                     .frame(width: imageSize.width, height: imageSize.height)
                     .clipShape(RoundedRectangle(cornerRadius: layout == .landscape ? 19 : 14))
                     .rotationEffect(.degrees(rotation))
+            } else {
+                SnapCategoryPlaceholder(entry: entry, surface: .featured)
+                    .frame(width: layout == .landscape ? 96 : 86, height: layout == .landscape ? 96 : 86)
+                    .rotationEffect(.degrees(rotation))
             }
         }
     }
@@ -83,6 +87,9 @@ struct RecentSnapRow: View {
                     .scaledToFill()
                     .frame(width: 34, height: 34)
                     .clipShape(RoundedRectangle(cornerRadius: 7))
+            } else {
+                SnapCategoryPlaceholder(entry: entry, surface: .recent)
+                    .frame(width: 34, height: 34)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.category.title)
@@ -96,4 +103,42 @@ struct RecentSnapRow: View {
         }
         .frame(width: 150, height: 46)
     }
+}
+
+private struct SnapCategoryPlaceholder: View {
+    enum Surface: String {
+        case featured
+        case recent
+    }
+
+    let entry: TodaySnapEntry
+    let surface: Surface
+
+    var body: some View {
+        Image(systemName: entry.category.placeholderSymbol)
+            .font(.system(size: surface == .featured ? 34 : 15, weight: .semibold))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Exact category palette remains design-gated; use an approved neutral token meanwhile.
+            .background(MoneySnapVisualSystem.profileNeutralFill, in: RoundedRectangle(cornerRadius: surface == .featured ? 20 : 7))
+            .foregroundStyle(MoneySnapVisualSystem.charcoal)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(entry.category.title) 사진 없음")
+            .accessibilityIdentifier("home.placeholder.\(surface.rawValue).\(entry.id.uuidString.lowercased())")
+    }
+}
+
+private extension SnapCategory {
+    var placeholderSymbol: String {
+        switch self {
+        case .food: "fork.knife"
+        case .cafe: "cup.and.saucer.fill"
+        case .transportation: "bus.fill"
+        case .shopping: "bag.fill"
+        case .living: "house.fill"
+        case .culture: "theatermasks.fill"
+        case .health: "cross.case.fill"
+        case .other: "circle.grid.2x2.fill"
+        }
+    }
+
 }

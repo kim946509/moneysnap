@@ -13,6 +13,8 @@ enum MoneySnapVisualSystem {
     static let profileSecondaryText = Color(red: 138.0 / 255, green: 141.0 / 255, blue: 153.0 / 255)
     static let profileBadgeText = Color(red: 46.0 / 255, green: 48.0 / 255, blue: 56.0 / 255)
     static let profileNeutralFill = Color(red: 240.0 / 255, green: 241.0 / 255, blue: 244.0 / 255)
+    static let captureKeyFill = Color(red: 245.0 / 255, green: 245.0 / 255, blue: 247.0 / 255)
+    static let captureSelectionFill = Color(red: 1, green: 225.0 / 255, blue: 174.0 / 255)
     static let profileBorder = Color(red: 239.0 / 255, green: 239.0 / 255, blue: 242.0 / 255)
     static let profileAvatar = Color(red: 1, green: 211.0 / 255, blue: 220.0 / 255)
 }

@@ -576,8 +576,62 @@ struct AuthenticationModelTests {
         #expect(model.issue == .localSessionCleanupFailed)
     }
 
+    @Test
+    func staleBearerRejectionDoesNotClearTheRotatedCurrentSession() async {
+        let old = session(access: "old-token")
+        let rotated = session(access: "rotated-token")
+        let store = MemorySessionStore(session: rotated)
+        let model = authenticatedModel(
+            api: StubAuthenticationAPI(),
+            store: store,
+            session: old
+        )
+        await model.restore()
+
+        await model.handleSessionRejection(for: "old-token")
+
+        #expect(model.phase == .authenticated(rotated))
+        #expect(await store.storedSession() == rotated)
+    }
+
+    @Test
+    func currentBearerRejectionClearsTheCurrentSession() async {
+        let current = session(access: "current-token")
+        let store = MemorySessionStore(session: current)
+        let model = authenticatedModel(
+            api: StubAuthenticationAPI(),
+            store: store,
+            session: current
+        )
+
+        await model.handleSessionRejection(for: "current-token")
+
+        #expect(model.phase == .signedOut)
+        #expect(await store.storedSession() == nil)
+    }
+
+    @Test
+    func currentBearerRejectionDuringRefreshCannotReviveTheSession() async {
+        let current = session(access: "old-token", accessExpiresIn: 0)
+        let refreshed = session(access: "new-token")
+        let api = SuspendedRefreshAuthenticationAPI(refreshed: refreshed)
+        let store = MemorySessionStore(session: current)
+        let model = authenticatedModel(api: api, store: store, session: current)
+        let refresh = Task { try await model.accessTokenForRequest() }
+        await api.waitUntilRefreshStarts()
+
+        await model.handleSessionRejection(for: "old-token")
+        await api.release()
+
+        await #expect(throws: AuthenticationClientError.sessionRejected) {
+            _ = try await refresh.value
+        }
+        #expect(model.phase == .signedOut)
+        #expect(await store.storedSession() == nil)
+    }
+
     private func authenticatedModel(
-        api: StubAuthenticationAPI,
+        api: any AuthenticationAPI,
         store: MemorySessionStore,
         session: AuthenticationSession
     ) -> AuthenticationModel {
@@ -643,6 +697,8 @@ private actor MemorySessionStore: SessionStore {
         }
         session = nil
     }
+
+    func storedSession() -> AuthenticationSession? { session }
 }
 
 private enum SessionStoreFixtureError: Error {
@@ -718,6 +774,40 @@ private actor StubAuthenticationAPI: AuthenticationAPI {
     func deleteAccount(accessToken: String, credential: AppleSignInCredential) throws {
         deletedAccessToken = accessToken
         if let deleteError { throw deleteError }
+    }
+}
+
+private actor SuspendedRefreshAuthenticationAPI: AuthenticationAPI {
+    private let refreshed: AuthenticationSession
+    private var refreshStarted = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    private var gate: CheckedContinuation<Void, Never>?
+
+    init(refreshed: AuthenticationSession) { self.refreshed = refreshed }
+
+    func signIn(with credential: AppleSignInCredential) throws -> AuthenticationSession {
+        throw AuthenticationClientError.temporarilyUnavailable
+    }
+
+    func refresh(_ refreshToken: String) async -> AuthenticationSession {
+        refreshStarted = true
+        startWaiters.forEach { $0.resume() }
+        startWaiters.removeAll()
+        await withCheckedContinuation { gate = $0 }
+        return refreshed
+    }
+
+    func logout(accessToken: String) {}
+    func deleteAccount(accessToken: String, credential: AppleSignInCredential) {}
+
+    func waitUntilRefreshStarts() async {
+        guard !refreshStarted else { return }
+        await withCheckedContinuation { startWaiters.append($0) }
+    }
+
+    func release() {
+        gate?.resume()
+        gate = nil
     }
 }
 

@@ -4,6 +4,7 @@ struct AuthenticationGateView: View {
     let authentication: AuthenticationModel
     @Binding var selectedTab: AppTab
     let snapJournalClient: any SnapJournalClient
+    var initialCaptureModel: SnapCaptureModel?
 
     var body: some View {
         Group {
@@ -22,7 +23,8 @@ struct AuthenticationGateView: View {
                 AppShellView(
                     selectedTab: $selectedTab,
                     authentication: authentication,
-                    snapJournalClient: snapJournalClient
+                    snapJournalClient: snapJournalClient,
+                    initialCaptureModel: initialCaptureModel
                 )
             }
         }

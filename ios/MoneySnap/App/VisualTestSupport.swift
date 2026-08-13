@@ -5,10 +5,12 @@ import SwiftUI
 enum VisualScenario: String, CaseIterable, Sendable {
     case home
     case my
+    case recordCategory = "record-category"
+    case recordAmount = "record-amount"
 
     var initialTab: AppTab {
         switch self {
-        case .home: .home
+        case .home, .recordCategory, .recordAmount: .home
         case .my: .profile
         }
     }
@@ -20,8 +22,24 @@ enum VisualLaunchRequest: Equatable, Sendable {
     case invalid(String)
 }
 
+enum FeatureLaunchRequest: Equatable, Sendable {
+    case absent
+    case record
+    case recordRetry
+    case invalid(String)
+}
+
 @MainActor
 enum VisualTestSupport {
+    static func resolveFeature(environment: [String: String]) -> FeatureLaunchRequest {
+        guard let rawValue = environment["MONEYSNAP_FEATURE_SCENARIO"] else { return .absent }
+        switch rawValue {
+        case "record": .record
+        case "record-retry": .recordRetry
+        default: .invalid(rawValue)
+        }
+    }
+
     static func resolve(environment: [String: String]) -> VisualLaunchRequest {
         guard let rawValue = environment["MONEYSNAP_VISUAL_SCENARIO"] else {
             return .live
@@ -50,6 +68,35 @@ enum VisualTestSupport {
 
     static var snapJournalClient: any SnapJournalClient {
         InMemorySnapJournalClient(summary: homeSummary)
+    }
+
+    static var recordFeatureClient: any SnapJournalClient {
+        RecordFeatureSnapJournalClient(summary: recordFeatureSummary)
+    }
+
+    static var recordRetryFeatureClient: any SnapJournalClient {
+        RecordRetrySnapJournalClient(summary: recordFeatureSummary)
+    }
+
+    static func initialCaptureModel(
+        for scenario: VisualScenario,
+        client: any SnapJournalClient
+    ) -> SnapCaptureModel? {
+        guard scenario == .recordCategory || scenario == .recordAmount else { return nil }
+        let model = SnapCaptureModel(
+            record: { try await client.record($0) },
+            now: { Date(timeIntervalSince1970: 1_780_415_400) },
+            timeZone: { TimeZone(identifier: "Asia/Seoul")! },
+            mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! }
+        )
+        if scenario == .recordCategory {
+            model.select(.food)
+            model.goBack()
+        } else if scenario == .recordAmount {
+            model.select(.food)
+            [1, 8, 9, 0, 0].forEach(model.appendDigit)
+        }
+        return model
     }
 
     private static let session = AuthenticationSession(
@@ -85,6 +132,19 @@ enum VisualTestSupport {
             preconditionFailure("Visual fixture must satisfy the Snap model: \(error)")
         }
     }()
+
+    private static let recordFeatureSummary: TodaySnapSummary = {
+        do {
+            return try TodaySnapSummary(
+                day: SnapDay(year: 2026, month: 8, day: 13, weekday: .thursday),
+                entries: homeSummary.entries,
+                featuredEntryIDs: homeSummary.featuredEntryIDs,
+                recentEntryIDs: homeSummary.recentEntryIDs
+            )
+        } catch {
+            preconditionFailure("Record feature fixture must satisfy the Snap model: \(error)")
+        }
+    }()
 }
 
 private struct InMemorySnapJournalClient: SnapJournalClient {
@@ -92,6 +152,45 @@ private struct InMemorySnapJournalClient: SnapJournalClient {
 
     func fetchToday() async throws -> TodaySnapSummary {
         summary
+    }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        throw SnapRecordError.transportFailure
+    }
+}
+
+private actor RecordFeatureSnapJournalClient: SnapJournalClient {
+    let summary: TodaySnapSummary
+
+    func fetchToday() async throws -> TodaySnapSummary { summary }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        SnapRecordReceipt(
+            id: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
+            category: command.category,
+            amountWon: command.amountWon,
+            localDay: command.localDay,
+            createdAt: Date(timeIntervalSince1970: 1_786_582_800)
+        )
+    }
+}
+
+private actor RecordRetrySnapJournalClient: SnapJournalClient {
+    let summary: TodaySnapSummary
+    private var attempts = 0
+
+    func fetchToday() async throws -> TodaySnapSummary { summary }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        attempts += 1
+        guard attempts > 1 else { throw SnapRecordError.transportFailure }
+        return SnapRecordReceipt(
+            id: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
+            category: command.category,
+            amountWon: command.amountWon,
+            localDay: command.localDay,
+            createdAt: Date(timeIntervalSince1970: 1_786_582_800)
+        )
     }
 }
 

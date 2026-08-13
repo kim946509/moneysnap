@@ -37,6 +37,63 @@ struct AppShellTests {
 
     @Test
     func visualScenarioAllowlistKeepsReviewedOrder() {
-        #expect(VisualScenario.allCases == [.home, .my])
+        #expect(VisualScenario.allCases == [.home, .my, .recordCategory, .recordAmount])
+        #expect(
+            VisualTestSupport.resolve(
+                environment: ["MONEYSNAP_VISUAL_SCENARIO": "record-category"]
+            ) == .scenario(.recordCategory)
+        )
+        #expect(
+            VisualTestSupport.resolve(
+                environment: ["MONEYSNAP_VISUAL_SCENARIO": "record-amount"]
+            ) == .scenario(.recordAmount)
+        )
+    }
+
+    @Test
+    func recordAmountVisualScenarioSeedsTheReviewedDraft() throws {
+        let model = try #require(
+            VisualTestSupport.initialCaptureModel(
+                for: .recordAmount,
+                client: VisualTestSupport.snapJournalClient
+            )
+        )
+
+        #expect(model.phase == .amount)
+        #expect(model.selectedCategory == .food)
+        #expect(model.amountText == "₩18,900")
+    }
+
+    @Test
+    func recordCategoryVisualScenarioSeedsTheReviewedSelection() throws {
+        let model = try #require(
+            VisualTestSupport.initialCaptureModel(
+                for: .recordCategory,
+                client: VisualTestSupport.snapJournalClient
+            )
+        )
+
+        #expect(model.phase == .category)
+        #expect(model.selectedCategory == .food)
+    }
+
+    @Test
+    func unknownFeatureScenarioFailsClosed() {
+        #expect(VisualTestSupport.resolveFeature(environment: [:]) == .absent)
+        #expect(
+            VisualTestSupport.resolveFeature(
+                environment: ["MONEYSNAP_FEATURE_SCENARIO": "record"]
+            ) == .record
+        )
+        #expect(
+            VisualTestSupport.resolveFeature(
+                environment: ["MONEYSNAP_FEATURE_SCENARIO": "record-retry"]
+            ) == .recordRetry
+        )
+        #expect(
+            VisualTestSupport.resolveFeature(
+                environment: ["MONEYSNAP_FEATURE_SCENARIO": "unknown"]
+            ) == .invalid("unknown")
+        )
     }
 }

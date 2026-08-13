@@ -2,12 +2,13 @@ import SwiftUI
 
 struct MoneySnapTabBar: View {
     @Binding var selectedTab: AppTab
+    let onSelect: (AppTab) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases) { tab in
                 Button {
-                    selectedTab = tab
+                    onSelect(tab)
                 } label: {
                     VStack(spacing: 1) {
                         Image(systemName: tab.systemImage)
@@ -28,6 +29,7 @@ struct MoneySnapTabBar: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("tab.\(tab.rawValue)")
+                .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
             }
         }
         .padding(.horizontal, 5)
