@@ -52,16 +52,17 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
         let firstToken = try await tokenForRequest()
         do {
             return try await send(body: body, token: firstToken, expected: command)
-        } catch let error as UnauthorizedResponse {
+        } catch let unauthorized as UnauthorizedResponse {
+            let correlationID = unauthorized.correlationID
             await sessionRejected(firstToken)
             let retryToken: String
             do {
                 retryToken = try await tokenForRequest()
             } catch {
-                throw SnapRecordError.sessionRejected(correlationID: error.correlationID)
+                throw SnapRecordError.sessionRejected(correlationID: correlationID)
             }
             guard retryToken != firstToken else {
-                throw SnapRecordError.sessionRejected(correlationID: error.correlationID)
+                throw SnapRecordError.sessionRejected(correlationID: correlationID)
             }
             do {
                 return try await send(body: body, token: retryToken, expected: command)

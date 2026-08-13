@@ -33,7 +33,7 @@ enum FeatureLaunchRequest: Equatable, Sendable {
 enum VisualTestSupport {
     static func resolveFeature(environment: [String: String]) -> FeatureLaunchRequest {
         guard let rawValue = environment["MONEYSNAP_FEATURE_SCENARIO"] else { return .absent }
-        switch rawValue {
+        return switch rawValue {
         case "record": .record
         case "record-retry": .recordRetry
         default: .invalid(rawValue)
