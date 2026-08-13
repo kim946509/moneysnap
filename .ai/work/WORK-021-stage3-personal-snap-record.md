@@ -1,6 +1,6 @@
 ---
 id: WORK-021
-status: proposed
+status: active
 depends_on: [WORK-017, WORK-019, WORK-020, WORK-022]
 owner: codex
 ---
@@ -86,8 +86,10 @@ git diff --check
 ## Evidence
 
 - 실행 명령:
+  - dependency status와 `git status --short` 확인
 - 결과:
-- 리뷰: WORK-017·019·020 승인/완료 후 Red부터 실행
+  - WORK-017·019·020·022가 모두 완료됐고 working tree가 clean인 `3fa01c9`를 Stage 3 시작 기준점으로 고정했다.
+- 리뷰: 2026-08-13 사용자가 전체 MVP와 하네스 변경을 명시 승인했으며 Red부터 구현을 시작한다.
 
 ## Agent rules impact
 
@@ -98,8 +100,8 @@ git diff --check
 ## Code Review Graph
 
 - 코드 변경 여부: yes
-- graph action: valid graph 확인 후 stage-start SHA 기준 incremental update 예정
-- base: Stage 3 시작 시 고정
+- graph action: valid graph 확인 후 stage-start SHA `3fa01c9` 기준 incremental update 예정
+- base: `3fa01c9`
 - risk: high (owner authorization, money, idempotency, transaction, session boundary)
 - findings와 처리 결과: 각 의미 있는 서버/iOS 변경 묶음 뒤 standard detail로 검사하고 actionable finding은 TDD 수정·재update한다.
 

@@ -13,7 +13,7 @@
 - CRITICAL: 외부 시스템 변경, 배포, 삭제, 비용 발생 작업은 실행 전에 승인 경계를 확인할 것
 
 ## 현재 프로젝트 단계
-- 현재 단계는 **iOS 인증 기반과 MVP 세부 정책 완료, Stage 3 개인 Snap 구현 하네스 준비 중**이다. development CD와 실제 Apple activation은 아직 수행하지 않는다.
+- 현재 단계는 **iOS 인증·공통 계약·UI/시각 하네스를 완료하고 Stage 3 사진 없는 개인 Snap 저장을 구현 중**이다. development CD와 실제 Apple activation은 아직 수행하지 않는다.
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
 - SwiftUI + Spring Boot + PostgreSQL + Cloudflare DNS/R2 + Ubuntu Docker/Nginx Proxy Manager 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
 - `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native test·393x852 visual artifact 생성을 통과했다.
@@ -23,7 +23,7 @@
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - development Spring Boot는 개발자 소유 Ubuntu Docker에서 `moneysnap-server`로 실행되며 private host `192.168.1.102:9090`, external network `main`, container management `9091` 계약을 사용한다. `moneysnap-server.ansandy.co.kr`은 Cloudflare DNS와 기존 Nginx Proxy Manager를 거쳐 `/` 200, public actuator 403을 반환한다.
 - 기존 Prometheus는 host publish `127.0.0.1:9092`와 container `9090`을 사용하며 `moneysnap-server:9091` target을 `up=1`로 수집한다. Grafana `monitor.ansandy.co.kr/api/health`는 200이다.
-- 서버의 Sign in with Apple 전체 경계와 iOS AuthenticationServices·Keychain 지속 session, 로그아웃·재인증 탈퇴 UI가 완료됐다. GitHub-hosted Xcode 16.4 Simulator에서 native 59 tests와 Home/My 393x852 visual evidence가 통과했다. 실제 Apple credential 연동은 explicit App ID와 key activation이 필요하다.
+- 서버의 Sign in with Apple 전체 경계와 iOS AuthenticationServices·Keychain 지속 session, 로그아웃·재인증 탈퇴 UI가 완료됐다. GitHub-hosted Xcode 16.4 Simulator에서 Swift Testing 61건·XCUITest 2건과 build-once Home/My 393x852 visual evidence가 통과했다. 실제 Apple credential 연동은 explicit App ID와 key activation이 필요하다.
 - `WORK-019`에서 금액·`localDay`, private 사진 quota, 그룹·초대·불변 공개 설정, 저장 후 단일-group 공유와 profile fallback 정책을 2026-08-13 승인 기준으로 확정했다. Stage 3·6·7·8은 해당 runtime AC를 각 기능 테스트로 검증한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 
