@@ -1,5 +1,8 @@
 package com.ansandy.moneysnap.identity;
 
+import com.ansandy.moneysnap.shared.http.ApiErrorCode;
+import com.ansandy.moneysnap.shared.http.ApiErrorResponse;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

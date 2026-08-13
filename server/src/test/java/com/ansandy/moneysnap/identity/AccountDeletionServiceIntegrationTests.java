@@ -73,7 +73,7 @@ class AccountDeletionServiceIntegrationTests {
 		SessionActor actor = sessions.authenticate(firstDevice.accessToken());
 		AccountDeletionService deletion = new AccountDeletionService(store, cipher, apple);
 
-		deletion.delete(actor, new VerifiedAppleAuthorization(
+		deletion.delete(actor.userId(), new VerifiedAppleAuthorization(
 				new VerifiedAppleIdentity("apple-delete-subject"),
 				cipher.encrypt("reauth-apple-refresh-token")));
 
@@ -88,7 +88,7 @@ class AccountDeletionServiceIntegrationTests {
 		SessionTokens tokens = sessions.signIn(new VerifiedAppleIdentity("apple-delete-subject"));
 		SessionActor actor = sessions.authenticate(tokens.accessToken());
 
-		deletion().delete(actor, reauthorization("apple-delete-subject"));
+		deletion().delete(actor.userId(), reauthorization("apple-delete-subject"));
 
 		assertThat(apple.revokedRefreshToken).isEqualTo("reauth-apple-refresh-token");
 	}
@@ -98,7 +98,7 @@ class AccountDeletionServiceIntegrationTests {
 		SessionTokens tokens = sessions.signIn(new VerifiedAppleIdentity("current-apple-subject"));
 		SessionActor actor = sessions.authenticate(tokens.accessToken());
 
-		assertThatThrownBy(() -> deletion().delete(actor, reauthorization("different-apple-subject")))
+		assertThatThrownBy(() -> deletion().delete(actor.userId(), reauthorization("different-apple-subject")))
 				.isInstanceOf(IdentitySessionException.class)
 				.extracting(error -> ((IdentitySessionException) error).failure())
 				.isEqualTo(IdentitySessionFailure.UNAUTHORIZED);
@@ -113,7 +113,7 @@ class AccountDeletionServiceIntegrationTests {
 		SessionActor actor = sessions.authenticate(firstDevice.accessToken());
 		apple.fail = true;
 
-		assertThatThrownBy(() -> deletion().delete(actor, reauthorization("apple-delete-subject")))
+		assertThatThrownBy(() -> deletion().delete(actor.userId(), reauthorization("apple-delete-subject")))
 				.isInstanceOf(AppleRevocationException.class);
 		assertThat(rowCount("users")).isOne();
 		assertThat(rowCount("identity_sessions")).isEqualTo(2);
@@ -125,7 +125,7 @@ class AccountDeletionServiceIntegrationTests {
 		SessionTokens secondDevice = sessions.signIn(new VerifiedAppleIdentity("apple-delete-subject"));
 		SessionActor actor = sessions.authenticate(firstDevice.accessToken());
 
-		deletion().delete(actor, reauthorization("apple-delete-subject"));
+		deletion().delete(actor.userId(), reauthorization("apple-delete-subject"));
 
 		assertUnauthorized(() -> sessions.authenticate(firstDevice.accessToken()));
 		assertUnauthorized(() -> sessions.refresh(firstDevice.refreshToken()));

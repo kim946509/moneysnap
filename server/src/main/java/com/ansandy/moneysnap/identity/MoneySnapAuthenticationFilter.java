@@ -12,6 +12,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.ansandy.moneysnap.shared.AuthenticatedUser;
+
 final class MoneySnapAuthenticationFilter extends OncePerRequestFilter {
 
 	private static final String BEARER_PREFIX = "Bearer ";
@@ -33,7 +35,8 @@ final class MoneySnapAuthenticationFilter extends OncePerRequestFilter {
 			try {
 				SessionActor actor = sessions.authenticate(accessToken);
 				SecurityContextHolder.getContext().setAuthentication(
-						UsernamePasswordAuthenticationToken.authenticated(actor, accessToken, List.of()));
+						UsernamePasswordAuthenticationToken.authenticated(
+								new AuthenticatedUser(actor.userId()), accessToken, List.of()));
 			}
 			catch (IdentitySessionException ignored) {
 				SecurityContextHolder.clearContext();

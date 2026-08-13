@@ -10,6 +10,9 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import tools.jackson.databind.ObjectMapper;
 
+import com.ansandy.moneysnap.shared.http.ApiErrorCode;
+import com.ansandy.moneysnap.shared.http.ApiErrorResponse;
+
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Configuration(proxyBeanMethods = false)

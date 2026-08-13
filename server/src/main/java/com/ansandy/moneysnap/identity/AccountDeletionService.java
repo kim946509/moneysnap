@@ -1,6 +1,7 @@
 package com.ansandy.moneysnap.identity;
 
 import java.util.Objects;
+import java.util.UUID;
 
 final class AccountDeletionService {
 
@@ -17,14 +18,14 @@ final class AccountDeletionService {
 		this.apple = Objects.requireNonNull(apple);
 	}
 
-	void delete(SessionActor actor, VerifiedAppleAuthorization reauthorization) {
-		Objects.requireNonNull(actor);
+	void delete(UUID userId, VerifiedAppleAuthorization reauthorization) {
+		Objects.requireNonNull(userId);
 		Objects.requireNonNull(reauthorization);
-		if (!store.isIdentityOwnedBy(actor.userId(), reauthorization.identity().subject())) {
+		if (!store.isIdentityOwnedBy(userId, reauthorization.identity().subject())) {
 			throw new IdentitySessionException(IdentitySessionFailure.UNAUTHORIZED);
 		}
 		String refreshToken = refreshTokenCipher.decrypt(reauthorization.encryptedRefreshToken());
 		apple.revoke(refreshToken);
-		store.deleteUser(actor.userId());
+		store.deleteUser(userId);
 	}
 }

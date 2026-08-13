@@ -1,5 +1,8 @@
 package com.ansandy.moneysnap.identity;
 
+import com.ansandy.moneysnap.shared.http.ApiErrorCode;
+import com.ansandy.moneysnap.shared.http.ApiErrorResponse;
+
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Set;

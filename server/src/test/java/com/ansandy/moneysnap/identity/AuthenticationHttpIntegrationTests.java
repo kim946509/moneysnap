@@ -26,6 +26,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import com.ansandy.moneysnap.shared.AuthenticatedUser;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -133,14 +135,14 @@ class AuthenticationHttpIntegrationTests {
 	}
 
 	@Test
-	void recoversTheSessionActorFromABearerAccessToken() throws Exception {
+	void exposesOnlyTheUserIdThroughTheFeatureNeutralPrincipal() throws Exception {
 		SessionResponse signedIn = responseOf(signIn().andReturn());
 
 		mockMvc.perform(get("/api/v1/auth/actor-probe")
 					.header("Authorization", "Bearer " + signedIn.accessToken()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.userId").isNotEmpty())
-				.andExpect(jsonPath("$.sessionId").isNotEmpty());
+				.andExpect(jsonPath("$.sessionId").doesNotExist());
 	}
 
 	@Test
@@ -276,8 +278,8 @@ class AuthenticationHttpIntegrationTests {
 	static class ActorProbeController {
 
 		@GetMapping("/api/v1/auth/actor-probe")
-		SessionActor actor(Authentication authentication) {
-			return (SessionActor) authentication.getPrincipal();
+		AuthenticatedUser actor(Authentication authentication) {
+			return (AuthenticatedUser) authentication.getPrincipal();
 		}
 	}
 }

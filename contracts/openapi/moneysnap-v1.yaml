@@ -150,6 +150,59 @@ paths:
               examples:
                 canonical:
                   externalValue: ../examples/v1/identity/error-apple-event-rejected.json
+  /snaps:
+    post:
+      operationId: recordPersonalSnap
+      summary: Record a photo-free personal Snap for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapRecordRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/snaps/record-request.json
+      responses:
+        '201':
+          description: Personal Snap recorded or an identical mutation replayed.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+              description: Relative path of the stable recorded Snap ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapRecordResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/record-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: The actor already used the mutation ID for a different semantic payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
 components:
   securitySchemes:
     bearerAuth:
@@ -232,6 +285,64 @@ components:
         refreshExpiresAt:
           type: string
           format: date-time
+    SnapRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - clientMutationId
+        - localDay
+        - timeZone
+        - category
+        - amountWon
+      properties:
+        clientMutationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '.*\S.*'
+          description: Actor-scoped opaque idempotency key; UUID syntax is not required.
+        localDay:
+          type: string
+          format: date
+        timeZone:
+          type: string
+          minLength: 1
+          description: UTC or an available tzdb region ID containing a slash.
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999999999
+    SnapRecordResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - category
+        - amountWon
+        - localDay
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999999999
+        localDay:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
     ErrorResponse:
       type: object
       additionalProperties: false
@@ -245,6 +356,8 @@ components:
           enum:
             - INVALID_REQUEST
             - SESSION_REJECTED
+            - MUTATION_CONFLICT
+            - INTERNAL_ERROR
             - APPLE_REAUTHENTICATION_REJECTED
             - APPLE_REVOCATION_FAILED
             - APPLE_EVENT_REJECTED

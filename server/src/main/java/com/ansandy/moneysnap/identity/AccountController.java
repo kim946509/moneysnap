@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ansandy.moneysnap.shared.AuthenticatedUser;
+import com.ansandy.moneysnap.shared.http.ApiErrorCode;
+import com.ansandy.moneysnap.shared.http.ApiErrorResponse;
+
 @RestController
 @RequestMapping("/api/v1/account")
 @ConditionalOnProperty(name = "moneysnap.apple.enabled", havingValue = "true")
@@ -33,7 +37,7 @@ class AccountController {
 			Authentication authentication,
 			@Valid @RequestBody AppleCredentialRequest request) {
 		VerifiedAppleAuthorization verified = appleAuthorization.authorize(request.toAuthorizationRequest());
-		deletion.delete((SessionActor) authentication.getPrincipal(), verified);
+		deletion.delete(((AuthenticatedUser) authentication.getPrincipal()).userId(), verified);
 	}
 
 	@ExceptionHandler(IdentitySessionException.class)
