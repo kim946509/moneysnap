@@ -59,7 +59,7 @@ WORK-019의 체크는 정책 채택만 증명한다. 다음 runtime 조건은 �
 - 카메라는 1장, 앨범은 최대 3장을 선택하되 각 사진은 category+amount를 가진 별도 Snap으로 순차 저장하며 Snap당 active image는 최대 1개다.
 - iOS는 orientation을 보정하고 EXIF를 제거한 JPEG를 최대 변 `1600px` 이하, `2,097,152 bytes` 이하로 만든다.
 - grant는 정확한 `image/jpeg`, byte size, SHA-256을 받아 최근 24시간 completed+nonexpired pending 20건과 active+pending+신규 예약 `7,000,000,000 bytes` 경계를 transaction으로 검사한다. 삭제는 24시간 quota를 환급하지 않는다.
-- upload intent와 grant는 10분 뒤 만료하며 expired·failed pending reservation과 invalid/orphan object는 cleanup job으로 회수한다.
+- upload intent와 grant는 10분 뒤 만료한다. complete된 unlinked media는 `completedAt`부터 24시간 동안 같은 사용자의 draft 복구 대상으로 보존하고 explicit abort 또는 24시간 경계 이후에만 orphan cleanup job으로 회수한다.
 - exact length/type/checksum을 direct PUT에서 실제로 강제하는 held-out contract test를 둔다. 강제할 수 없으면 unrestricted grant를 발급하지 않고 backend가 `2,097,153 bytes`에서 중단하는 bounded stream으로 전달한다.
 - complete는 private object를 최대 `2,097,153 bytes` bounded read로 확인해 JPEG signature·dimension·byte size·checksum·EXIF 제거를 재검증한 뒤에만 활성화한다.
 - storage guardrail 도달 시 신규 사진 grant만 차단하고 read·delete·사진 없는 Snap은 유지한다.

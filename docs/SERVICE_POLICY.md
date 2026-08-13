@@ -51,7 +51,9 @@ upload grant를 요청할 때 client는 정확한 byte size, `image/jpeg`와 SHA
 
 삭제는 최근 24시간 upload quota를 환급하지 않는다. 실제 object 삭제가 확인되기 전에는 active bytes에서 제외하지 않는다. 전체 storage guardrail에 도달하면 신규 upload grant만 차단하고 기존 사진 read·delete와 사진 없는 Snap 저장은 유지한다.
 
-upload intent와 grant는 발급 시각부터 10분 뒤 만료한다. expired·failed pending reservation, complete 검증에 실패한 object, orphan object와 삭제 실패는 bounded retry cleanup 대상으로 관리한다.
+upload intent와 grant는 발급 시각부터 10분 뒤 만료한다. complete에 성공했지만 Snap에 연결되지 않은 `ACTIVE_UNLINKED` media는 `completedAt`부터 24시간 동안 같은 사용자의 draft 복구 대상으로 보존한다. 사용자가 명시적으로 draft를 폐기했거나 `completedAt + 24시간` 경계에 도달한 뒤에도 연결되지 않은 경우에만 orphan cleanup 대상이 된다. expired·failed pending reservation, complete 검증에 실패한 object, eligible orphan object와 삭제 실패는 bounded retry cleanup 대상으로 관리한다.
+
+계정 탈퇴는 media row를 바로 cascade해 object key를 잃지 않는다. transaction 안에서 해당 사용자의 pending·active·linked media를 account와 독립된 cleanup job/tombstone으로 먼저 전환한 뒤 계정 데이터를 삭제하고, private object 삭제와 byte 회계를 bounded retry로 완료한다. 다른 사용자의 media는 건드리지 않는다.
 
 direct PUT grant는 exact `Content-Length`, `Content-Type`과 checksum을 서명 경계에 결합하고 실제 R2 contract test로 변경·누락·초과 upload가 저장되지 않는지 검증해야 한다. R2와 사용 중인 SDK가 이 경계를 강제하지 못하면 unrestricted presigned PUT을 노출하지 않고 Spring Boot가 `2,097,153 bytes`에서 읽기를 중단하는 bounded stream으로 R2에 전달한다.
 

@@ -75,6 +75,7 @@
 - 금액 비공개 group response에는 금액과 금액 기반 크기·정렬 필드를 포함하지 않는다. client-side hide로 구현하지 않는다.
 - Apple 이름이 첫 로그인에서 유효하게 제공되면 display name으로 저장하고, 없으면 `MoneySnap 사용자`를 사용한다. 이름 편집과 profile 사진은 MVP에서 제외하며 기본 avatar는 첫 grapheme 또는 MoneySnap mark다.
 - 사진 bucket은 private다. iOS에 R2 credential이나 permanent object URL을 넣지 않고 backend 권한 검사 후 짧은 PUT/GET grant만 사용한다.
+- complete된 미연결 media는 `completedAt`부터 24시간 동안 같은 사용자의 draft 복구를 위해 보존하고 explicit abort 또는 경계 이후에만 cleanup한다. 계정 탈퇴 전에는 media object key를 account-independent cleanup row로 옮겨 R2 orphan과 byte 회계 누락을 막는다.
 - 기존 Cloudflare account-wide R2 token을 재사용하지 않는다. Spring Boot media Adapter를 만들 때 dev/prod bucket별 최소 권한 credential을 생성해 저장소 밖 secret으로 주입한다.
 - Figma frame node와 393x852 screenshot을 화면 구현의 source of truth로 사용하며 macOS snapshot diff 없이 UI 작업을 완료 처리하지 않는다.
 - Windows에서는 source/project 파일을 작성할 수 있지만 Xcode, Simulator, signing, archive와 pixel verification은 macOS lane에서 수행한다.

@@ -126,7 +126,7 @@ com.ansandy.moneysnap
 - object key는 서버가 만들고 client 입력을 경로로 사용하지 않는다.
 - 한 Snap에는 active image를 최대 1개만 연결한다. JPEG는 최대 변 `1600px`, `2,097,152 bytes` 이하이고 EXIF를 제거해야 한다.
 - grant는 정확한 `image/jpeg`, byte size와 SHA-256을 받고, 최근 24시간 completed+nonexpired pending 20건과 active+pending+신규 `7,000,000,000 bytes`를 transaction으로 검사한다. 삭제는 24시간 quota를 환급하지 않는다.
-- upload intent와 grant는 10분 뒤 만료한다. expired·failed pending, invalid·orphan object와 삭제 실패는 cleanup job이 bounded retry한다.
+- upload intent와 grant는 10분 뒤 만료한다. complete된 `ACTIVE_UNLINKED` media는 `completedAt`부터 24시간 동안 같은 사용자의 draft 복구를 위해 보존하고, explicit abort 또는 `completedAt + 24시간` 이후에만 orphan cleanup claim 대상이 된다. expired·failed pending, invalid·eligible orphan object와 삭제 실패는 cleanup job이 bounded retry한다.
 - iOS가 R2에 직접 업로드한 뒤 `complete`가 private object를 최대 `2,097,153 bytes`로 bounded read해 signature·dimension·size·checksum·EXIF 제거를 확인해야 image를 활성화한다.
 - direct PUT이 exact length·type·checksum을 실제 강제하지 못하면 unrestricted grant 대신 Spring Boot bounded stream upload를 사용한다.
 - 읽기 grant도 소유자 또는 현재 group member를 확인한 뒤 발급한다.
@@ -182,7 +182,9 @@ sequenceDiagram
     A-->>I: "opaque ImageRef"
 ```
 
-Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한다. 카메라 한 장 또는 앨범 최대 3장은 각각 독립된 Snap으로 순차 저장한다. DB transaction과 R2 operation을 하나의 transaction처럼 가장하지 않는다. 미완료 upload intent, invalid·orphan object와 삭제 실패는 `cleanup_jobs`로 bounded retry한다.
+Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한다. 카메라 한 장 또는 앨범 최대 3장은 각각 독립된 Snap으로 순차 저장한다. DB transaction과 R2 operation을 하나의 transaction처럼 가장하지 않는다. 미완료 upload intent, invalid object, explicit abort 또는 24시간 복구 창이 끝난 unlinked object와 삭제 실패는 `cleanup_jobs`로 bounded retry한다. record/link와 cleanup은 같은 media row의 조건부 claim으로 경합해 이미 연결된 object를 삭제하지 않는다.
+
+계정 탈퇴 transaction은 사용자의 pending·active·linked media object key와 회계 정보를 account-independent cleanup row로 먼저 옮긴 뒤 user-owned DB data를 삭제한다. R2 삭제 성공을 확인한 뒤에만 active byte를 줄이고, 실패는 bounded retry하며 다른 owner object는 보존한다.
 
 ## 보안과 개인정보 경계
 
