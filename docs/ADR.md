@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-> 기준일: 2026-08-09
+> 기준일: 2026-08-13
 
 ## 철학
 
@@ -21,6 +21,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 | ADR-009 | accepted | Bundle ID와 iOS visual verification toolchain 고정 |
 | ADR-010 | accepted | Sign in with Apple 단독 인증과 서버 소유 장기 session |
 | ADR-011 | accepted | 기록 리마인더와 원격 알림은 MVP에서 제외 |
+| ADR-012 | accepted | 사진 없는 개인 저장을 먼저 닫고 private 사진·그룹 공유를 별도 경계로 완성 |
 
 ## ADR-001: native iOS 전용 MVP
 
@@ -82,7 +83,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-008: GitHub Actions와 Xcode Cloud CI/CD 분리
 
-**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 signing 없이 실행하고, archive·signing·internal TestFlight CD는 Xcode Cloud가 소유한다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
+**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 Apple 개발 credential·provisioning 없이 실행하되 Simulator app·test host는 Keychain entitlement를 위해 Xcode 기본 ad-hoc(`Sign to Run Locally`) 서명을 사용한다. archive·배포 signing·internal TestFlight CD는 Xcode Cloud가 소유한다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
 
 모든 GitHub Action reference는 전체 commit SHA로 고정하고 Dependabot이 갱신한다. workflow 기본 권한은 `contents: read`다. server secret은 `server-development` environment를 통과한 `main` deployment job과 Ubuntu mode `600` runtime file에만 존재하며 pull request CI나 artifact에는 전달하지 않는다.
 
@@ -114,9 +115,19 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 **트레이드오프**: 초기 사용자의 재방문을 앱이 직접 상기시키지 못한다. 실제 사용 데이터에서 기록 누락이 핵심 문제로 확인되면 별도 기능으로 다시 연다.
 
+## ADR-012: 개인 저장, private 사진과 그룹 공유 경계
+
+**결정**: Snap은 `1...999,999,999 KRW` category+amount 개인 기록으로 먼저 저장하며 사진은 선택이다. 단계 3은 사진 없는 durable record를 먼저 완성하고 단계 6에서 camera·PhotosUI·JPEG 정규화와 private R2를 함께 연결한다. 사진은 Snap당 active image 한 장, 최대 변 `1600px`, `2,097,152 bytes`, EXIF 제거를 요구한다. server `Clock`과 제출된 tzdb region `ZoneId` 또는 `UTC`로 current day·직전 day만 받아 immutable `localDay`로 저장한다.
+
+사진 grant는 최근 24시간 completed+nonexpired pending 20건과 active+pending `7,000,000,000 bytes` storage guardrail을 transaction으로 예약한다. direct PUT이 exact byte/type/checksum 경계를 실제로 강제하지 못하면 unrestricted grant를 발급하지 않고 Spring Boot bounded stream fallback을 사용한다.
+
+그룹은 owner 한 명과 member, owner 포함 최대 20명이고 금액 공개 여부는 생성 시 고정한다. 초대는 최소 128-bit entropy, hash-only storage, 168시간, group당 active 하나다. 공유는 이미 저장된 개인 Snap 한 건에서 Home의 명시적 action으로 group 한 곳에만 수행하며 취소·실패가 개인 save를 되돌리지 않는다. 사진 없는 공유 Snap과 대표 Snap은 category별 고정 placeholder와 최신 `sharedAt`을 사용한다.
+
+**이유**: 사진 upload를 record의 선행 조건으로 만들면 local persistence, object storage와 UI가 순환 의존하고 사진을 찍기 어려운 상황의 10초 기록을 막는다. 개인 저장과 share command를 분리하면 기본 비공개를 transaction 경계로 보장하고 네트워크·membership 실패가 원본 기록을 잃게 하지 않는다. 고정 quota와 immutable visibility는 폐쇄형 무료 MVP의 비용과 privacy 의미를 사용자가 예측할 수 있게 한다.
+
+**트레이드오프**: 단계 3에서는 제품의 사진 중심 매력이 제한되고 단계 6에 실제 R2 contract test 비용이 집중된다. 한 Snap·한 group씩 공유하므로 여러 group 사용자는 action을 반복해야 한다. visibility 변경, owner 양도, 여러 사진을 한 Snap으로 묶기와 batch share는 MVP 이후로 미룬다.
+
 ## 아직 확정하지 않은 결정
 
 - 첫 macOS interactive 환경을 로컬 Mac, 원격 Mac 중 무엇으로 확보할지
-- 그룹 계정·초대 정책
-- 사진 최대 변·압축 품질·파일 크기·사용자별 일일 quota
 - public App Store 전환 시 Cloudflare Containers 월 5 USD를 승인할지 또는 다른 JVM origin을 사용할지

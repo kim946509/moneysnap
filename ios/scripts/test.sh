@@ -21,5 +21,4 @@ xcodebuild \
   -scheme MoneySnap \
   -destination "id=${destination_id}" \
   "${result_bundle_arguments[@]}" \
-  CODE_SIGNING_ALLOWED=NO \
   test

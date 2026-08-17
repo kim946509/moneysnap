@@ -5,24 +5,37 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import com.ansandy.moneysnap.shared.AccountMediaCleanup;
 
 final class JdbcIdentitySessionStore implements IdentitySessionStore {
 
 	private final JdbcClient jdbc;
 	private final TransactionTemplate transactions;
+	private final AccountMediaCleanup mediaCleanup;
 
 	JdbcIdentitySessionStore(JdbcClient jdbc, TransactionTemplate transactions) {
+		this(jdbc, transactions, null);
+	}
+
+	JdbcIdentitySessionStore(
+			JdbcClient jdbc,
+			TransactionTemplate transactions,
+			ObjectProvider<AccountMediaCleanup> mediaCleanup) {
 		this.jdbc = jdbc;
 		this.transactions = transactions;
+		this.mediaCleanup = mediaCleanup == null ? null : mediaCleanup.getIfAvailable();
 	}
 
 	@Override
-	public UUID findOrCreateUser(String appleSubject, Instant now) {
+	public UUID findOrCreateUser(String appleSubject, String encryptedAppleRefreshToken, Instant now) {
 		return transactions.execute(status -> {
 			Optional<UUID> existing = findUser(appleSubject);
 			if (existing.isPresent()) {
+				updateAppleRefreshToken(existing.get(), encryptedAppleRefreshToken, now);
 				return existing.get();
 			}
 
@@ -32,12 +45,15 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					.param("createdAt", Timestamp.from(now))
 					.update();
 			int inserted = jdbc.sql("""
-					INSERT INTO apple_identities (user_id, apple_subject, created_at, updated_at)
-					VALUES (:userId, :subject, :now, :now)
+					INSERT INTO apple_identities (
+						user_id, apple_subject, encrypted_apple_refresh_token, created_at, updated_at
+					)
+					VALUES (:userId, :subject, :encryptedRefreshToken, :now, :now)
 					ON CONFLICT (apple_subject) DO NOTHING
 					""")
 					.param("userId", candidate)
 					.param("subject", appleSubject)
+					.param("encryptedRefreshToken", encryptedAppleRefreshToken)
 					.param("now", Timestamp.from(now))
 					.update();
 			if (inserted == 1) {
@@ -45,6 +61,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			}
 
 			UUID actual = findUser(appleSubject).orElseThrow();
+			updateAppleRefreshToken(actual, encryptedAppleRefreshToken, now);
 			jdbc.sql("DELETE FROM users WHERE id = :id")
 					.param("id", candidate)
 					.update();
@@ -175,11 +192,98 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				.update();
 	}
 
+	@Override
+	public boolean isIdentityOwnedBy(UUID userId, String appleSubject) {
+		return jdbc.sql("""
+				SELECT count(*)
+				FROM apple_identities
+				WHERE user_id = :userId AND apple_subject = :appleSubject
+				""")
+				.param("userId", userId)
+				.param("appleSubject", appleSubject)
+				.query(Integer.class)
+				.single() == 1;
+	}
+
+	@Override
+	public void deleteUser(UUID userId) {
+		if (mediaCleanup != null) {
+			mediaCleanup.transferToTombstones(userId);
+		}
+		jdbc.sql("DELETE FROM users WHERE id = :userId")
+				.param("userId", userId)
+				.update();
+	}
+
+	@Override
+	public void applyAppleAccountEvent(VerifiedAppleAccountEvent event, Instant receivedAt) {
+		transactions.executeWithoutResult(status -> {
+			int inserted = jdbc.sql("""
+					INSERT INTO apple_account_event_receipts (event_id, received_at)
+					VALUES (:eventId, :receivedAt)
+					ON CONFLICT (event_id) DO NOTHING
+					""")
+					.param("eventId", event.eventId())
+					.param("receivedAt", Timestamp.from(receivedAt))
+					.update();
+			if (inserted == 0) {
+				return;
+			}
+
+			switch (event.type()) {
+				case CONSENT_REVOKED -> revokeAllSessions(event.subject(), receivedAt);
+				case ACCOUNT_DELETED -> deleteUser(event.subject());
+				case EMAIL_ENABLED, EMAIL_DISABLED -> {
+				}
+			}
+		});
+	}
+
+	private void revokeAllSessions(String appleSubject, Instant now) {
+		jdbc.sql("""
+				UPDATE identity_sessions
+				SET revoked_at = COALESCE(revoked_at, :now)
+				WHERE user_id = (
+					SELECT user_id FROM apple_identities WHERE apple_subject = :appleSubject
+				)
+				""")
+				.param("appleSubject", appleSubject)
+				.param("now", Timestamp.from(now))
+				.update();
+	}
+
+	private void deleteUser(String appleSubject) {
+		jdbc.sql("""
+				DELETE FROM users
+				WHERE id = (
+					SELECT user_id FROM apple_identities WHERE apple_subject = :appleSubject
+				)
+				""")
+				.param("appleSubject", appleSubject)
+				.update();
+	}
+
 	private Optional<UUID> findUser(String appleSubject) {
 		return jdbc.sql("SELECT user_id FROM apple_identities WHERE apple_subject = :subject")
 				.param("subject", appleSubject)
 				.query(UUID.class)
 				.optional();
+	}
+
+	private void updateAppleRefreshToken(UUID userId, String encryptedAppleRefreshToken, Instant now) {
+		if (encryptedAppleRefreshToken == null) {
+			return;
+		}
+		jdbc.sql("""
+				UPDATE apple_identities
+				SET encrypted_apple_refresh_token = :encryptedRefreshToken,
+				    updated_at = :now
+				WHERE user_id = :userId
+				""")
+				.param("userId", userId)
+				.param("encryptedRefreshToken", encryptedAppleRefreshToken)
+				.param("now", Timestamp.from(now))
+				.update();
 	}
 
 	private void insertRefreshToken(UUID sessionId, String tokenHash, Instant expiresAt, Instant now) {

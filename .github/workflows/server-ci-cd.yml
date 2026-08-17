@@ -125,6 +125,11 @@ jobs:
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_PRIVATE_KEY_P8: ${{ secrets.APPLE_PRIVATE_KEY_P8 }}
           APPLE_REFRESH_TOKEN_ENCRYPTION_KEY: ${{ secrets.APPLE_REFRESH_TOKEN_ENCRYPTION_KEY }}
+          R2_ENABLED: ${{ secrets.R2_ENABLED }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           umask 077
           required_secrets=(
@@ -151,6 +156,19 @@ jobs:
             echo "APPLE_AUTH_ENABLED must be exactly true or false" >&2
             exit 1
           fi
+          r2_enabled=${R2_ENABLED:-false}
+          if [[ "$r2_enabled" != "true" && "$r2_enabled" != "false" ]]; then
+            echo "R2_ENABLED must be exactly true or false" >&2
+            exit 1
+          fi
+          if [[ "$r2_enabled" == "true" ]]; then
+            for secret_name in R2_BUCKET R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
+              if [[ -z "${!secret_name}" ]]; then
+                echo "missing required server-development secret: $secret_name" >&2
+                exit 1
+              fi
+            done
+          fi
           apple_private_key=${APPLE_PRIVATE_KEY_P8//$'\r'/}
           apple_private_key=${apple_private_key//$'\n'/\\n}
           {
@@ -166,6 +184,11 @@ jobs:
             printf 'APPLE_KEY_ID=%s\n' "$APPLE_KEY_ID"
             printf 'APPLE_PRIVATE_KEY_P8=%s\n' "$apple_private_key"
             printf 'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY=%s\n' "$APPLE_REFRESH_TOKEN_ENCRYPTION_KEY"
+            printf 'R2_ENABLED=%s\n' "$r2_enabled"
+            printf 'R2_BUCKET=%s\n' "${R2_BUCKET:-moneysnap-media-dev}"
+            printf 'R2_ENDPOINT=%s\n' "${R2_ENDPOINT:-https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com}"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
           } > "$RUNNER_TEMP/moneysnap-runtime.env"
 
       - name: Transfer and deploy tested image

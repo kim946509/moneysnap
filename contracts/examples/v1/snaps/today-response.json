@@ -1,0 +1,20 @@
+{
+  "localDay": "2026-08-14",
+  "totalAmountWon": 24100,
+  "snaps": [
+    {
+      "id": "018f1e2d-1234-7abc-8def-0123456789ac",
+      "category": "cafe",
+      "amountWon": 5200,
+      "localDay": "2026-08-14",
+      "createdAt": "2026-08-13T15:30:01Z"
+    },
+    {
+      "id": "018f1e2d-1234-7abc-8def-0123456789ab",
+      "category": "food",
+      "amountWon": 18900,
+      "localDay": "2026-08-14",
+      "createdAt": "2026-08-13T15:30:00Z"
+    }
+  ]
+}

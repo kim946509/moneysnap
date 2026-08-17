@@ -63,7 +63,7 @@ flowchart LR
 ```text
 ios/                 SwiftUI app, Xcode project, Swift tests, Figma visual references
 server/              Spring Boot modular monolith, Gradle, Docker image
-contracts/openapi/   versioned server/iOS HTTP contract
+contracts/           versioned OpenAPI contract and canonical server/iOS JSON examples
 infra/               Neon, Cloudflare, Apple, Ubuntu deployment contracts
 docs/                product, policy, architecture, UI and CI/CD sources of truth
 .ai/                 work items, loops and project-local AI harness
@@ -82,6 +82,8 @@ cd server
 ```
 
 production JAR은 `server/build/libs/moneysnap-server.jar`로 생성됩니다.
+
+기본 `test`에는 OpenAPI 3.1 parse/reference, `/api/v1`, operation ID, Draft 2020-12 example schema와 runtime error enum drift를 검사하는 semantic contract gate가 포함됩니다. canonical JSON은 `contracts/examples/v1/**` 한 벌을 서버와 iOS consumer test가 함께 사용합니다.
 
 ### 서버 실행
 
@@ -115,7 +117,7 @@ bash ios/scripts/test.sh
 bash ios/scripts/capture-visual-baseline.sh
 ```
 
-두 번째 명령은 `app`, `reference`, `overlay`, `diff`, `report` artifact를 만들며 검토된 threshold를 넘으면 실패합니다. signing, archive와 TestFlight는 Apple activation 이후 Xcode Cloud가 담당합니다.
+두 번째 명령은 `app`, `reference`, `overlay`, `diff`, `report` artifact를 만들며 검토된 threshold를 넘으면 실패합니다. 배포 signing, archive와 TestFlight는 Apple activation 이후 Xcode Cloud가 담당합니다.
 
 ### 저장소 계약 검증
 
@@ -141,7 +143,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1
 | Workflow | Trigger | 결과 |
 |---|---|---|
 | [Server CI/CD](.github/workflows/server-ci-cd.yml) | server/contract PR, `main`, manual | test, JAR, immutable Docker image; `main`만 Ubuntu development deploy |
-| [iOS CI](.github/workflows/ios-ci.yml) | iOS/contract PR, `main`, manual | unsigned native test, 393x852 visual evidence |
+| [iOS CI](.github/workflows/ios-ci.yml) | iOS/contract PR, `main`, manual | Simulator ad-hoc signed native test, unsigned 393x852 visual build |
 | Xcode Cloud | Apple workflow | managed signing, archive, internal TestFlight 예정 |
 
 운영 계약과 rollback 경계는 [CI/CD 문서](docs/CI_CD.md), 실제 리소스와 secret 이름은 [인프라 문서](infra/README.md)를 참고하세요.

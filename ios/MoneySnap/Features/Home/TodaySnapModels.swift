@@ -2,7 +2,7 @@ import Foundation
 
 enum SnapModelError: Error, Equatable {
     case nonPositiveAmount
-    case totalOverflow
+    case amountAboveLimit
 }
 
 struct KrwAmount: Equatable, Comparable, Sendable {
@@ -12,6 +12,9 @@ struct KrwAmount: Equatable, Comparable, Sendable {
         guard value > 0 else {
             throw SnapModelError.nonPositiveAmount
         }
+        guard value <= 999_999_999 else {
+            throw SnapModelError.amountAboveLimit
+        }
         self.value = value
     }
 
@@ -20,7 +23,7 @@ struct KrwAmount: Equatable, Comparable, Sendable {
     }
 }
 
-enum SnapCategory: String, CaseIterable, Equatable, Sendable {
+enum SnapCategory: String, CaseIterable, Codable, Equatable, Sendable {
     case food
     case cafe
     case transportation
@@ -46,7 +49,13 @@ enum SnapCategory: String, CaseIterable, Equatable, Sendable {
 
 struct SnapDay: Equatable, Sendable {
     enum Weekday: String, Equatable, Sendable {
+        case sunday = "일요일"
+        case monday = "월요일"
+        case tuesday = "화요일"
         case wednesday = "수요일"
+        case thursday = "목요일"
+        case friday = "금요일"
+        case saturday = "토요일"
     }
 
     let year: Int
@@ -58,7 +67,25 @@ struct SnapDay: Equatable, Sendable {
         "\(month)월 \(day)일 \(weekday.rawValue)"
     }
 
-    static let figmaReference = SnapDay(year: 2026, month: 6, day: 3, weekday: .wednesday)
+    static func parse(localDay: String) -> SnapDay? {
+        let parts = localDay.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        guard let date = calendar.date(from: DateComponents(
+            year: parts[0], month: parts[1], day: parts[2]
+        )) else { return nil }
+        let normalized = calendar.dateComponents([.year, .month, .day], from: date)
+        guard normalized.year == parts[0], normalized.month == parts[1],
+              normalized.day == parts[2] else { return nil }
+        let weekdays: [SnapDay.Weekday] = [
+            .sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday
+        ]
+        return SnapDay(
+            year: parts[0], month: parts[1], day: parts[2],
+            weekday: weekdays[calendar.component(.weekday, from: date) - 1]
+        )
+    }
 }
 
 enum SnapArtwork: String, Equatable, Sendable {
@@ -100,20 +127,11 @@ struct TodaySnapSummary: Equatable, Sendable {
         featuredEntryIDs: [TodaySnapEntry.ID],
         recentEntryIDs: [TodaySnapEntry.ID]
     ) throws {
-        var total: Int64 = 0
-        for entry in entries {
-            let addition = total.addingReportingOverflow(entry.amount.value)
-            guard !addition.overflow else {
-                throw SnapModelError.totalOverflow
-            }
-            total = addition.partialValue
-        }
-
         self.day = day
         self.entries = entries
         self.featuredEntryIDs = featuredEntryIDs
         self.recentEntryIDs = recentEntryIDs
-        self.totalAmount = total
+        self.totalAmount = entries.reduce(0) { $0 + $1.amount.value }
     }
 
     var featuredEntries: [TodaySnapEntry] {

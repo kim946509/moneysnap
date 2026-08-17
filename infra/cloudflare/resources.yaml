@@ -35,7 +35,7 @@ r2:
       cors: false
       data_catalog: false
   credentials:
-    status: deferred_until_backend_media_adapter
+    status: github_server_development_only
     policy: separate_bucket_scoped_object_read_write_credentials
 
 paid_services:

@@ -1,0 +1,6 @@
+{
+  "accessToken": "access-token",
+  "accessExpiresAt": "2026-08-10T12:15:00.123456Z",
+  "refreshToken": "refresh-token",
+  "refreshExpiresAt": "2027-02-06T12:00:00Z"
+}
