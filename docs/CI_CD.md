@@ -23,7 +23,7 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 - workflow 전체 권한은 `contents: read`뿐이다.
 - 모든 외부 action은 전체 commit SHA로 고정하고 Dependabot으로 갱신한다.
 - pull request CI와 server test/package job은 Neon, SSH, R2, Cloudflare 또는 Apple secret을 받지 않는다.
-- `deploy-development`는 `server-development`의 Neon·SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 `/opt/moneysnap/.env`에만 쓴다.
+- `deploy-development`는 `server-development`의 Neon·SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 값은 single-quote로 `/opt/moneysnap/.env`에만 쓴다. Compose interpolation은 같은 디렉터리의 비밀 `.env`를 읽지 않는다.
 - `contracts/**` 변경도 server와 iOS lane을 함께 실행한다.
 - server 기본 `test`는 `contracts/openapi/moneysnap-v1.yaml`과 `contracts/examples/v1/**`의 semantic OpenAPI 3.1/Draft 2020-12 gate를 실행하고, iOS native test는 같은 canonical fixture resource를 decode한다.
 - test와 `bootJar`가 통과한 뒤 digest-pinned Java runtime으로 Docker image를 만든다.

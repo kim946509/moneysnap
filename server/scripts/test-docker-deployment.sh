@@ -56,7 +56,7 @@ MONEYSNAP_INSTALL_ROOT="$healthy_fixture/install" \
     healthy-release
 
 [[ $(cat "$healthy_fixture/install/current-release") == healthy-release ]]
-grep -q 'compose .* image=moneysnap-server:new' "$docker_log"
+grep -q 'compose .*--env-file .* image=moneysnap-server:new' "$docker_log"
 echo 'healthy deployment: OK'
 
 rollback_fixture="$test_root/rollback"
