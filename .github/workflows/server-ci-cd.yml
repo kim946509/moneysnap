@@ -180,26 +180,54 @@ jobs:
               fi
             done
           fi
+          sanitize_env_value() {
+            local value="$1"
+            value="${value#$'\xEF\xBB\xBF'}"
+            value="${value//$'\r'/}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            value="${value#\'}"
+            value="${value%\'}"
+            value="${value#\"}"
+            value="${value%\"}"
+            value="${value//\$/\$\$}"
+            printf '%s' "$value"
+          }
+          normalize_jdbc() {
+            local url
+            url="$(sanitize_env_value "$1")"
+            if [[ "$url" == postgresql://* ]]; then
+              url="jdbc:${url}"
+            fi
+            printf '%s' "$url"
+          }
+          runtime_url="$(normalize_jdbc "$NEON_RUNTIME_DATABASE_URL")"
+          migration_url="$(normalize_jdbc "$NEON_MIGRATION_DATABASE_URL")"
+          if [[ "$runtime_url" != jdbc:* || "$migration_url" != jdbc:* ]]; then
+            echo "Neon database URLs must start with jdbc: after normalization" >&2
+            exit 1
+          fi
           apple_private_key=${APPLE_PRIVATE_KEY_P8//$'\r'/}
           apple_private_key=${apple_private_key//$'\n'/\\n}
+          apple_private_key="$(sanitize_env_value "$apple_private_key")"
           {
-            printf 'NEON_RUNTIME_DATABASE_URL=%s\n' "$NEON_RUNTIME_DATABASE_URL"
-            printf 'NEON_RUNTIME_DATABASE_USERNAME=%s\n' "$NEON_RUNTIME_DATABASE_USERNAME"
-            printf 'NEON_RUNTIME_DATABASE_PASSWORD=%s\n' "$NEON_RUNTIME_DATABASE_PASSWORD"
-            printf 'NEON_MIGRATION_DATABASE_URL=%s\n' "$NEON_MIGRATION_DATABASE_URL"
-            printf 'NEON_MIGRATION_DATABASE_USERNAME=%s\n' "$NEON_MIGRATION_DATABASE_USERNAME"
-            printf 'NEON_MIGRATION_DATABASE_PASSWORD=%s\n' "$NEON_MIGRATION_DATABASE_PASSWORD"
-            printf 'APPLE_AUTH_ENABLED=%s\n' "$APPLE_AUTH_ENABLED"
-            printf 'APPLE_CLIENT_ID=%s\n' "$APPLE_CLIENT_ID"
-            printf 'APPLE_TEAM_ID=%s\n' "$APPLE_TEAM_ID"
-            printf 'APPLE_KEY_ID=%s\n' "$APPLE_KEY_ID"
+            printf 'NEON_RUNTIME_DATABASE_URL=%s\n' "$runtime_url"
+            printf 'NEON_RUNTIME_DATABASE_USERNAME=%s\n' "$(sanitize_env_value "$NEON_RUNTIME_DATABASE_USERNAME")"
+            printf 'NEON_RUNTIME_DATABASE_PASSWORD=%s\n' "$(sanitize_env_value "$NEON_RUNTIME_DATABASE_PASSWORD")"
+            printf 'NEON_MIGRATION_DATABASE_URL=%s\n' "$migration_url"
+            printf 'NEON_MIGRATION_DATABASE_USERNAME=%s\n' "$(sanitize_env_value "$NEON_MIGRATION_DATABASE_USERNAME")"
+            printf 'NEON_MIGRATION_DATABASE_PASSWORD=%s\n' "$(sanitize_env_value "$NEON_MIGRATION_DATABASE_PASSWORD")"
+            printf 'APPLE_AUTH_ENABLED=%s\n' "$(sanitize_env_value "$APPLE_AUTH_ENABLED")"
+            printf 'APPLE_CLIENT_ID=%s\n' "$(sanitize_env_value "$APPLE_CLIENT_ID")"
+            printf 'APPLE_TEAM_ID=%s\n' "$(sanitize_env_value "$APPLE_TEAM_ID")"
+            printf 'APPLE_KEY_ID=%s\n' "$(sanitize_env_value "$APPLE_KEY_ID")"
             printf 'APPLE_PRIVATE_KEY_P8=%s\n' "$apple_private_key"
-            printf 'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY=%s\n' "$APPLE_REFRESH_TOKEN_ENCRYPTION_KEY"
-            printf 'R2_ENABLED=%s\n' "$r2_enabled"
-            printf 'R2_BUCKET=%s\n' "${R2_BUCKET:-moneysnap-media-dev}"
-            printf 'R2_ENDPOINT=%s\n' "${R2_ENDPOINT:-https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com}"
-            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
-            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
+            printf 'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY=%s\n' "$(sanitize_env_value "$APPLE_REFRESH_TOKEN_ENCRYPTION_KEY")"
+            printf 'R2_ENABLED=%s\n' "$(sanitize_env_value "$r2_enabled")"
+            printf 'R2_BUCKET=%s\n' "$(sanitize_env_value "${R2_BUCKET:-moneysnap-media-dev}")"
+            printf 'R2_ENDPOINT=%s\n' "$(sanitize_env_value "${R2_ENDPOINT:-https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com}")"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$(sanitize_env_value "$R2_ACCESS_KEY_ID")"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$(sanitize_env_value "$R2_SECRET_ACCESS_KEY")"
           } > "$RUNNER_TEMP/moneysnap-runtime.env"
 
       - name: Transfer and deploy tested image
