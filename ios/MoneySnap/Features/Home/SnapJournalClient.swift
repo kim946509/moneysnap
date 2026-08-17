@@ -295,7 +295,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
         }
     }
 
-    private func authorizedJSON<T>(
+    private func authorizedJSON<T: Sendable>(
         method: String,
         path: String,
         body: Data?,
@@ -330,7 +330,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
         }
     }
 
-    private func sendRaw<T>(
+    private func sendRaw<T: Sendable>(
         method: String,
         path: String,
         body: Data?,

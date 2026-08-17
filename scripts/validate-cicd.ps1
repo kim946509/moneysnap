@@ -116,6 +116,8 @@ if ($workflowJobs[0] -match 'secrets\.APPLE_|secrets\.R2_') {
     throw 'Apple and R2 runtime secrets must stay out of the server build/PR job'
 }
 Require-Match $workflow 'missing required server-development secret' 'deploy-time required secret presence check'
+Require-Match $workflow 'xEF\\xBB\\xBF' 'UTF-8 BOM strip for SSH secrets'
+Require-Match $workflow 'ssh-keygen -y -f "\$HOME/.ssh/moneysnap-deploy"' 'loadable SSH private key check'
 Require-Match $workflow "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" 'Apple PEM carriage-return strip'
 Require-Match $workflow "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" 'Apple PEM literal newline flatten'
 foreach ($secretName in @(

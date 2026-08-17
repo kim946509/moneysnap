@@ -29,7 +29,7 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 - test와 `bootJar`가 통과한 뒤 digest-pinned Java runtime으로 Docker image를 만든다.
 - image는 `docker save`와 gzip으로 고정하고 SHA-256 manifest와 함께 7일 보관한다.
 - deployment job은 `push`와 `refs/heads/main`을 동시에 검사하고 `server-development` environment를 요구한다.
-- GitHub-hosted deployment runner는 pinned host key와 private key로 tested image만 Ubuntu staging에 전송한다.
+- GitHub-hosted deployment runner는 pinned host key와 private key로 tested image만 Ubuntu staging에 전송한다. host/user/port/key의 UTF-8 BOM과 CR을 제거하고, private key가 `ssh-keygen`으로 loadable하지 않으면 전송 전에 실패한다.
 - runtime secret file은 artifact에 포함하지 않으며 원격 `/opt/moneysnap/.env`에 mode `600`으로 설치한다.
 - main deployment는 cancel하지 않고 concurrency로 직렬화한다.
 
