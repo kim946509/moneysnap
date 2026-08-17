@@ -1,0 +1,112 @@
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["iOS CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight-main
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Archive and upload to TestFlight
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_run'
+          && github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.head_branch == 'main')
+    runs-on: macos-15
+    timeout-minutes: 40
+    environment: ios-testflight
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Require ios-testflight secrets
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          for secret_name in APPLE_TEAM_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_API_KEY_P8; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "missing required ios-testflight secret: $secret_name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Write App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          auth_key="$RUNNER_TEMP/AuthKey.p8"
+          key="${APP_STORE_CONNECT_API_KEY_P8//$'\r'/}"
+          if [[ "$key" != *$'\n'* ]]; then
+            key="${key//\\n/$'\n'}"
+          fi
+          printf '%s\n' "$key" > "$auth_key"
+          chmod 600 "$auth_key"
+          if ! grep -q "BEGIN PRIVATE KEY" "$auth_key"; then
+            echo "APP_STORE_CONNECT_API_KEY_P8 is not a PEM private key" >&2
+            exit 1
+          fi
+          echo "ASC_AUTH_KEY_PATH=$auth_key" >> "$GITHUB_ENV"
+
+      - name: Archive Money Snap for iOS
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+        run: |
+          xcodebuild -version
+          xcodebuild \
+            -project ios/MoneySnap.xcodeproj \
+            -scheme MoneySnap \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/MoneySnap.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            MARKETING_VERSION=0.1.0 \
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_AUTH_KEY_PATH" \
+            -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+            archive
+
+      - name: Export and upload to App Store Connect
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+        run: |
+          export_plist="$RUNNER_TEMP/ExportOptions.plist"
+          bash ios/scripts/write-testflight-export-options.sh "$APPLE_TEAM_ID" "$export_plist"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/MoneySnap.xcarchive" \
+            -exportPath "$RUNNER_TEMP/MoneySnapExport" \
+            -exportOptionsPlist "$export_plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_AUTH_KEY_PATH" \
+            -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$ASC_AUTH_KEY_PATH" "$RUNNER_TEMP/ExportOptions.plist"

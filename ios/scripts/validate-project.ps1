@@ -11,6 +11,7 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'scripts\validate-pbx-object-ids.ps1'),
     (Join-Path $iosRoot 'scripts\test-validate-pbx-object-ids.ps1'),
     (Join-Path $iosRoot 'scripts\test-validate-visual-baseline.ps1'),
+    (Join-Path $iosRoot 'scripts\write-testflight-export-options.sh'),
     (Join-Path $iosRoot 'MoneySnap\App\MoneySnapApp.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\VisualTestSupport.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\AppShellView.swift'),

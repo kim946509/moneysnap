@@ -23,27 +23,38 @@
 
 ## 아이폰 실기기 설치
 
-Windows 작업 트리에서는 archive/TestFlight/실기기 Run을 완료할 수 없다. Mac에서 `ios/MoneySnap.xcodeproj`를 열고 Team을 연결한 뒤 기기에 Run 하거나, 같은 Mac에서 첫 Xcode Cloud workflow를 만들어 Internal TestFlight로 배포한다. 앱은 `https://moneysnap-server.ansandy.co.kr`에 붙는다.
+Windows에서 Xcode Run은 할 수 없다. TestFlight 업로드는 GitHub-hosted `macos-15`의 `.github/workflows/ios-testflight.yml`이 한다. 성공한 `main` iOS CI 또는 Actions `workflow_dispatch`가 `ios-testflight` secret으로 archive한 뒤 App Store Connect에 올린다. 앱은 `https://moneysnap-server.ansandy.co.kr`에 붙는다.
 
-## iOS project와 Mac 확보 후
+```text
+gh secret set APPLE_TEAM_ID --env ios-testflight
+gh secret set APP_STORE_CONNECT_ISSUER_ID --env ios-testflight
+gh secret set APP_STORE_CONNECT_KEY_ID --env ios-testflight
+gh secret set APP_STORE_CONNECT_API_KEY_P8 --env ios-testflight
+```
 
-1. Xcode target의 Team, Bundle ID와 automatic signing을 연결한다.
-2. 고정 Simulator/OS에서 build, test, snapshot을 통과시킨다.
-3. Xcode에서 첫 Xcode Cloud workflow를 만든다. Apple Developer Program에 포함된 월 25 compute hours만 사용하고 유료 quota는 승인 없이 추가하지 않는다.
-4. TestFlight internal build를 먼저 배포한 뒤 최종 단계에서 실기기 iPhone을 연결한다.
+`.p8`은 대화에 붙이지 않는다. API key 역할은 Admin 또는 App Manager여야 automatic signing이 Distribution 인증서를 만들 수 있다. 업로드 후 App Store Connect에서 본인 Apple ID를 Internal Tester로 넣고 아이폰 TestFlight에서 설치한다.
+
+## iOS project와 TestFlight
+
+1. App Store Connect iOS app record와 explicit App ID `com.ansandy.moneysnap`이 있어야 한다.
+2. App Store Connect API key를 만들어 `ios-testflight` environment secret에만 넣는다. 대화·Git에 `.p8`을 붙이지 않는다.
+3. `main`에서 `iOS TestFlight` workflow를 수동 실행하거나, 성공한 `main` iOS CI가 같은 workflow를 이어서 실행하게 한다.
+4. App Store Connect에서 본인 Apple ID를 Internal Tester로 넣은 뒤 아이폰 TestFlight에서 설치한다.
+
+로컬 Mac의 Xcode Team 연결은 interactive Run/pixel 작업에만 필요하다. repository에 `DEVELOPMENT_TEAM`을 커밋하지 않는다.
 
 ## 준비된 CI/CD lane
 
 - `.github/workflows/ios-ci.yml`: `macos-15`에서 Apple credential·provisioning 없이 Xcode 기본 ad-hoc 서명으로 native test를 실행하고, visual build는 signing을 비활성화하며 실패 `.xcresult`만 짧게 보관한다.
-- `ios/ci_scripts/ci_post_clone.sh`: Xcode Cloud clone 뒤 Xcode version과 `MoneySnap.xcodeproj`/shared scheme을 확인한다.
-- Xcode Cloud pull request workflow: test만 실행한다.
-- Xcode Cloud main release workflow: test 성공 후 archive하고 internal TestFlight group에만 post-action 배포한다.
+- `.github/workflows/ios-testflight.yml`: `ios-testflight` environment의 App Store Connect API key로 `main` archive와 upload만 수행한다. 같은 레포이며 서버 CD와 secret을 공유하지 않는다.
+- `ios/scripts/write-testflight-export-options.sh`: `app-store-connect` / `destination=upload` ExportOptions를 생성한다.
+- `ios/ci_scripts/ci_post_clone.sh`: 예전 Xcode Cloud hook이며 현재 TestFlight lane이 아니다.
 
-GitHub Actions iOS CI에는 Apple certificate, provisioning profile, App Store Connect key를 주입하지 않는다. Xcode Cloud workflow는 repository 파일만으로 생성할 수 없으므로 최종 Bundle ID와 App Store Connect app record를 확정한 뒤 Mac/Xcode에서 첫 workflow/build를 시작해야 한다.
+GitHub Actions iOS CI와 pull request job에는 Apple certificate, provisioning profile, App Store Connect key를 주입하지 않는다.
 
 ## 자동화 credential
 
-Xcode Cloud의 기본 TestFlight post-action에는 별도 App Store Connect API key를 만들지 않는다. API 기반 tester/group 관리 같은 추가 자동화가 실제로 필요해진 뒤에만 key 작업을 연다. private key는 한 번만 다운로드할 수 있으므로 repository·log·artifact에 남기지 않고 가능한 최소 역할과 app 범위를 사용한다.
+TestFlight CD는 App Store Connect API key가 필요하다. private key는 한 번만 다운로드할 수 있으므로 repository·log·artifact·대화에 남기지 않고 `ios-testflight` environment에만 넣는다. 가능한 최소 역할과 Money Snap app 범위를 사용한다. Sign in with Apple 서버 `.p8`과 같은 파일을 재사용하지 않는다.
 
 Spring Boot runtime Apple 값은 GitHub `server-development` environment secret으로만 보관하고, `main` development CD가 `/opt/moneysnap/runtime.env`에 쓴다. pull request CI와 iOS workflow에는 주입하지 않는다.
 
@@ -58,4 +69,4 @@ Spring Boot runtime Apple 값은 GitHub `server-development` environment secret�
 
 `.p8`은 여러 줄로 secret에 넣어도 되며 CD가 env 한 줄의 literal `\n`으로 정규화한다. 필수 값이 비면 CD는 host `.env`를 덮어쓰지 않고 실패한다.
 
-공식 기준: [Register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/), [App Store Connect workflow](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow), [Xcode Cloud](https://developer.apple.com/xcode-cloud/), [App Store Connect API](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-api)
+공식 기준: [Register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/), [App Store Connect workflow](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow), [App Store Connect API](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-api), [Distributing your app for beta testing](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases/)

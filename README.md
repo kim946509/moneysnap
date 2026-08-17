@@ -42,7 +42,7 @@
 | 미디어 | private Cloudflare R2 Standard, backend-authorized short-lived signed grant |
 | 개발 배포 | Cloudflare DNS → Nginx Proxy Manager → Ubuntu Docker Spring Boot |
 | 관측성 | Spring Boot Actuator, Prometheus, Grafana |
-| 자동화 | GitHub Actions server/iOS CI, Ubuntu SSH Docker CD, 향후 Xcode Cloud/TestFlight |
+| 자동화 | GitHub Actions server/iOS CI, Ubuntu SSH Docker CD, GitHub-hosted TestFlight CD |
 
 ```mermaid
 flowchart LR
@@ -52,7 +52,7 @@ flowchart LR
     API --> DB[("Neon PostgreSQL")]
     API --> R2[("Private Cloudflare R2")]
     API --> MON["Prometheus + Grafana"]
-    FIGMA["Figma 393x852"] --> CI["GitHub macOS / Xcode Cloud"]
+    FIGMA["Figma 393x852"] --> CI["GitHub macOS CI / TestFlight"]
     CI --> IOS
 ```
 
@@ -117,7 +117,7 @@ bash ios/scripts/test.sh
 bash ios/scripts/capture-visual-baseline.sh
 ```
 
-두 번째 명령은 `app`, `reference`, `overlay`, `diff`, `report` artifact를 만들며 검토된 threshold를 넘으면 실패합니다. 배포 signing, archive와 TestFlight는 Apple activation 이후 Xcode Cloud가 담당합니다.
+두 번째 명령은 `app`, `reference`, `overlay`, `diff`, `report` artifact를 만들며 검토된 threshold를 넘으면 실패합니다. 배포 signing, archive와 TestFlight는 같은 레포의 GitHub-hosted `ios-testflight` workflow가 담당합니다.
 
 ### 저장소 계약 검증
 
@@ -144,7 +144,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1
 |---|---|---|
 | [Server CI/CD](.github/workflows/server-ci-cd.yml) | server/contract PR, `main`, manual | test, JAR, immutable Docker image; `main`만 Ubuntu development deploy |
 | [iOS CI](.github/workflows/ios-ci.yml) | iOS/contract PR, `main`, manual | Simulator ad-hoc signed native test, unsigned 393x852 visual build |
-| Xcode Cloud | Apple workflow | managed signing, archive, internal TestFlight 예정 |
+| [iOS TestFlight](.github/workflows/ios-testflight.yml) | 성공한 `main` iOS CI 또는 `main` manual | App Store Connect archive/upload. PR에는 secret 없음 |
 
 운영 계약과 rollback 경계는 [CI/CD 문서](docs/CI_CD.md), 실제 리소스와 secret 이름은 [인프라 문서](infra/README.md)를 참고하세요.
 
