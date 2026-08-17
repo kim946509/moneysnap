@@ -31,7 +31,9 @@ struct GroupDetailModelTests {
         let joined = await model.confirmJoin()
 
         #expect(joined?.name == "주말 모임")
-        #expect(client.joinCalls == [("invite-code", "11111111-1111-4111-8111-111111111111")])
+        #expect(client.joinCalls == [
+            JoinCall(code: "invite-code", mutationID: "11111111-1111-4111-8111-111111111111")
+        ])
         #expect(model.joinPreview == nil)
     }
 
@@ -61,7 +63,7 @@ struct GroupDetailModelTests {
         )
 
         #expect(await model.deleteGroup())
-        #expect(client.deletedGroupIDs == [.owned.id])
+        #expect(client.deletedGroupIDs == [MoneySnapGroup.owned.id])
     }
 }
 
@@ -70,7 +72,7 @@ private final class RecordingGroupClient: GroupClient {
     var previewResult: InvitePreview?
     var joinResult: MoneySnapGroup = .owned
     var membersResult = GroupMemberList(members: [])
-    var joinCalls: [(String, String)] = []
+    var joinCalls: [JoinCall] = []
     var removedMemberIDs: [UUID] = []
     var deletedGroupIDs: [UUID] = []
     var membersCalls = 0
@@ -97,7 +99,7 @@ private final class RecordingGroupClient: GroupClient {
     }
 
     func join(code: String, mutationID: String) async throws -> MoneySnapGroup {
-        joinCalls.append((code, mutationID))
+        joinCalls.append(JoinCall(code: code, mutationID: mutationID))
         return joinResult
     }
 
@@ -117,6 +119,11 @@ private final class RecordingGroupClient: GroupClient {
         _ = mutationID
         deletedGroupIDs.append(groupID)
     }
+}
+
+private struct JoinCall: Equatable {
+    let code: String
+    let mutationID: String
 }
 
 private extension MoneySnapGroup {

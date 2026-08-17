@@ -30,7 +30,7 @@ main CD의 SSH BOM/키 로드 실패와 iOS native CI 컴파일 실패를 고쳐
 - [x] `scripts/validate-cicd.ps1`가 BOM strip과 ssh-keygen 계약을 통과한다.
 - [x] iOS `AppShellView`/`SnapJournalClient` 컴파일 오류를 수정했다. 전체 `validate-project.ps1`은 기존 WORK-035 visual probe에서 실패한다.
 - [x] `server-development`의 SSH port/user/host를 `--body`로 재등록했다. TCP 2222는 열려 있다.
-- [ ] 코드 변경은 PR로 `main`에 들어가고 Server CI는 PR에서 통과한다.
+- [ ] 코드 변경은 PR로 `main`에 들어가고 Server·iOS CI는 PR에서 통과한다. `GroupDetailModelTests`의 tuple/`UUID.owned` 컴파일 오류도 수정했다.
 
 ## Test seam
 
