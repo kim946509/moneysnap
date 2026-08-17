@@ -181,11 +181,11 @@ Require-Match $deploy '\$docker_bin"\s+load' 'Docker image load'
 Require-Match $deploy 'previous_image' 'previous image rollback boundary'
 Require-Match $deploy '\$docker_bin"\s+compose' 'Compose deployment'
 Require-Match $deploy '--env-file' 'compose interpolation env file is not the secret file'
+Require-Match $deploy 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
 
 $deploymentTest = Get-Content -LiteralPath $deploymentTestPath -Raw
 Require-Match $deploymentTest 'healthy deployment' 'healthy deployment behavior test'
 Require-Match $deploymentTest 'rollback' 'failed health rollback behavior test'
-Require-Match $deploymentTest 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
 
 $prometheusJob = Get-Content -LiteralPath $prometheusJobPath -Raw
 Require-Match $prometheusJob 'job_name:\s*moneysnap_server' 'Money Snap Prometheus job'
