@@ -34,7 +34,7 @@ struct AppShellView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
-                ForEach(AppTab.allCases) { tab in
+                ForEach(AppTab.allCases.filter { $0 != .add }) { tab in
                     NavigationStack(path: tabRouter.binding(for: tab)) {
                         rootView(for: tab)
                             .navigationDestination(for: AppRoute.self) { route in
