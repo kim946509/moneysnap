@@ -5,7 +5,8 @@
 - 사용자는 유료 Apple Developer Program 계정을 보유하고 있다.
 - Apple 계정 password, 2FA code, signing certificate와 private key는 저장소에 보관하지 않는다.
 - Xcode·Simulator·signing·archive는 Windows에서 실행할 수 없으며 macOS/Xcode lane에서 검증한다.
-- repository의 scaffold identifier는 `com.ansandy.moneysnap`으로 고정했다. Apple App ID에는 아직 등록하지 않았으며 외부 등록 전에 이 값을 최종 Bundle ID로 사용할지 재확인한다.
+- 최종 Bundle ID는 `com.ansandy.moneysnap`이다. explicit App ID와 App Store Connect iOS app record는 사용자가 생성했다.
+- Sign in with Apple runtime 값은 GitHub `server-development` environment secret으로만 보관한다. 현재 `main` 서버 image는 아직 Apple 인증 코드를 포함하지 않으며, CD는 다음 배포부터 `/opt/moneysnap/.env`에 값을 유지한다.
 
 ## 지금 확인할 항목
 
@@ -39,5 +40,18 @@ GitHub Actions iOS CI에는 Apple certificate, provisioning profile, App Store C
 ## 자동화 credential
 
 Xcode Cloud의 기본 TestFlight post-action에는 별도 App Store Connect API key를 만들지 않는다. API 기반 tester/group 관리 같은 추가 자동화가 실제로 필요해진 뒤에만 key 작업을 연다. private key는 한 번만 다운로드할 수 있으므로 repository·log·artifact에 남기지 않고 가능한 최소 역할과 app 범위를 사용한다.
+
+Spring Boot runtime Apple 값은 GitHub `server-development` environment secret으로만 보관하고, `main` development CD가 `/opt/moneysnap/.env`에 쓴다. pull request CI와 iOS workflow에는 주입하지 않는다.
+
+등록 이름:
+
+- `APPLE_AUTH_ENABLED` — `true` 또는 `false`
+- `APPLE_CLIENT_ID` — `com.ansandy.moneysnap`
+- `APPLE_TEAM_ID` — 10자 Apple Developer Team ID
+- `APPLE_KEY_ID` — Sign in with Apple Key ID
+- `APPLE_PRIVATE_KEY_P8` — `AuthKey_<KEY_ID>.p8` 내용. 대화·Git에 붙이지 말고 `gh secret set APPLE_PRIVATE_KEY_P8 --env server-development < AuthKey_<KEY_ID>.p8`
+- `APPLE_REFRESH_TOKEN_ENCRYPTION_KEY` — 무작위 32-byte Base64. Apple `.p8`이 아니며 서버가 refresh token을 암호화할 때 쓴다.
+
+`.p8`은 여러 줄로 secret에 넣어도 되며 CD가 env 한 줄의 literal `\n`으로 정규화한다. 필수 값이 비면 CD는 host `.env`를 덮어쓰지 않고 실패한다.
 
 공식 기준: [Register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/), [App Store Connect workflow](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow), [Xcode Cloud](https://developer.apple.com/xcode-cloud/), [App Store Connect API](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-api)

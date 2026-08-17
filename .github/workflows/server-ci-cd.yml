@@ -119,8 +119,40 @@ jobs:
           NEON_MIGRATION_DATABASE_URL: ${{ secrets.NEON_MIGRATION_DATABASE_URL }}
           NEON_MIGRATION_DATABASE_USERNAME: ${{ secrets.NEON_MIGRATION_DATABASE_USERNAME }}
           NEON_MIGRATION_DATABASE_PASSWORD: ${{ secrets.NEON_MIGRATION_DATABASE_PASSWORD }}
+          APPLE_AUTH_ENABLED: ${{ secrets.APPLE_AUTH_ENABLED }}
+          APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY_P8: ${{ secrets.APPLE_PRIVATE_KEY_P8 }}
+          APPLE_REFRESH_TOKEN_ENCRYPTION_KEY: ${{ secrets.APPLE_REFRESH_TOKEN_ENCRYPTION_KEY }}
         run: |
           umask 077
+          required_secrets=(
+            NEON_RUNTIME_DATABASE_URL
+            NEON_RUNTIME_DATABASE_USERNAME
+            NEON_RUNTIME_DATABASE_PASSWORD
+            NEON_MIGRATION_DATABASE_URL
+            NEON_MIGRATION_DATABASE_USERNAME
+            NEON_MIGRATION_DATABASE_PASSWORD
+            APPLE_AUTH_ENABLED
+            APPLE_CLIENT_ID
+            APPLE_TEAM_ID
+            APPLE_KEY_ID
+            APPLE_PRIVATE_KEY_P8
+            APPLE_REFRESH_TOKEN_ENCRYPTION_KEY
+          )
+          for secret_name in "${required_secrets[@]}"; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "missing required server-development secret: $secret_name" >&2
+              exit 1
+            fi
+          done
+          if [[ "$APPLE_AUTH_ENABLED" != "true" && "$APPLE_AUTH_ENABLED" != "false" ]]; then
+            echo "APPLE_AUTH_ENABLED must be exactly true or false" >&2
+            exit 1
+          fi
+          apple_private_key=${APPLE_PRIVATE_KEY_P8//$'\r'/}
+          apple_private_key=${apple_private_key//$'\n'/\\n}
           {
             printf 'NEON_RUNTIME_DATABASE_URL=%s\n' "$NEON_RUNTIME_DATABASE_URL"
             printf 'NEON_RUNTIME_DATABASE_USERNAME=%s\n' "$NEON_RUNTIME_DATABASE_USERNAME"
@@ -128,6 +160,12 @@ jobs:
             printf 'NEON_MIGRATION_DATABASE_URL=%s\n' "$NEON_MIGRATION_DATABASE_URL"
             printf 'NEON_MIGRATION_DATABASE_USERNAME=%s\n' "$NEON_MIGRATION_DATABASE_USERNAME"
             printf 'NEON_MIGRATION_DATABASE_PASSWORD=%s\n' "$NEON_MIGRATION_DATABASE_PASSWORD"
+            printf 'APPLE_AUTH_ENABLED=%s\n' "$APPLE_AUTH_ENABLED"
+            printf 'APPLE_CLIENT_ID=%s\n' "$APPLE_CLIENT_ID"
+            printf 'APPLE_TEAM_ID=%s\n' "$APPLE_TEAM_ID"
+            printf 'APPLE_KEY_ID=%s\n' "$APPLE_KEY_ID"
+            printf 'APPLE_PRIVATE_KEY_P8=%s\n' "$apple_private_key"
+            printf 'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY=%s\n' "$APPLE_REFRESH_TOKEN_ENCRYPTION_KEY"
           } > "$RUNNER_TEMP/moneysnap-runtime.env"
 
       - name: Transfer and deploy tested image

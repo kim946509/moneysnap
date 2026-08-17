@@ -217,8 +217,8 @@ Snap 저장은 활성 `ImageRef`만 허용한다. DB transaction과 R2 operation
 ## iOS build와 배포 lane
 
 - Windows: Spring Boot build/test, Swift source와 project file 작성, Figma asset 준비, CI/CD 정적 검증.
-- GitHub-hosted Ubuntu CI: Java 21 test·bootJar와 digest-pinned Docker image archive를 만들며 secret을 주입하지 않는다.
-- GitHub-hosted Ubuntu CD: 성공한 `main` image만 pinned SSH Ubuntu origin에 전송하고 container health 실패 시 이전 image로 rollback한다.
+- GitHub-hosted Ubuntu CI: Java 21 test·bootJar와 digest-pinned Docker image archive를 만들며 Neon/SSH/Apple secret을 주입하지 않는다.
+- GitHub-hosted Ubuntu CD: 성공한 `main` image만 pinned SSH Ubuntu origin에 전송하고, `server-development`의 Neon·Apple runtime secret으로 `/opt/moneysnap/.env`를 다시 쓴 뒤 container health 실패 시 이전 image와 같은 release secret으로 rollback한다.
 - GitHub-hosted `macos-15`: iOS·contract 변경에만 signing 없는 Simulator build/test를 실행한다.
 - macOS/Xcode: SwiftUI preview, screenshot diff, interactive debugging과 첫 Xcode Cloud workflow 설정.
 - Xcode Cloud: Apple-managed build/test/sign/archive와 internal TestFlight. Apple Developer Program 포함 25 compute hours/month 안에서 PR test와 main/release archive를 분리한다.
