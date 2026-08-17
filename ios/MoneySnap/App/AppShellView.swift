@@ -34,7 +34,7 @@ struct AppShellView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
-                ForEach(AppTab.allCases) { tab in
+                ForEach(AppTab.allCases.filter { $0 != .add }) { tab in
                     NavigationStack(path: tabRouter.binding(for: tab)) {
                         rootView(for: tab)
                             .navigationDestination(for: AppRoute.self) { route in
@@ -168,13 +168,17 @@ struct AppShellView: View {
             )
         }
         #endif
-        let mediaClient = mediaClient
+        let journal = snapJournalClient
+        let photoPublisher: (@Sendable (NormalizedJpeg) async throws -> UUID)?
+        if let mediaClient {
+            photoPublisher = { jpeg in try await mediaClient.publish(jpeg) }
+        } else {
+            photoPublisher = nil
+        }
         return SnapCaptureModel(
-            record: { try await snapJournalClient.record($0) },
+            record: { command in try await journal.record(command) },
             allowsPhotos: true,
-            publishPhoto: mediaClient.map { client in
-                { jpeg in try await client.publish(jpeg) }
-            }
+            publishPhoto: photoPublisher
         )
     }
 }

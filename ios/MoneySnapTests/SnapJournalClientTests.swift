@@ -16,7 +16,8 @@ struct SnapJournalClientTests {
         let request = try #require(harness.protocolState.requests.first)
         #expect(request.request.httpMethod == "GET")
         #expect(request.request.url?.path == "/api/v1/snaps/today")
-        #expect(request.request.url?.query == "timeZone=Asia%2FSeoul")
+        let queryItems = URLComponents(url: request.request.url!, resolvingAgainstBaseURL: false)?.queryItems
+        #expect(queryItems == [URLQueryItem(name: "timeZone", value: "Asia/Seoul")])
         #expect(request.request.value(forHTTPHeaderField: "Authorization") == "Bearer current-token")
         #expect(summary.totalAmount == 24_100)
         #expect(summary.entries.map(\.category) == [.cafe, .food])

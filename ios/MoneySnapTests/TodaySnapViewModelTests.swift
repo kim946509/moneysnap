@@ -197,7 +197,7 @@ struct TodaySnapViewModelTests {
     }
 
     @Test
-    func refreshAfterReceiptReplacesHomeWithoutDuplicatingTheReceipt() async {
+    func refreshAfterReceiptReplacesHomeWithoutDuplicatingTheReceipt() async throws {
         let client = RecordingTodayClient(summary: VisualTestSupport.homeSummary)
         let viewModel = TodaySnapViewModel(client: client)
         await viewModel.load()
@@ -209,7 +209,7 @@ struct TodaySnapViewModelTests {
             createdAt: Date(timeIntervalSince1970: 1_786_582_800)
         )
         #expect(viewModel.apply(receipt))
-        await client.include(receipt)
+        try await client.include(receipt)
         await viewModel.refresh()
 
         guard case let .content(summary) = viewModel.state else {

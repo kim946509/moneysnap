@@ -105,11 +105,22 @@ jobs:
           SERVER_SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
           SERVER_SSH_KNOWN_HOSTS: ${{ secrets.SERVER_SSH_KNOWN_HOSTS }}
         run: |
+          sanitize_multiline() {
+            local value="$1"
+            value="${value#$'\xEF\xBB\xBF'}"
+            value="${value//$'\r'/}"
+            value="${value//\\n/$'\n'}"
+            printf '%s\n' "$value"
+          }
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$SERVER_SSH_PRIVATE_KEY" > "$HOME/.ssh/moneysnap-deploy"
+          sanitize_multiline "$SERVER_SSH_PRIVATE_KEY" > "$HOME/.ssh/moneysnap-deploy"
           chmod 600 "$HOME/.ssh/moneysnap-deploy"
-          printf '%s\n' "$SERVER_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          sanitize_multiline "$SERVER_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
+          if ! ssh-keygen -y -f "$HOME/.ssh/moneysnap-deploy" >/dev/null; then
+            echo "SERVER_SSH_PRIVATE_KEY is not a loadable OpenSSH or PEM private key" >&2
+            exit 1
+          fi
 
       - name: Prepare runtime secret file
         env:
@@ -197,6 +208,17 @@ jobs:
           SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
           SERVER_SSH_USER: ${{ secrets.SERVER_SSH_USER }}
         run: |
+          sanitize_scalar() {
+            local value="$1"
+            value="${value#$'\xEF\xBB\xBF'}"
+            value="${value//$'\r'/}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            printf '%s' "$value"
+          }
+          SERVER_HOST="$(sanitize_scalar "$SERVER_HOST")"
+          SERVER_SSH_PORT="$(sanitize_scalar "$SERVER_SSH_PORT")"
+          SERVER_SSH_USER="$(sanitize_scalar "$SERVER_SSH_USER")"
           remote_stage="/tmp/moneysnap-${{ github.sha }}"
           ssh -i "$HOME/.ssh/moneysnap-deploy" -p "$SERVER_SSH_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SERVER_SSH_USER@$SERVER_HOST" "install -d -m 700 '$remote_stage'"
           scp -i "$HOME/.ssh/moneysnap-deploy" -P "$SERVER_SSH_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
@@ -222,5 +244,16 @@ jobs:
           SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
           SERVER_SSH_USER: ${{ secrets.SERVER_SSH_USER }}
         run: |
+          sanitize_scalar() {
+            local value="$1"
+            value="${value#$'\xEF\xBB\xBF'}"
+            value="${value//$'\r'/}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            printf '%s' "$value"
+          }
+          SERVER_HOST="$(sanitize_scalar "$SERVER_HOST")"
+          SERVER_SSH_PORT="$(sanitize_scalar "$SERVER_SSH_PORT")"
+          SERVER_SSH_USER="$(sanitize_scalar "$SERVER_SSH_USER")"
           ssh -i "$HOME/.ssh/moneysnap-deploy" -p "$SERVER_SSH_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$SERVER_SSH_USER@$SERVER_HOST" "rm -rf '/tmp/moneysnap-${{ github.sha }}'" || true
           rm -f "$HOME/.ssh/moneysnap-deploy" "$RUNNER_TEMP/moneysnap-runtime.env"
