@@ -122,6 +122,7 @@ Require-Match -Content $workflow -Pattern 'xEF\\xBB\\xBF' -Description 'UTF-8 BO
 Require-Match -Content $workflow -Pattern 'ssh-keygen -y -f "\$HOME/.ssh/moneysnap-deploy"' -Description 'loadable SSH private key check'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" -Description 'Apple PEM carriage-return strip'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" -Description 'Apple PEM literal newline flatten'
+Require-Match -Content $workflow -Pattern 'normalize_jdbc' -Description 'Neon URL JDBC prefix normalization'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
