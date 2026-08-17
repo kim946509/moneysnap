@@ -74,7 +74,7 @@ deploy_image() {
       --project-directory "$install_root" \
       --file "$compose_file" \
       --env-file "$compose_interpolation_env" \
-      up --detach --force-recreate --wait --wait-timeout 90
+      up --detach --force-recreate --wait --wait-timeout 180
 }
 
 if ! deploy_image "$image"; then
