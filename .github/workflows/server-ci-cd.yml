@@ -109,9 +109,7 @@ jobs:
             local value="$1"
             value="${value#$'\xEF\xBB\xBF'}"
             value="${value//$'\r'/}"
-            if [[ "$value" != *$'\n'* && "$value" == *'\\n'* ]]; then
-              value="${value//\\n/$'\n'}"
-            fi
+            value="${value//\\n/$'\n'}"
             printf '%s\n' "$value"
           }
           install -d -m 700 "$HOME/.ssh"

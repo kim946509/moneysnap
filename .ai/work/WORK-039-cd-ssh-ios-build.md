@@ -66,3 +66,4 @@ powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1
 
 - Windows `gh secret set`가 BOM을 붙일 수 있으므로 `--body`로 재등록하고 workflow에서도 strip한다.
 - Wrangler OAuth는 R2 object API는 가능해도 User API Tokens Write가 없으면 S3 Access Key를 만들 수 없다.
+- deploy user를 root에서 최소 권한 계정으로 바꾸는 일은 기존 ADR hardening이며 이번 CD 복구 범위 밖이다.
