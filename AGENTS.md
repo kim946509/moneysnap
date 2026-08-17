@@ -89,10 +89,10 @@
 - GitHub workflow action은 full commit SHA로 고정하고 Dependabot PR로 갱신한다. workflow 기본 권한은 `contents: read`다.
 - `main` branch는 PR, linear history와 conversation resolution을 요구하고 force-push·delete를 금지한다. path-scoped CI를 required check로 지정하면 관련 없는 PR이 pending될 수 있으므로 항상 실행되는 gate를 설계하기 전에는 required status check를 추가하지 않는다.
 - public repository의 pull request CI와 server/iOS test job에는 Neon, SSH, R2, Tunnel, Apple secret을 주입하지 않는다. development CD는 성공한 `main` push의 checksum 검증 Docker image와 `server-development` environment만 사용한다.
-- `deploy-development` job만 `server-development`의 Neon·SSH·Apple runtime secret과, `R2_ENABLED=true`일 때 R2 bucket-scoped secret을 Ubuntu `/opt/moneysnap/.env`에 mode `600`으로 쓴다. Tunnel secret은 이 CD에 넣지 않는다.
+- `deploy-development` job만 `server-development`의 Neon·SSH·Apple runtime secret과, `R2_ENABLED=true`일 때 R2 bucket-scoped secret을 Ubuntu `/opt/moneysnap/runtime.env`에 mode `600`으로 쓴다. `/opt/moneysnap/.env`는 Compose interpolation stub만 둔다. Tunnel secret은 이 CD에 넣지 않는다.
 - application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus/Grafana 설정을 생성·변경·재시작하지 않는다. infrastructure lifecycle은 별도 승인 작업이 소유한다.
 - public API는 application `/` smoke만 허용하고 management `9091`과 actuator는 Docker `main` network 안에만 둔다.
-- SSH host identity는 pinned known_hosts로 검증하고 runtime secret file은 Ubuntu `/opt/moneysnap/.env` mode `600`으로 유지한다. 대화·로그에 노출된 key는 회전하며 장기적으로 최소 권한 deploy account를 사용한다.
+- SSH host identity는 pinned known_hosts로 검증하고 runtime secret file은 Ubuntu `/opt/moneysnap/runtime.env` mode `600`으로 유지한다. 대화·로그에 노출된 key는 회전하며 장기적으로 최소 권한 deploy account를 사용한다.
 - 자동 rollback은 JAR과 동일 release secret 복원까지만 수행한다. DB down migration은 자동화하지 않고 schema 변경은 이전 JAR과 호환되는 expand-first AC를 요구한다.
 
 ## 개발 프로세스

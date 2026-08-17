@@ -63,7 +63,7 @@ rollback_fixture="$test_root/rollback"
 make_fixture "$rollback_fixture"
 mkdir -p "$rollback_fixture/install"
 printf 'services: previous\n' > "$rollback_fixture/install/compose.yaml"
-printf 'PREVIOUS_SECRET=preserved\n' > "$rollback_fixture/install/.env"
+printf 'PREVIOUS_SECRET=preserved\n' > "$rollback_fixture/install/runtime.env"
 printf 'previous-release\n' > "$rollback_fixture/install/current-release"
 if DOCKER_LOG="$docker_log" \
    DOCKER_BIN="$fake_docker" \
@@ -82,6 +82,6 @@ fi
 
 grep -q 'compose .* image=moneysnap-server:previous' "$docker_log"
 grep -q 'services: previous' "$rollback_fixture/install/compose.yaml"
-grep -q 'PREVIOUS_SECRET=preserved' "$rollback_fixture/install/.env"
+grep -q 'PREVIOUS_SECRET=preserved' "$rollback_fixture/install/runtime.env"
 [[ $(cat "$rollback_fixture/install/current-release") == previous-release ]]
 echo 'rollback after failed health gate: OK'

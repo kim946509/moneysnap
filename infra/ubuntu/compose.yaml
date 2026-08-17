@@ -4,7 +4,7 @@ services:
     container_name: moneysnap-server
     restart: unless-stopped
     env_file:
-      - ${MONEYSNAP_ENV_FILE:-/opt/moneysnap/.env}
+      - ${MONEYSNAP_ENV_FILE:-/opt/moneysnap/runtime.env}
     environment:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_SERVER_ADDRESS: 0.0.0.0

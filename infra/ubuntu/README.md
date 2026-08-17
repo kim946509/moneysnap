@@ -10,7 +10,8 @@ Money Snap development API는 기존 Ubuntu host의 Docker와 `main` monitoring 
 - management: container `9091`, host publish 없음
 - network: existing external bridge `main`
 - restart: `unless-stopped`
-- secret file: `/opt/moneysnap/.env`, owner root, mode `600`
+- secret file: `/opt/moneysnap/runtime.env`, owner root, mode `600`
+- compose interpolation stub: `/opt/moneysnap/.env`
 - public route: `https://moneysnap-server.ansandy.co.kr/`
 
 `compose.yaml`은 non-root user, read-only root filesystem, tmpfs, dropped Linux capabilities와 `no-new-privileges`를 강제한다. `/actuator/health`와 `/actuator/prometheus`는 management port에서만 사용한다.
@@ -32,7 +33,7 @@ GitHub Actions가 test와 `bootJar`를 통과한 image를 archive하고 SHA-256 
 ```bash
 bash server/scripts/test-docker-deployment.sh
 MONEYSNAP_IMAGE=moneysnap-server:validation \
-MONEYSNAP_ENV_FILE=/opt/moneysnap/.env \
+MONEYSNAP_ENV_FILE=/opt/moneysnap/runtime.env \
 docker compose -f infra/ubuntu/compose.yaml config --quiet
 curl --fail http://192.168.1.102:9090/
 curl --fail http://127.0.0.1:9092/api/v1/query?query=up%7Bjob%3D%22moneysnap_server%22%7D

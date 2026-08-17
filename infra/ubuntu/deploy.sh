@@ -16,7 +16,8 @@ release=$6
 install_root=${MONEYSNAP_INSTALL_ROOT:-/opt/moneysnap}
 docker_bin=${DOCKER_BIN:-docker}
 compose_file="$install_root/compose.yaml"
-runtime_env_file="$install_root/.env"
+runtime_env_file="$install_root/runtime.env"
+compose_interpolation_env="$install_root/.env"
 state_file="$install_root/current-release"
 backup_dir=$(mktemp -d)
 trap 'rm -rf "$backup_dir"' EXIT
@@ -53,15 +54,16 @@ fi
 if [[ -f "$runtime_env_file" ]]; then
   install -m 600 "$runtime_env_file" "$backup_dir/runtime.env"
   had_previous_env=true
+elif [[ -f "$compose_interpolation_env" ]]; then
+  install -m 600 "$compose_interpolation_env" "$backup_dir/runtime.env"
+  had_previous_env=true
 fi
 
 install -m 600 "$runtime_env_source" "$runtime_env_file"
 install -m 644 "$compose_source" "$compose_file"
+printf '# compose interpolation only; runtime secrets stay in runtime.env\n' > "$compose_interpolation_env"
+chmod 600 "$compose_interpolation_env"
 gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/dev/null
-
-interpolation_env="$install_root/compose.env"
-printf '# compose interpolation only; runtime secrets stay in %s\n' "$runtime_env_file" > "$interpolation_env"
-chmod 600 "$interpolation_env"
 
 deploy_image() {
   local candidate_image=$1
@@ -71,7 +73,7 @@ deploy_image() {
       --project-name moneysnap \
       --project-directory "$install_root" \
       --file "$compose_file" \
-      --env-file "$interpolation_env" \
+      --env-file "$compose_interpolation_env" \
       up --detach --force-recreate --wait --wait-timeout 90
 }
 

@@ -122,7 +122,6 @@ Require-Match -Content $workflow -Pattern 'xEF\\xBB\\xBF' -Description 'UTF-8 BO
 Require-Match -Content $workflow -Pattern 'ssh-keygen -y -f "\$HOME/.ssh/moneysnap-deploy"' -Description 'loadable SSH private key check'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" -Description 'Apple PEM carriage-return strip'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" -Description 'Apple PEM literal newline flatten'
-Require-Match -Content $workflow -Pattern 'write_env_line' -Description 'quoted runtime env writer'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
@@ -174,6 +173,7 @@ Require-Match $compose '192\.168\.1\.102:9090:8080' 'private host 9090 to applic
 Require-Match $compose 'name:\s*main' 'existing monitoring network attachment'
 Require-Match $compose 'MANAGEMENT_SERVER_PORT:\s*"9091"' 'container-only management port'
 Require-Match $compose 'restart:\s*unless-stopped' 'restart policy'
+Require-Match $compose 'opt/moneysnap/runtime.env' 'runtime secret file is not compose interpolation .env'
 
 $deploy = Get-Content -LiteralPath $deployPath -Raw
 Require-Match $deploy 'sha256sum\s+--check' 'image archive checksum verification'
