@@ -7,6 +7,8 @@ struct MoneySnapApp: App {
     @State private var selectedTab: AppTab
     @State private var authentication: AuthenticationModel
     private let snapJournalClient: any SnapJournalClient
+    private let groupClient: any GroupClient
+    private let mediaClient: (any MediaClient)?
     private let initialCaptureModel: SnapCaptureModel?
     #if DEBUG
     private let invalidVisualScenario: String?
@@ -19,6 +21,8 @@ struct MoneySnapApp: App {
             _selectedTab = State(initialValue: .home)
             _authentication = State(initialValue: VisualTestSupport.authenticatedModel())
             snapJournalClient = VisualTestSupport.recordFeatureClient
+            groupClient = UnavailableGroupClient()
+            mediaClient = nil
             initialCaptureModel = nil
             invalidVisualScenario = nil
             return
@@ -26,6 +30,8 @@ struct MoneySnapApp: App {
             _selectedTab = State(initialValue: .home)
             _authentication = State(initialValue: VisualTestSupport.authenticatedModel())
             snapJournalClient = VisualTestSupport.recordRetryFeatureClient
+            groupClient = UnavailableGroupClient()
+            mediaClient = nil
             initialCaptureModel = nil
             invalidVisualScenario = nil
             return
@@ -33,6 +39,8 @@ struct MoneySnapApp: App {
             _selectedTab = State(initialValue: .home)
             _authentication = State(initialValue: VisualTestSupport.failClosedModel())
             snapJournalClient = UnavailableSnapJournalClient()
+            groupClient = UnavailableGroupClient()
+            mediaClient = nil
             initialCaptureModel = nil
             invalidVisualScenario = scenario
             return
@@ -45,6 +53,8 @@ struct MoneySnapApp: App {
             _selectedTab = State(initialValue: .initial)
             _authentication = State(initialValue: authentication)
             snapJournalClient = Self.liveSnapJournalClient(authentication: authentication)
+            groupClient = Self.liveGroupClient(authentication: authentication)
+            mediaClient = Self.liveMediaClient(authentication: authentication)
             initialCaptureModel = nil
             invalidVisualScenario = nil
         case let .scenario(scenario):
@@ -52,6 +62,8 @@ struct MoneySnapApp: App {
             _selectedTab = State(initialValue: scenario.initialTab)
             _authentication = State(initialValue: VisualTestSupport.authenticatedModel())
             snapJournalClient = client
+            groupClient = UnavailableGroupClient()
+            mediaClient = nil
             initialCaptureModel = VisualTestSupport.initialCaptureModel(
                 for: scenario,
                 client: client
@@ -61,6 +73,8 @@ struct MoneySnapApp: App {
             _selectedTab = State(initialValue: .initial)
             _authentication = State(initialValue: VisualTestSupport.failClosedModel())
             snapJournalClient = UnavailableSnapJournalClient()
+            groupClient = UnavailableGroupClient()
+            mediaClient = nil
             initialCaptureModel = nil
             invalidVisualScenario = scenario
         }
@@ -69,6 +83,8 @@ struct MoneySnapApp: App {
         _selectedTab = State(initialValue: .initial)
         _authentication = State(initialValue: authentication)
         snapJournalClient = Self.liveSnapJournalClient(authentication: authentication)
+        groupClient = Self.liveGroupClient(authentication: authentication)
+        mediaClient = Self.liveMediaClient(authentication: authentication)
         initialCaptureModel = nil
         #endif
     }
@@ -92,6 +108,8 @@ struct MoneySnapApp: App {
             authentication: authentication,
             selectedTab: $selectedTab,
             snapJournalClient: snapJournalClient,
+            groupClient: groupClient,
+            mediaClient: mediaClient,
             initialCaptureModel: initialCaptureModel
         )
     }
@@ -102,6 +120,24 @@ struct MoneySnapApp: App {
                 baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!
             ),
             store: KeychainSessionStore()
+        )
+    }
+
+    private static func liveGroupClient(
+        authentication: AuthenticationModel
+    ) -> any GroupClient {
+        URLSessionGroupClient(
+            baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!,
+            accessToken: { try await authentication.accessTokenForRequest() }
+        )
+    }
+
+    private static func liveMediaClient(
+        authentication: AuthenticationModel
+    ) -> any MediaClient {
+        URLSessionMediaClient(
+            baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!,
+            accessToken: { try await authentication.accessTokenForRequest() }
         )
     }
 

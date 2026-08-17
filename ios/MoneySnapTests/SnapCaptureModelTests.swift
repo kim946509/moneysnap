@@ -114,6 +114,39 @@ struct SnapCaptureModelTests {
     }
 
     @Test
+    func attachedPhotoIsUploadedOnceAndFrozenOnRecordRetry() async {
+        let imageRef = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        let publisher = RecordingPhotoPublisher(imageRef: imageRef)
+        let journal = RecordingSnapJournalClient(
+            results: [.failure(.transportFailure), .success(.fixture)]
+        )
+        let model = makeModel(journal: journal, publishPhoto: publisher.publish)
+        model.attach([
+            NormalizedJpeg(bytes: Data([0xFF, 0xD8, 0xFF]), checksumSha256: "ab", width: 8, height: 8)
+        ])
+        enterValidAmount(in: model)
+
+        #expect(await model.submit() == nil)
+        #expect(await model.submit() == .fixture)
+
+        #expect(await publisher.publishCount == 1)
+        let commands = await journal.commands
+        #expect(commands.count == 2)
+        #expect(commands[0].imageRef == imageRef)
+        #expect(commands[0] == commands[1])
+    }
+
+    @Test
+    func photoLessRecordOmitsImageRef() async {
+        let journal = RecordingSnapJournalClient(result: .success(.fixture))
+        let model = makeModel(journal: journal)
+        enterValidAmount(in: model)
+
+        #expect(await model.submit() == .fixture)
+        #expect(await journal.commands.first?.imageRef == nil)
+    }
+
+    @Test
     func knownShortAliasDoesNotEmitARejectedServerCommand() async {
         let journal = RecordingSnapJournalClient(result: .success(.fixture))
         let model = SnapCaptureModel(
@@ -130,19 +163,36 @@ struct SnapCaptureModelTests {
     }
 
     private func makeModel(
-        journal: RecordingSnapJournalClient = RecordingSnapJournalClient(result: .success(.fixture))
+        journal: RecordingSnapJournalClient = RecordingSnapJournalClient(result: .success(.fixture)),
+        publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)? = nil
     ) -> SnapCaptureModel {
         SnapCaptureModel(
             record: journal.record,
             now: { Date(timeIntervalSince1970: 1_786_582_800) },
             timeZone: { TimeZone(identifier: "Asia/Seoul")! },
-            mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! }
+            mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! },
+            publishPhoto: publishPhoto
         )
     }
 
     private func enterValidAmount(in model: SnapCaptureModel) {
         model.select(.food)
         [1, 8, 9, 0, 0].forEach(model.appendDigit)
+    }
+}
+
+private actor RecordingPhotoPublisher {
+    private let imageRef: UUID
+    private(set) var publishCount = 0
+
+    init(imageRef: UUID) {
+        self.imageRef = imageRef
+    }
+
+    func publish(_ jpeg: NormalizedJpeg) async throws -> UUID {
+        publishCount += 1
+        _ = jpeg
+        return imageRef
     }
 }
 

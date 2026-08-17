@@ -79,13 +79,15 @@ class SnapRecordRulesTests {
                 original.localDay(),
                 original.timeZone(),
                 original.category(),
-                original.amount());
+                original.amount(),
+                null);
         SnapRecordCommand changedAmount = new SnapRecordCommand(
                 "mutation-key",
                 original.localDay(),
                 original.timeZone(),
                 original.category(),
-                new KrwAmount(18_901));
+                new KrwAmount(18_901),
+                null);
 
         assertThat(retry.fingerprint()).isEqualTo(original.fingerprint());
         assertThat(changedAmount.fingerprint()).isNotEqualTo(original.fingerprint());
@@ -100,17 +102,17 @@ class SnapRecordRulesTests {
                 .doesNotThrowAnyException();
         assertThatThrownBy(() -> new SnapRecordCommand(
                 " ", LocalDate.parse("2026-08-14"), "Asia/Seoul",
-                SnapCategory.FOOD, new KrwAmount(1)))
+                SnapCategory.FOOD, new KrwAmount(1), null))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new SnapRecordCommand(
                 "x".repeat(129), LocalDate.parse("2026-08-14"), "Asia/Seoul",
-                SnapCategory.FOOD, new KrwAmount(1)))
+                SnapCategory.FOOD, new KrwAmount(1), null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static SnapRecordCommand command(LocalDate localDay, String timeZone) {
         return new SnapRecordCommand(
                 "mutation-key", localDay, timeZone,
-                SnapCategory.FOOD, new KrwAmount(18_900));
+                SnapCategory.FOOD, new KrwAmount(18_900), null);
     }
 }

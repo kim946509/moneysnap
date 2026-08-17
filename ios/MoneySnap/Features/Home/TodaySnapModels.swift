@@ -66,6 +66,26 @@ struct SnapDay: Equatable, Sendable {
     var displayLabel: String {
         "\(month)월 \(day)일 \(weekday.rawValue)"
     }
+
+    static func parse(localDay: String) -> SnapDay? {
+        let parts = localDay.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        guard let date = calendar.date(from: DateComponents(
+            year: parts[0], month: parts[1], day: parts[2]
+        )) else { return nil }
+        let normalized = calendar.dateComponents([.year, .month, .day], from: date)
+        guard normalized.year == parts[0], normalized.month == parts[1],
+              normalized.day == parts[2] else { return nil }
+        let weekdays: [SnapDay.Weekday] = [
+            .sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday
+        ]
+        return SnapDay(
+            year: parts[0], month: parts[1], day: parts[2],
+            weekday: weekdays[calendar.component(.weekday, from: date) - 1]
+        )
+    }
 }
 
 enum SnapArtwork: String, Equatable, Sendable {

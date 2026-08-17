@@ -4,6 +4,8 @@ struct AuthenticationGateView: View {
     let authentication: AuthenticationModel
     @Binding var selectedTab: AppTab
     let snapJournalClient: any SnapJournalClient
+    var groupClient: any GroupClient = UnavailableGroupClient()
+    var mediaClient: (any MediaClient)? = nil
     var initialCaptureModel: SnapCaptureModel?
 
     var body: some View {
@@ -24,6 +26,8 @@ struct AuthenticationGateView: View {
                     selectedTab: $selectedTab,
                     authentication: authentication,
                     snapJournalClient: snapJournalClient,
+                    groupClient: groupClient,
+                    mediaClient: mediaClient,
                     initialCaptureModel: initialCaptureModel
                 )
             }

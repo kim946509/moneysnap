@@ -10,7 +10,19 @@ iOS 17+, Swift 6, SwiftUI와 Swift Testing 기반의 native app scaffold다.
 - `MoneySnapUITests`: DEBUG visual scenario로 Home 표시와 My 이동, unknown scenario fail-closed를 검증하는 XCUITest target
 - `MoneySnap.xcodeproj`: app·unit test·UI test target과 shared `MoneySnap` scheme
 
-최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple Developer의 explicit App ID와 배포 signing team 연결은 아직 등록하지 않았으며 별도 Apple activation 작업에서 진행한다.
+최종 Bundle ID는 `com.ansandy.moneysnap`이다. Sign in with Apple entitlement는 `MoneySnap/MoneySnap.entitlements`에 있다. 실기기 서명 team은 Xcode/Xcode Cloud가 연결하며 repository에 `DEVELOPMENT_TEAM`을 커밋하지 않는다.
+
+## 아이폰에서 직접 열어보기
+
+Windows에서는 IPA를 기기나 TestFlight에 올릴 수 없다. Mac 한 대가 필요하다.
+
+1. App Store Connect의 Money Snap iOS app record가 있는지 확인한다.
+2. Mac에서 이 repository를 열고 `ios/MoneySnap.xcodeproj`의 Team을 Apple Developer team으로 맞춘다. Xcode가 Sign in with Apple capability를 App ID와 동기화한다.
+3. 아이폰을 케이블로 연결한 뒤 scheme `MoneySnap`, destination을 해당 기기로 두고 Run 한다. 또는 Xcode Cloud에서 archive 후 Internal TestFlight group에 넣는다.
+4. 앱 API는 `https://moneysnap-server.ansandy.co.kr`이다. Sign in with Apple과 새 Snap/group API는 그 서버에 이 코드가 배포된 뒤에만 동작한다.
+5. 첫 실행에서 카메라·사진 권한을 허용하고 Apple로 로그인한다.
+
+첫 Xcode Cloud workflow는 Mac/Xcode에서만 만들 수 있다. GitHub Actions iOS CI에는 signing certificate를 넣지 않는다.
 
 ## Windows 검증
 

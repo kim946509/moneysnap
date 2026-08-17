@@ -26,6 +26,24 @@ class SnapErrorAdvice {
         return ApiErrorResponse.of(ApiErrorCode.MUTATION_CONFLICT);
     }
 
+    @ExceptionHandler(SnapVersionConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    ApiErrorResponse versionConflict() {
+        return ApiErrorResponse.of(ApiErrorCode.SNAP_VERSION_CONFLICT);
+    }
+
+    @ExceptionHandler(InvalidCursorException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ApiErrorResponse invalidCursor() {
+        return ApiErrorResponse.of(ApiErrorCode.INVALID_CURSOR);
+    }
+
+    @ExceptionHandler(SnapNotAccessibleException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    ApiErrorResponse notAccessible() {
+        return ApiErrorResponse.of(ApiErrorCode.NOT_ACCESSIBLE);
+    }
+
     @ExceptionHandler({
             DataAccessException.class,
             CannotCreateTransactionException.class,

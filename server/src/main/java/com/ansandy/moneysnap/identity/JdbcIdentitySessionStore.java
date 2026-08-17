@@ -5,17 +5,29 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import com.ansandy.moneysnap.shared.AccountMediaCleanup;
 
 final class JdbcIdentitySessionStore implements IdentitySessionStore {
 
 	private final JdbcClient jdbc;
 	private final TransactionTemplate transactions;
+	private final AccountMediaCleanup mediaCleanup;
 
 	JdbcIdentitySessionStore(JdbcClient jdbc, TransactionTemplate transactions) {
+		this(jdbc, transactions, null);
+	}
+
+	JdbcIdentitySessionStore(
+			JdbcClient jdbc,
+			TransactionTemplate transactions,
+			ObjectProvider<AccountMediaCleanup> mediaCleanup) {
 		this.jdbc = jdbc;
 		this.transactions = transactions;
+		this.mediaCleanup = mediaCleanup == null ? null : mediaCleanup.getIfAvailable();
 	}
 
 	@Override
@@ -195,6 +207,9 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 
 	@Override
 	public void deleteUser(UUID userId) {
+		if (mediaCleanup != null) {
+			mediaCleanup.transferToTombstones(userId);
+		}
 		jdbc.sql("DELETE FROM users WHERE id = :userId")
 				.param("userId", userId)
 				.update();

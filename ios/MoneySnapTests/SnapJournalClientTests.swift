@@ -5,6 +5,35 @@ import Testing
 @Suite(.serialized)
 struct SnapJournalClientTests {
     @Test
+    func fetchTodaySendsPercentEncodedTimeZoneAndDecodesCanonicalSnaps() async throws {
+        let harness = Harness(
+            responses: [.init(status: 200, body: try canonicalFixture("today-response"))],
+            timeZone: TimeZone(identifier: "Asia/Seoul")!
+        )
+
+        let summary = try await harness.client.fetchToday()
+
+        let request = try #require(harness.protocolState.requests.first)
+        #expect(request.request.httpMethod == "GET")
+        #expect(request.request.url?.path == "/api/v1/snaps/today")
+        #expect(request.request.url?.query == "timeZone=Asia%2FSeoul")
+        #expect(request.request.value(forHTTPHeaderField: "Authorization") == "Bearer current-token")
+        #expect(summary.totalAmount == 24_100)
+        #expect(summary.entries.map(\.category) == [.cafe, .food])
+        #expect(summary.day == SnapDay(year: 2026, month: 8, day: 14, weekday: .friday))
+    }
+
+    @Test
+    func fetchTodayDecodesAnEmptyCanonicalDay() async throws {
+        let harness = Harness(responses: [.init(status: 200, body: try canonicalFixture("today-empty-response"))])
+
+        let summary = try await harness.client.fetchToday()
+
+        #expect(summary.entries.isEmpty)
+        #expect(summary.totalAmount == 0)
+    }
+
+    @Test
     func recordSendsTheCanonicalEnvelopeWithTheLatestBearer() async throws {
         let requestFixture = try canonicalFixture("record-request")
         let responseFixture = try canonicalFixture("record-response")
@@ -164,7 +193,11 @@ private struct Harness {
     let protocolState: SnapURLProtocolState
     let client: URLSessionSnapJournalClient
 
-    init(tokens: [String] = ["current-token"], responses: [SnapURLProtocolState.Stub]) {
+    init(
+        tokens: [String] = ["current-token"],
+        responses: [SnapURLProtocolState.Stub],
+        timeZone: TimeZone = TimeZone(identifier: "Asia/Seoul")!
+    ) {
         let tokenState = TokenState(tokens: tokens)
         let protocolState = SnapURLProtocolState(responses: responses)
         SnapURLProtocol.state = protocolState
@@ -176,7 +209,9 @@ private struct Harness {
             baseURL: URL(string: "https://moneysnap.example")!,
             session: URLSession(configuration: configuration),
             accessToken: { try await tokenState.nextToken() },
-            sessionRejected: { token in await tokenState.reject(token) }
+            sessionRejected: { token in await tokenState.reject(token) },
+            now: { Date(timeIntervalSince1970: 1_786_582_800) },
+            timeZone: { timeZone }
         )
     }
 }

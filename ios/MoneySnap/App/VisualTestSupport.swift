@@ -157,10 +157,25 @@ private struct InMemorySnapJournalClient: SnapJournalClient {
     func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
         throw SnapRecordError.transportFailure
     }
+
+    func get(_ snapID: UUID) async throws -> SnapDetail {
+        guard let entry = summary.entries.first(where: { $0.id == snapID }) else {
+            throw SnapRecordError.notAccessible(correlationID: "missing")
+        }
+        return SnapDetail(
+            id: entry.id,
+            category: entry.category,
+            amountWon: entry.amount.value,
+            localDay: String(format: "%04d-%02d-%02d", summary.day.year, summary.day.month, summary.day.day),
+            createdAt: Date(timeIntervalSince1970: 1_786_582_800),
+            updatedAt: Date(timeIntervalSince1970: 1_786_582_800),
+            version: 1
+        )
+    }
 }
 
 private actor RecordFeatureSnapJournalClient: SnapJournalClient {
-    let summary: TodaySnapSummary
+    private var summary: TodaySnapSummary
 
     init(summary: TodaySnapSummary) {
         self.summary = summary
@@ -169,18 +184,20 @@ private actor RecordFeatureSnapJournalClient: SnapJournalClient {
     func fetchToday() async throws -> TodaySnapSummary { summary }
 
     func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
-        SnapRecordReceipt(
+        let receipt = SnapRecordReceipt(
             id: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
             category: command.category,
             amountWon: command.amountWon,
             localDay: command.localDay,
             createdAt: Date(timeIntervalSince1970: 1_786_582_800)
         )
+        summary = try summary.including(receipt)
+        return receipt
     }
 }
 
 private actor RecordRetrySnapJournalClient: SnapJournalClient {
-    let summary: TodaySnapSummary
+    private var summary: TodaySnapSummary
     private var attempts = 0
 
     init(summary: TodaySnapSummary) {
@@ -192,12 +209,42 @@ private actor RecordRetrySnapJournalClient: SnapJournalClient {
     func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
         attempts += 1
         guard attempts > 1 else { throw SnapRecordError.transportFailure }
-        return SnapRecordReceipt(
+        let receipt = SnapRecordReceipt(
             id: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
             category: command.category,
             amountWon: command.amountWon,
             localDay: command.localDay,
             createdAt: Date(timeIntervalSince1970: 1_786_582_800)
+        )
+        summary = try summary.including(receipt)
+        return receipt
+    }
+}
+
+private extension TodaySnapSummary {
+    func including(_ receipt: SnapRecordReceipt) throws -> TodaySnapSummary {
+        guard let day = SnapDay.parse(localDay: receipt.localDay) else {
+            throw SnapRecordError.malformedResponse
+        }
+        let entry = TodaySnapEntry(
+            id: receipt.id,
+            category: receipt.category,
+            amount: try KrwAmount(receipt.amountWon),
+            artwork: nil
+        )
+        if self.day == day {
+            return try TodaySnapSummary(
+                day: self.day,
+                entries: entries + [entry],
+                featuredEntryIDs: [entry.id] + featuredEntryIDs,
+                recentEntryIDs: [entry.id] + recentEntryIDs
+            )
+        }
+        return try TodaySnapSummary(
+            day: day,
+            entries: [entry],
+            featuredEntryIDs: [entry.id],
+            recentEntryIDs: [entry.id]
         )
     }
 }

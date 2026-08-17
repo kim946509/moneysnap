@@ -26,10 +26,13 @@ class IdentityConfiguration {
 	}
 
 	@Bean
-	JdbcIdentitySessionStore identitySessionStore(DataSource dataSource) {
+	JdbcIdentitySessionStore identitySessionStore(
+			DataSource dataSource,
+			org.springframework.beans.factory.ObjectProvider<com.ansandy.moneysnap.shared.AccountMediaCleanup> mediaCleanup) {
 		return new JdbcIdentitySessionStore(
 				JdbcClient.create(dataSource),
-				new TransactionTemplate(new DataSourceTransactionManager(dataSource)));
+				new TransactionTemplate(new DataSourceTransactionManager(dataSource)),
+				mediaCleanup);
 	}
 
 	@Bean

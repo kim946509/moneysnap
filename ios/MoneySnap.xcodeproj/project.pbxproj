@@ -44,6 +44,20 @@
 		B00000000000000000000035 /* SnapCaptureModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000039 /* SnapCaptureModelTests.swift */; };
 		B00000000000000000000036 /* SnapJournalClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000040 /* SnapJournalClientTests.swift */; };
 		B00000000000000000000037 /* snaps in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000041 /* snaps */; };
+		B00000000000000000000038 /* SnapDetailModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000042 /* SnapDetailModel.swift */; };
+		B00000000000000000000039 /* SnapDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000043 /* SnapDetailView.swift */; };
+		B00000000000000000000040 /* GroupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000044 /* GroupModels.swift */; };
+		B00000000000000000000041 /* GroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000045 /* GroupListView.swift */; };
+		B00000000000000000000042 /* ArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000046 /* ArchiveView.swift */; };
+		B00000000000000000000043 /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000047 /* GroupDetailView.swift */; };
+		B00000000000000000000044 /* JpegNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000048 /* JpegNormalizer.swift */; };
+		B00000000000000000000045 /* PhotoQueueModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000049 /* PhotoQueueModel.swift */; };
+		B00000000000000000000046 /* JpegNormalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000050 /* JpegNormalizerTests.swift */; };
+		B00000000000000000000047 /* MediaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000051 /* MediaClient.swift */; };
+		B00000000000000000000048 /* MediaClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000052 /* MediaClientTests.swift */; };
+		B00000000000000000000049 /* GroupDetailModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000054 /* GroupDetailModel.swift */; };
+		B00000000000000000000050 /* AccountSummaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000055 /* AccountSummaryClient.swift */; };
+		B00000000000000000000051 /* GroupDetailModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000056 /* GroupDetailModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +119,21 @@
 		F00000000000000000000039 /* SnapCaptureModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapCaptureModelTests.swift; sourceTree = "<group>"; };
 		F00000000000000000000040 /* SnapJournalClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapJournalClientTests.swift; sourceTree = "<group>"; };
 		F00000000000000000000041 /* snaps */ = {isa = PBXFileReference; lastKnownFileType = folder; name = snaps; path = ../../contracts/examples/v1/snaps; sourceTree = "<group>"; };
+		F00000000000000000000042 /* SnapDetailModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapDetailModel.swift; sourceTree = "<group>"; };
+		F00000000000000000000043 /* SnapDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapDetailView.swift; sourceTree = "<group>"; };
+		F00000000000000000000044 /* GroupModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupModels.swift; sourceTree = "<group>"; };
+		F00000000000000000000045 /* GroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupListView.swift; sourceTree = "<group>"; };
+		F00000000000000000000046 /* ArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveView.swift; sourceTree = "<group>"; };
+		F00000000000000000000047 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
+		F00000000000000000000048 /* JpegNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JpegNormalizer.swift; sourceTree = "<group>"; };
+		F00000000000000000000049 /* PhotoQueueModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoQueueModel.swift; sourceTree = "<group>"; };
+		F00000000000000000000050 /* JpegNormalizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JpegNormalizerTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000051 /* MediaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaClient.swift; sourceTree = "<group>"; };
+		F00000000000000000000052 /* MediaClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaClientTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000053 /* MoneySnap.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MoneySnap.entitlements; sourceTree = "<group>"; };
+		F00000000000000000000054 /* GroupDetailModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailModel.swift; sourceTree = "<group>"; };
+		F00000000000000000000055 /* AccountSummaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSummaryClient.swift; sourceTree = "<group>"; };
+		F00000000000000000000056 /* GroupDetailModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +190,7 @@
 				A00000000000000000000010 /* Resources */,
 				F00000000000000000000006 /* Assets.xcassets */,
 				F00000000000000000000016 /* Info.plist */,
+				F00000000000000000000053 /* MoneySnap.entitlements */,
 			);
 			path = MoneySnap;
 			sourceTree = "<group>";
@@ -185,6 +215,8 @@
 				A00000000000000000000016 /* Capture */,
 				A00000000000000000000007 /* Placeholder */,
 				A00000000000000000000014 /* Profile */,
+				A00000000000000000000017 /* Group */,
+				A00000000000000000000018 /* Archive */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -208,6 +240,9 @@
 				F00000000000000000000031 /* KeychainSessionStoreTests.swift */,
 				F00000000000000000000039 /* SnapCaptureModelTests.swift */,
 				F00000000000000000000040 /* SnapJournalClientTests.swift */,
+				F00000000000000000000050 /* JpegNormalizerTests.swift */,
+				F00000000000000000000052 /* MediaClientTests.swift */,
+				F00000000000000000000056 /* GroupDetailModelTests.swift */,
 				F00000000000000000000032 /* identity */,
 				F00000000000000000000041 /* snaps */,
 			);
@@ -223,6 +258,8 @@
 				F00000000000000000000014 /* TodaySnapView.swift */,
 				F00000000000000000000017 /* TodayCanvasLayout.swift */,
 				F00000000000000000000018 /* TodaySnapCardViews.swift */,
+				F00000000000000000000042 /* SnapDetailModel.swift */,
+				F00000000000000000000043 /* SnapDetailView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -269,6 +306,7 @@
 			isa = PBXGroup;
 			children = (
 				F00000000000000000000027 /* MySettingsView.swift */,
+				F00000000000000000000055 /* AccountSummaryClient.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -287,8 +325,30 @@
 				F00000000000000000000036 /* SnapRecordModels.swift */,
 				F00000000000000000000037 /* SnapCaptureModel.swift */,
 				F00000000000000000000038 /* SnapCaptureView.swift */,
+				F00000000000000000000048 /* JpegNormalizer.swift */,
+				F00000000000000000000049 /* PhotoQueueModel.swift */,
+				F00000000000000000000051 /* MediaClient.swift */,
 			);
 			path = Capture;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000017 /* Group */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000044 /* GroupModels.swift */,
+				F00000000000000000000045 /* GroupListView.swift */,
+				F00000000000000000000047 /* GroupDetailView.swift */,
+				F00000000000000000000054 /* GroupDetailModel.swift */,
+			);
+			path = Group;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000018 /* Archive */ = {
+			isa = PBXGroup;
+			children = (
+				F00000000000000000000046 /* ArchiveView.swift */,
+			);
+			path = Archive;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -435,6 +495,8 @@
 				B00000000000000000000012 /* TodaySnapView.swift in Sources */,
 				B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */,
 				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
+				B00000000000000000000038 /* SnapDetailModel.swift in Sources */,
+				B00000000000000000000039 /* SnapDetailView.swift in Sources */,
 				B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */,
 				B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */,
 				B00000000000000000000018 /* AuthenticationModels.swift in Sources */,
@@ -447,6 +509,15 @@
 				B00000000000000000000032 /* SnapRecordModels.swift in Sources */,
 				B00000000000000000000033 /* SnapCaptureModel.swift in Sources */,
 				B00000000000000000000034 /* SnapCaptureView.swift in Sources */,
+				B00000000000000000000044 /* JpegNormalizer.swift in Sources */,
+				B00000000000000000000045 /* PhotoQueueModel.swift in Sources */,
+				B00000000000000000000047 /* MediaClient.swift in Sources */,
+				B00000000000000000000040 /* GroupModels.swift in Sources */,
+				B00000000000000000000041 /* GroupListView.swift in Sources */,
+				B00000000000000000000042 /* ArchiveView.swift in Sources */,
+				B00000000000000000000043 /* GroupDetailView.swift in Sources */,
+				B00000000000000000000049 /* GroupDetailModel.swift in Sources */,
+				B00000000000000000000050 /* AccountSummaryClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,6 +533,9 @@
 				B00000000000000000000028 /* KeychainSessionStoreTests.swift in Sources */,
 				B00000000000000000000035 /* SnapCaptureModelTests.swift in Sources */,
 				B00000000000000000000036 /* SnapJournalClientTests.swift in Sources */,
+				B00000000000000000000046 /* JpegNormalizerTests.swift in Sources */,
+				B00000000000000000000048 /* MediaClientTests.swift in Sources */,
+				B00000000000000000000051 /* GroupDetailModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -522,6 +596,7 @@
 		C00000000000000000000103 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MoneySnap/MoneySnap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_TESTABILITY = YES;
@@ -548,6 +623,7 @@
 		C00000000000000000000104 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MoneySnap/MoneySnap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;

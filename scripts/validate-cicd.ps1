@@ -90,13 +90,34 @@ foreach ($secretName in @(
     'NEON_RUNTIME_DATABASE_PASSWORD',
     'NEON_MIGRATION_DATABASE_URL',
     'NEON_MIGRATION_DATABASE_USERNAME',
-    'NEON_MIGRATION_DATABASE_PASSWORD'
+    'NEON_MIGRATION_DATABASE_PASSWORD',
+    'APPLE_AUTH_ENABLED',
+    'APPLE_CLIENT_ID',
+    'APPLE_TEAM_ID',
+    'APPLE_KEY_ID',
+    'APPLE_PRIVATE_KEY_P8',
+    'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY',
+    'R2_ENABLED',
+    'R2_BUCKET',
+    'R2_ENDPOINT',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY'
 )) {
     Require-Match `
         $workflow `
         ("{0}:\s*\$\{{\{{\s*secrets\.{0}\s*\}}\}}" -f $secretName) `
         "$secretName environment secret"
 }
+$workflowJobs = [regex]::Split($workflow, '(?m)^  deploy-development:')
+if ($workflowJobs.Count -lt 2) {
+    throw 'Server workflow is missing the deploy-development job'
+}
+if ($workflowJobs[0] -match 'secrets\.APPLE_|secrets\.R2_') {
+    throw 'Apple and R2 runtime secrets must stay out of the server build/PR job'
+}
+Require-Match $workflow 'missing required server-development secret' 'deploy-time required secret presence check'
+Require-Match $workflow "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" 'Apple PEM carriage-return strip'
+Require-Match $workflow "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" 'Apple PEM literal newline flatten'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
@@ -120,6 +141,9 @@ if ([regex]::Matches($iosWorkflow, 'capture-visual-baseline\.sh').Count -ne 1) {
 }
 Require-Match $iosWorkflow 'if:\s*failure\(\)' 'failure-only diagnostics upload'
 Require-FullActionShaPins -Content $iosWorkflow -Description 'iOS workflow'
+if ($iosWorkflow -match 'secrets\.APPLE_|secrets\.NEON_|secrets\.SERVER_') {
+    throw 'iOS workflow must not receive server-development secrets'
+}
 
 $iosTest = Get-Content -LiteralPath $iosTestPath -Raw
 $unsignedNativeTestOverride = '(?i)\bCODE_SIGNING_ALLOWED\s*(?:=|:)\s*["'']?NO["'']?\b'
@@ -129,7 +153,7 @@ if ($iosTest -match $unsignedNativeTestOverride -or $iosWorkflow -match $unsigne
 Require-Match $iosTest 'RESULT_BUNDLE_PATH' 'optional iOS result bundle output'
 
 $iosVisual = Get-Content -LiteralPath $iosVisualPath -Raw
-if ([regex]::Matches($iosVisual, '(?m)^xcodebuild\s+\\?$').Count -ne 1 -or
+if ([regex]::Matches($iosVisual, '(?m)^xcodebuild\s+\\?\r?$').Count -ne 1 -or
     [regex]::Matches($iosVisual, 'simctl\s+install').Count -ne 1) {
     throw 'Visual runner must build and install the app exactly once'
 }

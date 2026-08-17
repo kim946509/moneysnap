@@ -1,6 +1,6 @@
 ---
 id: WORK-021
-status: active
+status: verify
 depends_on: [WORK-017, WORK-019, WORK-020, WORK-022]
 owner: codex
 ---

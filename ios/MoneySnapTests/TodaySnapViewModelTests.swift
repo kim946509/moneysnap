@@ -171,6 +171,56 @@ struct TodaySnapViewModelTests {
     }
 
     @Test
+    func emptyCanonicalTodayShowsEmptyState() async {
+        let viewModel = TodaySnapViewModel(client: EmptySnapJournalClient())
+
+        await viewModel.load()
+
+        #expect(viewModel.state == .empty(SnapDay(year: 2026, month: 8, day: 14, weekday: .friday)))
+        #expect(!viewModel.refreshFailure)
+    }
+
+    @Test
+    func refreshFailureKeepsExistingContent() async {
+        let client = FlakyTodayClient(summary: VisualTestSupport.homeSummary)
+        let viewModel = TodaySnapViewModel(client: client)
+        await viewModel.load()
+        await client.failNextFetch()
+
+        await viewModel.refresh()
+
+        guard case .content = viewModel.state else {
+            Issue.record("Expected existing content to remain")
+            return
+        }
+        #expect(viewModel.refreshFailure)
+    }
+
+    @Test
+    func refreshAfterReceiptReplacesHomeWithoutDuplicatingTheReceipt() async {
+        let client = RecordingTodayClient(summary: VisualTestSupport.homeSummary)
+        let viewModel = TodaySnapViewModel(client: client)
+        await viewModel.load()
+        let receipt = SnapRecordReceipt(
+            id: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
+            category: .food,
+            amountWon: 18_900,
+            localDay: "2026-06-03",
+            createdAt: Date(timeIntervalSince1970: 1_786_582_800)
+        )
+        #expect(viewModel.apply(receipt))
+        await client.include(receipt)
+        await viewModel.refresh()
+
+        guard case let .content(summary) = viewModel.state else {
+            Issue.record("Expected canonical refresh content")
+            return
+        }
+        #expect(summary.entries.filter { $0.id == receipt.id }.count == 1)
+        #expect(summary.totalAmount == 62_100)
+    }
+
+    @Test
     func inFlightTodayLoadCannotOverwriteASessionLocalReceipt() async {
         let client = SuspendedSnapJournalClient(summary: VisualTestSupport.homeSummary)
         let viewModel = TodaySnapViewModel(client: client)
@@ -205,6 +255,69 @@ struct TodaySnapViewModelTests {
         } catch {
             #expect(error as? SnapModelError == expected)
         }
+    }
+}
+
+private struct EmptySnapJournalClient: SnapJournalClient {
+    func fetchToday() async throws -> TodaySnapSummary {
+        try TodaySnapSummary(
+            day: SnapDay(year: 2026, month: 8, day: 14, weekday: .friday),
+            entries: [],
+            featuredEntryIDs: [],
+            recentEntryIDs: []
+        )
+    }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        throw FixtureError.unavailable
+    }
+}
+
+private actor FlakyTodayClient: SnapJournalClient {
+    let summary: TodaySnapSummary
+    private var shouldFail = false
+
+    init(summary: TodaySnapSummary) { self.summary = summary }
+
+    func failNextFetch() { shouldFail = true }
+
+    func fetchToday() async throws -> TodaySnapSummary {
+        if shouldFail {
+            shouldFail = false
+            throw FixtureError.unavailable
+        }
+        return summary
+    }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        throw FixtureError.unavailable
+    }
+}
+
+private actor RecordingTodayClient: SnapJournalClient {
+    private var summary: TodaySnapSummary
+
+    init(summary: TodaySnapSummary) { self.summary = summary }
+
+    func include(_ receipt: SnapRecordReceipt) throws {
+        let entry = TodaySnapEntry(
+            id: receipt.id,
+            category: receipt.category,
+            amount: try KrwAmount(receipt.amountWon),
+            artwork: nil
+        )
+        summary = try TodaySnapSummary(
+            day: summary.day,
+            entries: summary.entries + [entry],
+            featuredEntryIDs: [entry.id] + summary.featuredEntryIDs,
+            recentEntryIDs: [entry.id] + summary.recentEntryIDs
+        )
+    }
+
+    func fetchToday() async throws -> TodaySnapSummary { summary }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        throw FixtureError.unavailable
     }
 }
 

@@ -89,8 +89,8 @@ class SnapRecordHttpIntegrationTests {
     @BeforeEach
     void resetDatabase() {
         given(clock.instant()).willReturn(NOW);
-        jdbc.sql("TRUNCATE TABLE snap_record_mutations, snaps, identity_refresh_tokens, "
-                + "identity_sessions, apple_identities, users CASCADE").update();
+        jdbc.sql("TRUNCATE TABLE snap_delete_mutations, snap_revise_mutations, snap_record_mutations, snaps, "
+                + "identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE").update();
     }
 
     @Test

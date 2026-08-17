@@ -1,6 +1,6 @@
 ---
 id: WORK-023
-status: proposed
+status: verify
 depends_on: [WORK-021]
 owner: codex
 ---

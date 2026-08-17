@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -5,6 +6,8 @@ struct SnapCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: SnapCaptureModel
     @State private var confirmsAbandon = false
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var presentsCamera = false
     @AccessibilityFocusState private var voiceOverFocus: SnapCaptureModel.FocusTarget?
     let onSaved: (SnapRecordReceipt) -> Void
 
@@ -16,6 +19,8 @@ struct SnapCaptureView: View {
     var body: some View {
         Group {
             switch model.phase {
+            case .source:
+                sourceStep
             case .category:
                 categoryStep
             case .amount:
@@ -41,6 +46,41 @@ struct SnapCaptureView: View {
         }
     }
 
+    private var sourceStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("사진")
+                .font(.moneySnap(size: 24, weight: .bold))
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("screen.record.source")
+            Button("사진 없이 기록") { model.skipPhotos() }
+                .frame(minWidth: 44, minHeight: 44)
+                .padding(.horizontal, 24)
+                .accessibilityIdentifier("record.source.none")
+            PhotosPicker(selection: $photoItems, maxSelectionCount: 3, matching: .images) {
+                Text("앨범에서 선택")
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+            .padding(.horizontal, 24)
+            .onChange(of: photoItems) { _, items in
+                Task { await loadPhotos(items) }
+            }
+            Button("사진 촬영") { presentsCamera = true }
+                .frame(minWidth: 44, minHeight: 44)
+                .padding(.horizontal, 24)
+                .accessibilityIdentifier("record.source.camera")
+                .sheet(isPresented: $presentsCamera) {
+                    CameraPicker { image in
+                        if let normalized = try? JpegNormalizer.normalize(image) {
+                            model.attach([normalized])
+                        }
+                    }
+                    .ignoresSafeArea()
+                }
+        }
+    }
+
     private var categoryStep: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -51,7 +91,7 @@ struct SnapCaptureView: View {
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityFocused($voiceOverFocus, equals: .categoryHeader)
                     Spacer()
-                    stepPill("1/2")
+                    stepPill(model.photoQueue.progressLabel ?? "1/2")
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 7)
@@ -245,7 +285,11 @@ struct SnapCaptureView: View {
     private func submit() async {
         guard let receipt = await model.submit() else { return }
         onSaved(receipt)
-        dismiss()
+        if model.photoQueue.photos.isEmpty || model.photoQueue.isFinished {
+            dismiss()
+        } else {
+            model.prepareNextPhoto()
+        }
     }
 
     private func message(for failure: SnapRecordError) -> String {
@@ -260,6 +304,62 @@ struct SnapCaptureView: View {
             "저장 결과를 확인하지 못했어요. 같은 기록으로 다시 확인해 주세요."
         case .malformedResponse:
             "저장 응답을 확인하지 못했어요. 같은 기록으로 다시 확인해 주세요."
+        case .versionConflict, .notAccessible:
+            "이 기록은 더 이상 저장할 수 없어요."
+        }
+    }
+
+    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+        var photos: [NormalizedJpeg] = []
+        for item in items.prefix(3) {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data),
+                  let normalized = try? JpegNormalizer.normalize(image)
+            else { continue }
+            photos.append(normalized)
+        }
+        if !photos.isEmpty {
+            model.attach(photos)
+        }
+    }
+}
+
+private struct CameraPicker: UIViewControllerRepresentable {
+    let onImage: (UIImage) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onImage: onImage)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
+        picker.delegate = context.coordinator
+        picker.allowsEditing = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let onImage: (UIImage) -> Void
+
+        init(onImage: @escaping (UIImage) -> Void) {
+            self.onImage = onImage
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            if let image = info[.originalImage] as? UIImage {
+                onImage(image)
+            }
+            picker.dismiss(animated: true)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
         }
     }
 }

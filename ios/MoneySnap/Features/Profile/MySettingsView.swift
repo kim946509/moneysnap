@@ -2,8 +2,10 @@ import SwiftUI
 
 struct MySettingsView: View {
     let authentication: AuthenticationModel
+    var summaryClient: (any AccountSummaryClient)? = nil
 
     @State private var presentsAccountSettings = false
+    @State private var summary: AccountSummary?
 
     var body: some View {
         GeometryReader { proxy in
@@ -19,6 +21,7 @@ struct MySettingsView: View {
         .sheet(isPresented: $presentsAccountSettings) {
             AccountSettingsView(authentication: authentication)
         }
+        .task { await loadSummary() }
     }
 
     private func header(availableWidth: CGFloat) -> some View {
@@ -54,10 +57,10 @@ struct MySettingsView: View {
                 .background(MoneySnapVisualSystem.profileAvatar, in: Circle())
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("김대연")
+                Text(summary?.displayName ?? "MoneySnap 사용자")
                     .font(.moneySnap(size: 20, weight: .bold))
                     .foregroundStyle(MoneySnapVisualSystem.ink)
-                Text("오늘 Snap 3개 · 그룹 3개")
+                Text("오늘 Snap \(summary?.todaySnapCount ?? 0)개 · 그룹 \(summary?.groupCount ?? 0)개")
                     .font(.moneySnap(size: 13, weight: .medium))
                     .foregroundStyle(MoneySnapVisualSystem.profileSecondaryText)
                 Text("기본 비공개")
@@ -82,8 +85,8 @@ struct MySettingsView: View {
                 .offset(x: 28, y: 230)
 
             HStack(spacing: 15) {
-                statCard(label: "기록한 Snap", value: "42개")
-                statCard(label: "공유 그룹", value: "3개")
+                statCard(label: "기록한 Snap", value: "\(summary?.monthSnapCount ?? 0)개")
+                statCard(label: "공유 그룹", value: "\(summary?.groupCount ?? 0)개")
             }
             .offset(x: 24, y: 264)
         }
@@ -136,6 +139,11 @@ struct MySettingsView: View {
         .padding(.horizontal, 17)
         .frame(width: 345, height: 64)
         .profileSurface(cornerRadius: 16)
+    }
+
+    private func loadSummary() async {
+        let zone = TimeZone.current.identifier.contains("/") ? TimeZone.current.identifier : "UTC"
+        summary = try? await summaryClient?.summary(timeZone: zone)
     }
 }
 

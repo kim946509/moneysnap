@@ -21,11 +21,19 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Features\Home\SnapJournalClient.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapViewModel.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\SnapDetailModel.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Home\SnapDetailView.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodayCanvasLayout.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapCardViews.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapRecordModels.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapCaptureModel.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapCaptureView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Capture\JpegNormalizer.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Capture\PhotoQueueModel.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Capture\MediaClient.swift'),
+    (Join-Path $iosRoot 'MoneySnap\MoneySnap.entitlements'),
+    (Join-Path $iosRoot 'MoneySnapTests\JpegNormalizerTests.swift'),
+    (Join-Path $iosRoot 'MoneySnapTests\MediaClientTests.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationModels.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationAPIClient.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\KeychainSessionStore.swift'),
@@ -33,6 +41,10 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AppleCredentialButton.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Authentication\AuthenticationViews.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Profile\MySettingsView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Group\GroupModels.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Group\GroupListView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Group\GroupDetailView.swift'),
+    (Join-Path $iosRoot 'MoneySnap\Features\Archive\ArchiveView.swift'),
     (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapVisualSystem.swift'),
     (Join-Path $iosRoot 'MoneySnap\VisualSystem\MoneySnapTabBar.swift'),
     (Join-Path $iosRoot 'MoneySnap\Info.plist'),
@@ -54,6 +66,11 @@ $requiredFiles = @(
     (Join-Path $iosRoot '..\contracts\examples\v1\identity\error-apple-reauthentication-rejected.json')
     (Join-Path $iosRoot '..\contracts\examples\v1\snaps\record-request.json')
     (Join-Path $iosRoot '..\contracts\examples\v1\snaps\record-response.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\today-response.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\today-empty-response.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\detail-response.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\revise-request.json')
+    (Join-Path $iosRoot '..\contracts\examples\v1\snaps\revise-response.json')
 )
 
 $missingFiles = $requiredFiles | Where-Object { -not (Test-Path -LiteralPath $_) }
@@ -82,6 +99,17 @@ if ($project -match 'DEVELOPMENT_TEAM = [A-Z0-9]+;') {
 if ($project -notmatch 'ENABLE_TESTABILITY = YES;') {
     throw 'The Debug app target must support @testable integration tests.'
 }
+if ($project -notmatch 'CODE_SIGN_ENTITLEMENTS = MoneySnap/MoneySnap.entitlements;') {
+    throw 'Sign in with Apple entitlements file is not attached to the app target.'
+}
+$entitlements = Get-Content -LiteralPath (Join-Path $iosRoot 'MoneySnap\MoneySnap.entitlements') -Raw
+if ($entitlements -notmatch 'com\.apple\.developer\.applesignin') {
+    throw 'MoneySnap.entitlements must enable Sign in with Apple.'
+}
+$infoPlist = Get-Content -LiteralPath (Join-Path $iosRoot 'MoneySnap\Info.plist') -Raw
+if ($infoPlist -notmatch 'NSCameraUsageDescription' -or $infoPlist -notmatch 'NSPhotoLibraryUsageDescription') {
+    throw 'Info.plist must declare camera and photo library usage for device capture.'
+}
 if ($project -notmatch 'path = \.\./\.\./contracts/examples/v1/identity;' -or
     $project -notmatch 'identity in Resources') {
     throw 'Canonical identity fixtures must be included in the MoneySnapTests resource phase.'
@@ -109,6 +137,12 @@ $expectedSourceNames = @(
     'SnapRecordModels.swift',
     'SnapCaptureModel.swift',
     'SnapCaptureView.swift',
+    'JpegNormalizer.swift',
+    'PhotoQueueModel.swift',
+    'MediaClient.swift',
+    'SnapDetailView.swift',
+    'GroupListView.swift',
+    'ArchiveView.swift',
     'AuthenticationModels.swift',
     'AuthenticationAPIClient.swift',
     'KeychainSessionStore.swift',
@@ -124,6 +158,8 @@ $expectedSourceNames = @(
     'AuthenticationAPIClientTests.swift'
     'SnapCaptureModelTests.swift'
     'SnapJournalClientTests.swift'
+    'JpegNormalizerTests.swift'
+    'MediaClientTests.swift'
     'AppleNonceTests.swift'
     'KeychainSessionStoreTests.swift'
     'MoneySnapUITests.swift'

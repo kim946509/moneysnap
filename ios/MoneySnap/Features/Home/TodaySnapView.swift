@@ -3,6 +3,7 @@ import SwiftUI
 struct TodaySnapView: View {
     let viewModel: TodaySnapViewModel
     let onRecord: () -> Void
+    var onOpen: (UUID) -> Void = { _ in }
 
     var body: some View {
         ZStack {
@@ -11,26 +12,56 @@ struct TodaySnapView: View {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityIdentifier("home.loading")
+            case let .empty(day):
+                emptyState(day: day)
             case let .content(summary):
-                TodaySnapContent(summary: summary, onRecord: onRecord)
+                TodaySnapContent(summary: summary, onRecord: onRecord, onOpen: onOpen)
+                    .refreshable { await viewModel.refresh() }
+                    .overlay(alignment: .top) {
+                        if viewModel.refreshFailure {
+                            Button("다시 불러오기") {
+                                Task { await viewModel.retry() }
+                            }
+                            .frame(minWidth: 44, minHeight: 44)
+                            .accessibilityIdentifier("home.refresh-retry")
+                            .padding(.top, 72)
+                        }
+                    }
             case .failure:
                 ContentUnavailableView {
                     Label("오늘 기록을 불러오지 못했어요", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
                         .accessibilityIdentifier("screen.home")
                 } actions: {
-                    Button("기록하기", action: onRecord)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .accessibilityIdentifier("home.record")
+                    Button("다시 시도") {
+                        Task { await viewModel.retry() }
+                    }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .accessibilityIdentifier("home.retry")
                 }
             }
         }
         .task { await viewModel.load() }
+    }
+
+    private func emptyState(day: SnapDay) -> some View {
+        ContentUnavailableView {
+            Label("오늘 기록이 없어요", systemImage: "plus.circle")
+                .accessibilityIdentifier("screen.home")
+        } description: {
+            Text(day.displayLabel)
+        } actions: {
+            Button("기록하기", action: onRecord)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityIdentifier("home.record")
+        }
     }
 }
 
 private struct TodaySnapContent: View {
     let summary: TodaySnapSummary
     let onRecord: () -> Void
+    var onOpen: (UUID) -> Void = { _ in }
 
     var body: some View {
         GeometryReader { proxy in
@@ -80,6 +111,7 @@ private struct TodaySnapContent: View {
                     imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
                     layout: .landscape
                 )
+                .onTapGesture { onOpen(entry.id) }
                 .position(x: availableWidth * 0.357, y: 276)
             }
             if let entry = summary.featuredEntries[safe: 1], let maximumAmount {
@@ -88,6 +120,7 @@ private struct TodaySnapContent: View {
                     imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
                     layout: .portrait
                 )
+                .onTapGesture { onOpen(entry.id) }
                 .position(x: availableWidth * 0.736, y: 303)
             }
             if let entry = summary.featuredEntries[safe: 2] {
@@ -154,6 +187,7 @@ private struct TodaySnapContent: View {
             HStack(spacing: 28) {
                 ForEach(summary.recentEntries) { entry in
                     RecentSnapRow(entry: entry)
+                        .onTapGesture { onOpen(entry.id) }
                 }
             }
             .offset(x: 26, y: 650)
@@ -171,7 +205,8 @@ private extension Collection {
 #Preview {
     TodaySnapView(
         viewModel: TodaySnapViewModel(client: VisualTestSupport.snapJournalClient),
-        onRecord: {}
+        onRecord: {},
+        onOpen: { _ in }
     )
 }
 #endif

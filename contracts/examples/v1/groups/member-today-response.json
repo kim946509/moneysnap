@@ -1,0 +1,13 @@
+{
+  "userId": "018f1e2d-dddd-7abc-8def-0123456789ab",
+  "displayName": "MoneySnap 사용자",
+  "avatar": "M",
+  "snapCount": 1,
+  "totalAmountWon": 18900,
+  "representative": {
+    "snapId": "018f1e2d-1234-7abc-8def-0123456789ab",
+    "category": "food",
+    "amountWon": 18900,
+    "sharedAt": "2026-08-13T15:30:00Z"
+  }
+}

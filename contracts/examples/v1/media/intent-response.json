@@ -1,0 +1,6 @@
+{
+  "imageRef": "018f1e2d-cccc-7abc-8def-0123456789ab",
+  "mode": "bounded-stream",
+  "uploadPath": "/api/v1/media/018f1e2d-cccc-7abc-8def-0123456789ab/upload",
+  "expiresAt": "2026-08-13T15:40:00Z"
+}

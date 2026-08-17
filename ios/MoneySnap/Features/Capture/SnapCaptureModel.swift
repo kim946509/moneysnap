@@ -5,17 +5,20 @@ import Observation
 @Observable
 final class SnapCaptureModel {
     enum Phase: Equatable, Sendable {
+        case source
         case category
         case amount
     }
 
     enum FocusTarget: Hashable, Sendable {
+        case sourceHeader
         case categoryHeader
         case amountHeader
         case retryAction
     }
 
-    private(set) var phase: Phase = .category
+    private(set) var phase: Phase
+    let photoQueue = PhotoQueueModel()
     private(set) var selectedCategory: SnapCategory?
     private(set) var failure: SnapRecordError?
     private(set) var isSubmitting = false
@@ -25,6 +28,7 @@ final class SnapCaptureModel {
     private var frozenCommand: SnapRecordCommand?
     private var succeeded = false
     private let record: @Sendable (SnapRecordCommand) async throws -> SnapRecordReceipt
+    private let publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)?
     private let now: @Sendable () -> Date
     private let timeZone: @Sendable () -> TimeZone
     private let mutationID: @Sendable () -> UUID
@@ -33,12 +37,17 @@ final class SnapCaptureModel {
         record: @escaping @Sendable (SnapRecordCommand) async throws -> SnapRecordReceipt,
         now: @escaping @Sendable () -> Date = Date.init,
         timeZone: @escaping @Sendable () -> TimeZone = { .current },
-        mutationID: @escaping @Sendable () -> UUID = UUID.init
+        mutationID: @escaping @Sendable () -> UUID = UUID.init,
+        allowsPhotos: Bool = false,
+        publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)? = nil
     ) {
         self.record = record
+        self.publishPhoto = publishPhoto
         self.now = now
         self.timeZone = timeZone
         self.mutationID = mutationID
+        self.phase = allowsPhotos ? .source : .category
+        self.focusTarget = allowsPhotos ? .sourceHeader : .categoryHeader
     }
 
     var amountText: String {
@@ -63,6 +72,7 @@ final class SnapCaptureModel {
 
     var accessibilityAnnouncement: String {
         switch focusTarget {
+        case .sourceHeader: "사진 선택 단계"
         case .categoryHeader: "카테고리 선택 단계"
         case .amountHeader: "금액 입력 단계"
         case .retryAction: "저장 결과를 확인하지 못했습니다"
@@ -74,6 +84,28 @@ final class SnapCaptureModel {
         selectedCategory = category
         phase = .amount
         focusTarget = .amountHeader
+    }
+
+    func skipPhotos() {
+        guard !isSubmitting, frozenCommand == nil else { return }
+        phase = .category
+        focusTarget = .categoryHeader
+    }
+
+    func prepareNextPhoto() {
+        guard !photoQueue.isFinished else { return }
+        frozenCommand = nil
+        succeeded = false
+        failure = nil
+        phase = .category
+        focusTarget = .categoryHeader
+    }
+
+    func attach(_ photos: [NormalizedJpeg]) {
+        guard !isSubmitting, frozenCommand == nil else { return }
+        photoQueue.enqueue(photos)
+        phase = .category
+        focusTarget = .categoryHeader
     }
 
     func goBack() {
@@ -110,6 +142,26 @@ final class SnapCaptureModel {
             guard let zoneIdentifier = Self.serverTimeZoneIdentifier(zone, at: commandDate) else {
                 return nil
             }
+            isSubmitting = true
+            failure = nil
+            let imageRef: UUID?
+            do {
+                if let currentPhoto = photoQueue.current, let publishPhoto {
+                    imageRef = try await publishPhoto(currentPhoto)
+                } else {
+                    imageRef = nil
+                }
+            } catch let error as SnapRecordError {
+                isSubmitting = false
+                failure = error
+                if error.isRetryable { focusTarget = .retryAction }
+                return nil
+            } catch {
+                isSubmitting = false
+                failure = .transportFailure
+                focusTarget = .retryAction
+                return nil
+            }
             let formatter = DateFormatter()
             formatter.calendar = Calendar(identifier: .gregorian)
             formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -120,7 +172,8 @@ final class SnapCaptureModel {
                 localDay: formatter.string(from: commandDate),
                 timeZone: zoneIdentifier,
                 category: selectedCategory,
-                amountWon: amount
+                amountWon: amount,
+                imageRef: imageRef
             )
             frozenCommand = command
         }
@@ -131,6 +184,9 @@ final class SnapCaptureModel {
         do {
             let receipt = try await record(command)
             succeeded = true
+            if !photoQueue.photos.isEmpty {
+                photoQueue.markCurrentSaved(receipt)
+            }
             return receipt
         } catch let error as SnapRecordError {
             failure = error

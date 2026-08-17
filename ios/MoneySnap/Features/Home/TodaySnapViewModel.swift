@@ -6,14 +6,17 @@ import Observation
 final class TodaySnapViewModel {
     enum State: Equatable {
         case loading
+        case empty(SnapDay)
         case content(TodaySnapSummary)
         case failure
     }
 
     private(set) var state: State = .loading
+    private(set) var refreshFailure = false
     private let client: any SnapJournalClient
     private var didLoad = false
     private var appliedReceiptIDs: Set<UUID> = []
+    private var requestGeneration = 0
 
     init(client: any SnapJournalClient) {
         self.client = client
@@ -22,14 +25,15 @@ final class TodaySnapViewModel {
     func load() async {
         guard !didLoad else { return }
         didLoad = true
-        do {
-            let summary = try await client.fetchToday()
-            guard appliedReceiptIDs.isEmpty else { return }
-            state = .content(summary)
-        } catch {
-            guard appliedReceiptIDs.isEmpty else { return }
-            state = .failure
-        }
+        await fetch(kind: .initial)
+    }
+
+    func refresh() async {
+        await fetch(kind: .refresh)
+    }
+
+    func retry() async {
+        await fetch(kind: state == .failure || state == .loading ? .initial : .refresh)
     }
 
     @discardableResult
@@ -68,7 +72,7 @@ final class TodaySnapViewModel {
                         recentEntryIDs: [entry.id]
                     )
                 }
-            case .loading, .failure:
+            case .loading, .failure, .empty:
                 summary = try TodaySnapSummary(
                     day: receiptDay,
                     entries: [entry],
@@ -78,29 +82,80 @@ final class TodaySnapViewModel {
             }
             state = .content(summary)
             appliedReceiptIDs.insert(receipt.id)
+            requestGeneration += 1
             return true
         } catch {
             return false
         }
     }
 
+    private func fetch(kind: RequestKind) async {
+        requestGeneration += 1
+        let generation = requestGeneration
+        do {
+            let summary = try await client.fetchToday()
+            guard generation == requestGeneration else { return }
+            if kind == .initial, !appliedReceiptIDs.isEmpty { return }
+            if summary.entries.isEmpty {
+                state = .empty(summary.day)
+            } else {
+                state = .content(summary)
+            }
+            appliedReceiptIDs.removeAll()
+            refreshFailure = false
+        } catch {
+            guard generation == requestGeneration else { return }
+            if kind == .initial, !appliedReceiptIDs.isEmpty { return }
+            switch state {
+            case .content, .empty:
+                refreshFailure = true
+            case .loading, .failure:
+                state = .failure
+            }
+        }
+    }
+
+    func replace(_ detail: SnapDetail) {
+        guard case let .content(current) = state,
+              let amount = try? KrwAmount(detail.amountWon) else { return }
+        let entries = current.entries.map { entry in
+            entry.id == detail.id
+                ? TodaySnapEntry(id: entry.id, category: detail.category, amount: amount, artwork: entry.artwork)
+                : entry
+        }
+        if let summary = try? TodaySnapSummary(
+            day: current.day,
+            entries: entries,
+            featuredEntryIDs: current.featuredEntryIDs,
+            recentEntryIDs: current.recentEntryIDs
+        ) {
+            state = .content(summary)
+        }
+    }
+
+    func remove(_ snapID: UUID) {
+        guard case let .content(current) = state else { return }
+        let entries = current.entries.filter { $0.id != snapID }
+        if entries.isEmpty {
+            state = .empty(current.day)
+            return
+        }
+        if let summary = try? TodaySnapSummary(
+            day: current.day,
+            entries: entries,
+            featuredEntryIDs: current.featuredEntryIDs.filter { $0 != snapID },
+            recentEntryIDs: current.recentEntryIDs.filter { $0 != snapID }
+        ) {
+            state = .content(summary)
+        }
+    }
+
     private static func day(from localDay: String) -> SnapDay? {
-        let parts = localDay.split(separator: "-").compactMap { Int($0) }
-        guard parts.count == 3 else { return nil }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        guard let date = calendar.date(from: DateComponents(
-            year: parts[0], month: parts[1], day: parts[2]
-        )) else { return nil }
-        let normalized = calendar.dateComponents([.year, .month, .day], from: date)
-        guard normalized.year == parts[0], normalized.month == parts[1],
-              normalized.day == parts[2] else { return nil }
-        let weekdays: [SnapDay.Weekday] = [
-            .sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday
-        ]
-        return SnapDay(
-            year: parts[0], month: parts[1], day: parts[2],
-            weekday: weekdays[calendar.component(.weekday, from: date) - 1]
-        )
+        SnapDay.parse(localDay: localDay)
+    }
+
+    private enum RequestKind {
+        case initial
+        case refresh
     }
 }
