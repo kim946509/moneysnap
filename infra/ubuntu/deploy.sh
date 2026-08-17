@@ -79,18 +79,16 @@ deploy_image() {
 
 if ! deploy_image "$image"; then
   echo "new release failed its health gate: $release" >&2
+  "$docker_bin" logs --tail 80 moneysnap-server >&2 || true
   if [[ -n "$previous_image" ]]; then
-    echo "rolling back to previous image" >&2
+    echo "rolling back to previous image; keeping parseable runtime.env" >&2
     if [[ "$had_previous_compose" == true ]]; then
       install -m 644 "$backup_dir/compose.yaml" "$compose_file"
     else
       rm -f "$compose_file"
     fi
-    if [[ "$had_previous_env" == true ]]; then
-      install -m 600 "$backup_dir/runtime.env" "$runtime_env_file"
-    else
-      rm -f "$runtime_env_file"
-    fi
+    printf '# compose interpolation only; runtime secrets stay in runtime.env\n' > "$compose_interpolation_env"
+    chmod 600 "$compose_interpolation_env"
     deploy_image "$previous_image"
   fi
   exit 1

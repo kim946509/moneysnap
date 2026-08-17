@@ -82,6 +82,6 @@ fi
 
 grep -q 'compose .* image=moneysnap-server:previous' "$docker_log"
 grep -q 'services: previous' "$rollback_fixture/install/compose.yaml"
-grep -q 'PREVIOUS_SECRET=preserved' "$rollback_fixture/install/runtime.env"
+grep -q 'NEON_RUNTIME_DATABASE_URL=jdbc:postgresql://example.invalid/db' "$rollback_fixture/install/runtime.env"
 [[ $(cat "$rollback_fixture/install/current-release") == previous-release ]]
 echo 'rollback after failed health gate: OK'
