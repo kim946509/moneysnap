@@ -180,26 +180,33 @@ jobs:
               fi
             done
           fi
+          write_env_line() {
+            local name=$1
+            local value=$2
+            value="${value//$'\r'/}"
+            value="${value//"'"/"'\\''"}"
+            printf "%s='%s'\n" "$name" "$value"
+          }
           apple_private_key=${APPLE_PRIVATE_KEY_P8//$'\r'/}
           apple_private_key=${apple_private_key//$'\n'/\\n}
           {
-            printf 'NEON_RUNTIME_DATABASE_URL=%s\n' "$NEON_RUNTIME_DATABASE_URL"
-            printf 'NEON_RUNTIME_DATABASE_USERNAME=%s\n' "$NEON_RUNTIME_DATABASE_USERNAME"
-            printf 'NEON_RUNTIME_DATABASE_PASSWORD=%s\n' "$NEON_RUNTIME_DATABASE_PASSWORD"
-            printf 'NEON_MIGRATION_DATABASE_URL=%s\n' "$NEON_MIGRATION_DATABASE_URL"
-            printf 'NEON_MIGRATION_DATABASE_USERNAME=%s\n' "$NEON_MIGRATION_DATABASE_USERNAME"
-            printf 'NEON_MIGRATION_DATABASE_PASSWORD=%s\n' "$NEON_MIGRATION_DATABASE_PASSWORD"
-            printf 'APPLE_AUTH_ENABLED=%s\n' "$APPLE_AUTH_ENABLED"
-            printf 'APPLE_CLIENT_ID=%s\n' "$APPLE_CLIENT_ID"
-            printf 'APPLE_TEAM_ID=%s\n' "$APPLE_TEAM_ID"
-            printf 'APPLE_KEY_ID=%s\n' "$APPLE_KEY_ID"
-            printf 'APPLE_PRIVATE_KEY_P8=%s\n' "$apple_private_key"
-            printf 'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY=%s\n' "$APPLE_REFRESH_TOKEN_ENCRYPTION_KEY"
-            printf 'R2_ENABLED=%s\n' "$r2_enabled"
-            printf 'R2_BUCKET=%s\n' "${R2_BUCKET:-moneysnap-media-dev}"
-            printf 'R2_ENDPOINT=%s\n' "${R2_ENDPOINT:-https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com}"
-            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
-            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
+            write_env_line NEON_RUNTIME_DATABASE_URL "$NEON_RUNTIME_DATABASE_URL"
+            write_env_line NEON_RUNTIME_DATABASE_USERNAME "$NEON_RUNTIME_DATABASE_USERNAME"
+            write_env_line NEON_RUNTIME_DATABASE_PASSWORD "$NEON_RUNTIME_DATABASE_PASSWORD"
+            write_env_line NEON_MIGRATION_DATABASE_URL "$NEON_MIGRATION_DATABASE_URL"
+            write_env_line NEON_MIGRATION_DATABASE_USERNAME "$NEON_MIGRATION_DATABASE_USERNAME"
+            write_env_line NEON_MIGRATION_DATABASE_PASSWORD "$NEON_MIGRATION_DATABASE_PASSWORD"
+            write_env_line APPLE_AUTH_ENABLED "$APPLE_AUTH_ENABLED"
+            write_env_line APPLE_CLIENT_ID "$APPLE_CLIENT_ID"
+            write_env_line APPLE_TEAM_ID "$APPLE_TEAM_ID"
+            write_env_line APPLE_KEY_ID "$APPLE_KEY_ID"
+            write_env_line APPLE_PRIVATE_KEY_P8 "$apple_private_key"
+            write_env_line APPLE_REFRESH_TOKEN_ENCRYPTION_KEY "$APPLE_REFRESH_TOKEN_ENCRYPTION_KEY"
+            write_env_line R2_ENABLED "$r2_enabled"
+            write_env_line R2_BUCKET "${R2_BUCKET:-moneysnap-media-dev}"
+            write_env_line R2_ENDPOINT "${R2_ENDPOINT:-https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com}"
+            write_env_line R2_ACCESS_KEY_ID "$R2_ACCESS_KEY_ID"
+            write_env_line R2_SECRET_ACCESS_KEY "$R2_SECRET_ACCESS_KEY"
           } > "$RUNNER_TEMP/moneysnap-runtime.env"
 
       - name: Transfer and deploy tested image

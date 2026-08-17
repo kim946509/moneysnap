@@ -59,13 +59,19 @@ install -m 600 "$runtime_env_source" "$runtime_env_file"
 install -m 644 "$compose_source" "$compose_file"
 gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/dev/null
 
+interpolation_env="$install_root/compose.env"
+printf '# compose interpolation only; runtime secrets stay in %s\n' "$runtime_env_file" > "$interpolation_env"
+chmod 600 "$interpolation_env"
+
 deploy_image() {
   local candidate_image=$1
   MONEYSNAP_IMAGE="$candidate_image" \
   MONEYSNAP_ENV_FILE="$runtime_env_file" \
     "$docker_bin" compose \
       --project-name moneysnap \
+      --project-directory "$install_root" \
       --file "$compose_file" \
+      --env-file "$interpolation_env" \
       up --detach --force-recreate --wait --wait-timeout 90
 }
 

@@ -120,8 +120,9 @@ Require-Match -Content $workflow -Pattern 'sanitize_multiline' -Description 'mul
 Require-Match -Content $workflow -Pattern 'sanitize_scalar' -Description 'scalar SSH host/user/port sanitizer'
 Require-Match -Content $workflow -Pattern 'xEF\\xBB\\xBF' -Description 'UTF-8 BOM strip for SSH secrets'
 Require-Match -Content $workflow -Pattern 'ssh-keygen -y -f "\$HOME/.ssh/moneysnap-deploy"' -Description 'loadable SSH private key check'
-Require-Match $workflow "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" 'Apple PEM carriage-return strip'
-Require-Match $workflow "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" 'Apple PEM literal newline flatten'
+Require-Match -Content $workflow -Pattern "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" -Description 'Apple PEM carriage-return strip'
+Require-Match -Content $workflow -Pattern "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" -Description 'Apple PEM literal newline flatten'
+Require-Match -Content $workflow -Pattern 'write_env_line' -Description 'quoted runtime env writer'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
@@ -179,6 +180,7 @@ Require-Match $deploy 'sha256sum\s+--check' 'image archive checksum verification
 Require-Match $deploy '\$docker_bin"\s+load' 'Docker image load'
 Require-Match $deploy 'previous_image' 'previous image rollback boundary'
 Require-Match $deploy '\$docker_bin"\s+compose' 'Compose deployment'
+Require-Match $deploy '--env-file' 'compose interpolation env file is not the secret file'
 
 $deploymentTest = Get-Content -LiteralPath $deploymentTestPath -Raw
 Require-Match $deploymentTest 'healthy deployment' 'healthy deployment behavior test'
