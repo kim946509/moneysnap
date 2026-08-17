@@ -4,5 +4,1623 @@ info:
   version: 0.1.0
   description: Canonical REST contract for the Money Snap iOS MVP.
 servers:
-  - url: /v1
-paths: {}
+  - url: /api/v1
+paths:
+  /auth/apple:
+    post:
+      operationId: signInWithApple
+      summary: Exchange verified Apple credentials for a Money Snap session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleCredentialRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/apple-credential-request.json
+      responses:
+        '200':
+          description: Authenticated Money Snap session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/session-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Rotate a refresh token and issue a new Money Snap session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/refresh-request.json
+      responses:
+        '200':
+          description: Rotated Money Snap session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/session-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current device session.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Current session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /account/summary:
+    get:
+      operationId: getAccountSummary
+      summary: Return the authenticated user's display name and current counts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: timeZone
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Profile summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSummaryResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/account/summary-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /account:
+    delete:
+      operationId: deleteAccount
+      summary: Delete the authenticated account after Apple reauthentication.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleCredentialRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/apple-credential-request.json
+      responses:
+        '204':
+          description: Account, user data, and all sessions deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Bearer authentication or Apple reauthentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                sessionRejected:
+                  externalValue: ../examples/v1/identity/error-session-rejected.json
+                appleReauthenticationRejected:
+                  externalValue: ../examples/v1/identity/error-apple-reauthentication-rejected.json
+        '502':
+          description: Apple token revocation failed; the account was preserved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/error-apple-revocation-failed.json
+  /auth/apple/events:
+    post:
+      operationId: receiveAppleAccountEvent
+      summary: Receive and verify an Apple server-to-server account event.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleAccountEventRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/identity/apple-account-event-request.json
+      responses:
+        '200':
+          description: Event accepted or already processed.
+        '400':
+          description: Request validation failed or the verified event type is unsupported.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  externalValue: ../examples/v1/identity/error-invalid-request.json
+                unsupportedEvent:
+                  externalValue: ../examples/v1/identity/error-apple-event-unsupported.json
+        '401':
+          description: The Apple server-to-server event could not be verified.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/identity/error-apple-event-rejected.json
+  /snaps:
+    post:
+      operationId: recordPersonalSnap
+      summary: Record a photo-free personal Snap for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapRecordRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/snaps/record-request.json
+      responses:
+        '201':
+          description: Personal Snap recorded or an identical mutation replayed.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+              description: Relative path of the stable recorded Snap ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapRecordResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/record-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: The actor already used the mutation ID for a different semantic payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /snaps/archive:
+    get:
+      operationId: getArchiveSnaps
+      summary: Return the authenticated owner's personal Snaps in a local-day range.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fromLocalDay
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: toLocalDay
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archive page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/archive-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The request could not be safely read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /snaps/today:
+    get:
+      operationId: getTodaySnaps
+      summary: Return the authenticated owner's personal Snaps for the current local day.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: timeZone
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: UTC or an available tzdb region ID containing a slash.
+      responses:
+        '200':
+          description: Today's personal Snaps for the submitted time zone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodaySnapResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/today-response.json
+                empty:
+                  externalValue: ../examples/v1/snaps/today-empty-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The request could not be safely read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /snaps/{snapId}:
+    get:
+      operationId: getSnap
+      summary: Return one owned personal Snap.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SnapId'
+      responses:
+        '200':
+          description: Owned personal Snap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapDetailResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/detail-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '500':
+          description: The request could not be safely read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+    patch:
+      operationId: reviseSnap
+      summary: Replace category and amount of an owned personal Snap.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SnapId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapReviseRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/snaps/revise-request.json
+      responses:
+        '200':
+          description: Revised personal Snap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapDetailResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/revise-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '409':
+          description: Mutation or optimistic version conflict.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                mutationConflict:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+                versionConflict:
+                  externalValue: ../examples/v1/snaps/error-version-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+    delete:
+      operationId: deleteSnap
+      summary: Hard-delete an owned personal Snap.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SnapId'
+        - name: X-Client-Mutation-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '.*\S.*'
+      responses:
+        '204':
+          description: Snap deleted or an identical delete mutation replayed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '409':
+          description: The actor already used the mutation ID for a different Snap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /shares:
+    post:
+      operationId: shareSnap
+      summary: Share one owned personal Snap to one group the actor belongs to.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/shares/share-request.json
+      responses:
+        '201':
+          description: Share created or an identical mutation replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/shares/share-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '409':
+          description: The actor already used the mutation ID for a different payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /groups:
+    post:
+      operationId: createGroup
+      summary: Create a group owned by the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreateRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/groups/create-request.json
+      responses:
+        '201':
+          description: Group created or an identical mutation replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/group-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: The actor already used the mutation ID for a different payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+    get:
+      operationId: listGroups
+      summary: List groups the authenticated user currently belongs to.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Membership groups.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupListResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/group-list-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: The request could not be safely read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /groups/{groupId}:
+    get:
+      operationId: getGroup
+      summary: Return one group the actor currently belongs to.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Group membership.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/group-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '500':
+          description: The request could not be safely read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+    delete:
+      operationId: deleteGroup
+      summary: Delete an owned group without deleting personal Snaps.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - name: X-Client-Mutation-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+            pattern: '.*\S.*'
+      responses:
+        '204':
+          description: Group deleted or an identical delete mutation replayed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '409':
+          description: The actor already used the mutation ID for a different group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+        '500':
+          description: The request could not be safely persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-internal.json
+  /groups/{groupId}/invites:
+    post:
+      operationId: issueGroupInvite
+      summary: Issue or rotate the single active invite for an owned group.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Active invite code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuedInviteResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/invite-issue-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+    delete:
+      operationId: revokeGroupInvite
+      summary: Revoke the active invite for an owned group.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '204':
+          description: Invite revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /groups/{groupId}/members:
+    get:
+      operationId: listGroupMembers
+      summary: List current members of a group the actor belongs to.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Group members.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberListResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/member-list-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /groups/{groupId}/members/me:
+    delete:
+      operationId: leaveGroup
+      summary: Leave a group without deleting personal Snaps.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '204':
+          description: Membership removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /groups/{groupId}/members/{memberId}:
+    delete:
+      operationId: removeGroupMember
+      summary: Owner removes one member without deleting personal Snaps.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '204':
+          description: Member removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /groups/{groupId}/today:
+    get:
+      operationId: getGroupToday
+      summary: Return today's shared projection for a group. Hidden groups omit amount fields.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - name: timeZone
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visible or hidden group Today projection.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VisibleGroupTodayResponse'
+                  - $ref: '#/components/schemas/HiddenGroupTodayResponse'
+              examples:
+                visible:
+                  externalValue: ../examples/v1/groups/visible-today-response.json
+                hidden:
+                  externalValue: ../examples/v1/groups/hidden-today-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /groups/{groupId}/members/{memberId}/today:
+    get:
+      operationId: getGroupMemberToday
+      summary: Return one member's today representative in a group.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - $ref: '#/components/parameters/MemberId'
+        - name: timeZone
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: One member today row.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VisibleMemberToday'
+                  - $ref: '#/components/schemas/HiddenMemberToday'
+              examples:
+                visible:
+                  externalValue: ../examples/v1/groups/member-today-response.json
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /invites/preview:
+    post:
+      operationId: previewInvite
+      summary: Preview group name and amount visibility before joining.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteCodeRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/groups/invite-request.json
+      responses:
+        '200':
+          description: Invite preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitePreviewResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/invite-preview-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /invites/join:
+    post:
+      operationId: joinGroup
+      summary: Join a group with an invite code after preview.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/groups/join-request.json
+      responses:
+        '200':
+          description: Joined group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/groups/group-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+        '409':
+          description: The actor already used the mutation ID for a different payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/snaps/error-mutation-conflict.json
+  /media/intents:
+    post:
+      operationId: createMediaIntent
+      summary: Reserve a bounded JPEG upload for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaIntentRequest'
+            examples:
+              canonical:
+                externalValue: ../examples/v1/media/intent-request.json
+      responses:
+        '200':
+          description: Bounded upload grant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaIntentResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/media/intent-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /media/{mediaId}/upload:
+    put:
+      operationId: uploadMedia
+      summary: Upload exact JPEG bytes for a pending intent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '204':
+          description: Bytes accepted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /media/{mediaId}/complete:
+    post:
+      operationId: completeMedia
+      summary: Verify uploaded JPEG and activate the image reference.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Activated image reference.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaRefResponse'
+              examples:
+                canonical:
+                  externalValue: ../examples/v1/media/complete-response.json
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /media/{mediaId}/abort:
+    post:
+      operationId: abortMedia
+      summary: Abort a pending or unlinked media object.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '204':
+          description: Media marked for cleanup.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+  /media/{mediaId}:
+    get:
+      operationId: readMedia
+      summary: Read an authorized JPEG for the current actor.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: JPEG bytes.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotAccessible'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque access token
+  responses:
+    BadRequest:
+      description: Request validation or semantics failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            canonical:
+              externalValue: ../examples/v1/identity/error-invalid-request.json
+    Unauthorized:
+      description: Authentication credentials are missing, invalid, expired, or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            canonical:
+              externalValue: ../examples/v1/identity/error-session-rejected.json
+    NotAccessible:
+      description: The Snap does not exist or is not owned by the actor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            canonical:
+              externalValue: ../examples/v1/snaps/error-not-accessible.json
+  parameters:
+    SnapId:
+      name: snapId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    AppleCredentialRequest:
+      type: object
+      required:
+        - identityToken
+        - authorizationCode
+        - nonce
+      properties:
+        identityToken:
+          type: string
+          minLength: 1
+          maxLength: 8192
+        authorizationCode:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        nonce:
+          type: string
+          minLength: 1
+          maxLength: 256
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 512
+    AppleAccountEventRequest:
+      type: object
+      required:
+        - payload
+      properties:
+        payload:
+          type: string
+          minLength: 1
+          maxLength: 8192
+    SessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accessToken
+        - accessExpiresAt
+        - refreshToken
+        - refreshExpiresAt
+      properties:
+        accessToken:
+          type: string
+        accessExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshExpiresAt:
+          type: string
+          format: date-time
+    SnapRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - clientMutationId
+        - localDay
+        - timeZone
+        - category
+        - amountWon
+      properties:
+        clientMutationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '.*\S.*'
+          description: Actor-scoped opaque idempotency key; UUID syntax is not required.
+        localDay:
+          type: string
+          format: date
+        timeZone:
+          type: string
+          minLength: 1
+          description: UTC or an available tzdb region ID containing a slash.
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999999999
+        imageRef:
+          type: string
+          format: uuid
+    SnapRecordResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - category
+        - amountWon
+        - localDay
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999999999
+        localDay:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+    TodaySnapResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - localDay
+        - totalAmountWon
+        - snaps
+      properties:
+        localDay:
+          type: string
+          format: date
+        totalAmountWon:
+          type: integer
+          format: int64
+          minimum: 0
+        snaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnapRecordResponse'
+    SnapDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - category
+        - amountWon
+        - localDay
+        - createdAt
+        - updatedAt
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999999999
+        localDay:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+    SnapReviseRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - clientMutationId
+        - expectedVersion
+        - category
+        - amountWon
+      properties:
+        clientMutationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '.*\S.*'
+        expectedVersion:
+          type: integer
+          minimum: 1
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 999999999
+    GroupCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - clientMutationId
+        - name
+        - amountVisible
+      properties:
+        clientMutationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '.*\S.*'
+        name:
+          type: string
+          minLength: 1
+        amountVisible:
+          type: boolean
+    GroupResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - amountVisible
+        - role
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        amountVisible:
+          type: boolean
+        role:
+          type: string
+          enum: [owner, member]
+        createdAt:
+          type: string
+          format: date-time
+    AccountSummaryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - displayName
+        - todaySnapCount
+        - monthSnapCount
+        - groupCount
+      properties:
+        displayName:
+          type: string
+        todaySnapCount:
+          type: integer
+          minimum: 0
+        monthSnapCount:
+          type: integer
+          minimum: 0
+        groupCount:
+          type: integer
+          minimum: 0
+    ShareRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - clientMutationId
+        - snapId
+        - groupId
+      properties:
+        clientMutationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '.*\S.*'
+        snapId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+    ShareResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - snapId
+        - groupId
+        - sharedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        snapId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        sharedAt:
+          type: string
+          format: date-time
+    ArchiveResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - snaps
+      properties:
+        snaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnapRecordResponse'
+        nextCursor:
+          type: string
+        occupiedLocalDays:
+          type: array
+          items:
+            type: string
+            format: date
+    GroupListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - groups
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupResponse'
+    IssuedInviteResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - expiresAt
+      properties:
+        code:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    InviteCodeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          minLength: 1
+    InvitePreviewResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - amountVisible
+      properties:
+        name:
+          type: string
+        amountVisible:
+          type: boolean
+    JoinRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - clientMutationId
+      properties:
+        code:
+          type: string
+          minLength: 1
+        clientMutationId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '.*\S.*'
+    MemberListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+    GroupMember:
+      type: object
+      additionalProperties: false
+      required:
+        - userId
+        - displayName
+        - avatar
+        - role
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatar:
+          type: string
+        role:
+          type: string
+          enum: [owner, member]
+    VisibleGroupTodayResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - localDay
+        - members
+      properties:
+        localDay:
+          type: string
+          format: date
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisibleMemberToday'
+    HiddenGroupTodayResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - localDay
+        - members
+      properties:
+        localDay:
+          type: string
+          format: date
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/HiddenMemberToday'
+    VisibleMemberToday:
+      type: object
+      additionalProperties: false
+      required:
+        - userId
+        - displayName
+        - avatar
+        - snapCount
+        - totalAmountWon
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatar:
+          type: string
+        snapCount:
+          type: integer
+          minimum: 0
+        totalAmountWon:
+          type: integer
+          format: int64
+          minimum: 0
+        representative:
+          $ref: '#/components/schemas/VisibleSnap'
+    HiddenMemberToday:
+      type: object
+      additionalProperties: false
+      required:
+        - userId
+        - displayName
+        - avatar
+        - snapCount
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatar:
+          type: string
+        snapCount:
+          type: integer
+          minimum: 0
+        representative:
+          $ref: '#/components/schemas/HiddenSnap'
+    VisibleSnap:
+      type: object
+      additionalProperties: false
+      required:
+        - snapId
+        - category
+        - amountWon
+        - sharedAt
+      properties:
+        snapId:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        amountWon:
+          type: integer
+          format: int64
+        sharedAt:
+          type: string
+          format: date-time
+    HiddenSnap:
+      type: object
+      additionalProperties: false
+      required:
+        - snapId
+        - category
+        - sharedAt
+      properties:
+        snapId:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [food, cafe, transportation, shopping, living, culture, health, other]
+        sharedAt:
+          type: string
+          format: date-time
+    MediaIntentRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - byteSize
+        - contentType
+        - checksumSha256
+      properties:
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 2097152
+        contentType:
+          type: string
+          enum: [image/jpeg]
+        checksumSha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+    MediaIntentResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - imageRef
+        - mode
+        - uploadPath
+        - expiresAt
+      properties:
+        imageRef:
+          type: string
+          format: uuid
+        mode:
+          type: string
+          enum: [bounded-stream]
+        uploadPath:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    MediaRefResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - imageRef
+      properties:
+        imageRef:
+          type: string
+          format: uuid
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - correlationId
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code.
+          enum:
+            - INVALID_REQUEST
+            - SESSION_REJECTED
+            - MUTATION_CONFLICT
+            - SNAP_VERSION_CONFLICT
+            - NOT_ACCESSIBLE
+            - INVALID_CURSOR
+            - INTERNAL_ERROR
+            - APPLE_REAUTHENTICATION_REJECTED
+            - APPLE_REVOCATION_FAILED
+            - APPLE_EVENT_REJECTED
+            - APPLE_EVENT_UNSUPPORTED
+        correlationId:
+          type: string
+          format: uuid
+          description: Identifier used to correlate the failed request with server logs.

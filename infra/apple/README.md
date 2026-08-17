@@ -5,21 +5,25 @@
 - 사용자는 유료 Apple Developer Program 계정을 보유하고 있다.
 - Apple 계정 password, 2FA code, signing certificate와 private key는 저장소에 보관하지 않는다.
 - Xcode·Simulator·signing·archive는 Windows에서 실행할 수 없으며 macOS/Xcode lane에서 검증한다.
-- 최종 Bundle ID는 `com.ansandy.moneysnap`이다. explicit App ID와 App Store Connect iOS app record는 사용자가 생성했다.
-- Sign in with Apple runtime 값은 GitHub `server-development` environment secret으로만 보관한다. 현재 `main` 서버 image는 아직 Apple 인증 코드를 포함하지 않으며, CD는 다음 배포부터 `/opt/moneysnap/.env`에 값을 유지한다.
+- 최종 Bundle ID는 `com.ansandy.moneysnap`으로 확정했다. explicit App ID와 App Store Connect iOS app record는 사용자가 생성했다.
+- MVP identity provider는 Sign in with Apple 하나다. 서버의 검증·code 교환·암호화 저장 경계는 구현되어 있고, 실제 Apple 호출은 `server-development`의 `APPLE_AUTH_ENABLED=true`와 `.p8`이 CD로 배포된 뒤에만 켜진다.
 
 ## 지금 확인할 항목
 
 - Apple Developer Program membership이 Active인지 확인
 - Apple Account 2FA 활성화
 - App Store Connect 로그인과 Account Holder/Admin 권한 확인
-- 표시 이름 `Money Snap`과 scaffold identifier `com.ansandy.moneysnap`의 최종 사용 승인
+- 표시 이름 `Money Snap`의 최종 사용 승인
 
 ## Bundle ID 확정 후
 
 1. Certificates, Identifiers & Profiles에서 explicit App ID를 등록한다. App ID와 Xcode target의 Bundle ID는 반드시 같아야 한다.
-2. 필요한 capability만 활성화한다. Sign in with Apple 채택 여부가 확정되기 전에는 capability를 선등록하지 않는다.
+2. Sign in with Apple capability와 server key를 활성화한다.
 3. App Store Connect에 iOS app record를 만든다. build upload 전 app record가 필요하다.
+
+## 아이폰 실기기 설치
+
+Windows 작업 트리에서는 archive/TestFlight/실기기 Run을 완료할 수 없다. Mac에서 `ios/MoneySnap.xcodeproj`를 열고 Team을 연결한 뒤 기기에 Run 하거나, 같은 Mac에서 첫 Xcode Cloud workflow를 만들어 Internal TestFlight로 배포한다. 앱은 `https://moneysnap-server.ansandy.co.kr`에 붙는다.
 
 ## iOS project와 Mac 확보 후
 
@@ -30,7 +34,7 @@
 
 ## 준비된 CI/CD lane
 
-- `.github/workflows/ios-ci.yml`: `macos-15`에서 signing 없이 Simulator build/test를 실행하고 실패 `.xcresult`만 짧게 보관한다.
+- `.github/workflows/ios-ci.yml`: `macos-15`에서 Apple credential·provisioning 없이 Xcode 기본 ad-hoc 서명으로 native test를 실행하고, visual build는 signing을 비활성화하며 실패 `.xcresult`만 짧게 보관한다.
 - `ios/ci_scripts/ci_post_clone.sh`: Xcode Cloud clone 뒤 Xcode version과 `MoneySnap.xcodeproj`/shared scheme을 확인한다.
 - Xcode Cloud pull request workflow: test만 실행한다.
 - Xcode Cloud main release workflow: test 성공 후 archive하고 internal TestFlight group에만 post-action 배포한다.

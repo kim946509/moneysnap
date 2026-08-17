@@ -13,18 +13,18 @@
 - CRITICAL: 외부 시스템 변경, 배포, 삭제, 비용 발생 작업은 실행 전에 승인 경계를 확인할 것
 
 ## 현재 프로젝트 단계
-- 현재 단계는 **public repository remote CI와 iOS visual baseline 활성화, development CD·Apple activation 전**이다.
+- 현재 단계는 **개인 Snap, 그룹·초대·공유, visible/hidden Today, archive, My summary, 사진 grant/upload/complete/abort/cleanup/tombstone, iOS JPEG 정규화와 앨범 최대 3장 순차 기록이 Windows에서 구현된 상태**다. R2 Adapter는 `R2_ENABLED=true`와 bucket-scoped secret이 있을 때만 켜진다. development CD SSH, 실제 Apple device 설치와 macOS 393x852 visual은 아직 수행하지 않는다.
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
 - SwiftUI + Spring Boot + PostgreSQL + Cloudflare DNS/R2 + Ubuntu Docker/Nginx Proxy Manager 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
 - `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native test·393x852 visual artifact 생성을 통과했다.
-- 첫 기능 슬라이스 `WORK-010`의 Today Snap 읽기 도메인과 Figma Home `9:2` 화면이 완료됐다. 서버·iOS 테스트와 393x852 시각 회귀 임계값(MAE 0.05, 불일치 픽셀 비율 0.43)을 통과하며, 다음 사용자 기능 게이트는 인증 정책 확정이다.
+- 첫 기능 슬라이스 `WORK-010`의 Today Snap 읽기 도메인과 Figma Home `9:2` 화면이 완료됐다. 서버·iOS 테스트와 393x852 시각 회귀 임계값(MAE 0.05, 불일치 픽셀 비율 0.43)을 통과했다.
 - repository는 public이고 draft PR #1이 remote CI 기준점이다. `server-development` environment는 `main` 전용 branch policy와 Ubuntu SSH·Neon secret 11개, Apple runtime secret 6개 계약을 보유하며 Secret Scanning과 Push Protection이 활성화되어 있다.
 - Neon Free에 `moneysnap-dev`와 `moneysnap-prod`가 생성되어 있다. 개발·운영 DB를 공유하지 않는다.
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - development Spring Boot는 개발자 소유 Ubuntu Docker에서 `moneysnap-server`로 실행되며 private host `192.168.1.102:9090`, external network `main`, container management `9091` 계약을 사용한다. `moneysnap-server.ansandy.co.kr`은 Cloudflare DNS와 기존 Nginx Proxy Manager를 거쳐 `/` 200, public actuator 403을 반환한다.
 - 기존 Prometheus는 host publish `127.0.0.1:9092`와 container `9090`을 사용하며 `moneysnap-server:9091` target을 `up=1`로 수집한다. Grafana `monitor.ansandy.co.kr/api/health`는 200이다.
-- 다음 기능 단계는 Sign in with Apple 단독 인증·지속 session·로그아웃·계정 탈퇴다. 실제 Apple 연동에는 explicit App ID와 key activation이 필요하며, 이후 사진 quota를 확정하고 개인 Snap 저장으로 진행한다.
-- 그룹 생성·초대, 그룹 공개 설정 변경, 저장 후 공유 진입처럼 미결정인 제품 정책은 관련 기능의 작업 항목을 `ready`로 바꾸기 전에 확정한다.
+- 서버의 Sign in with Apple 전체 경계와 iOS AuthenticationServices·Keychain 지속 session, 로그아웃·재인증 탈퇴 UI가 완료됐다. GitHub-hosted Xcode 16.4 Simulator에서 Swift Testing 61건·XCUITest 2건과 build-once Home/My 393x852 visual evidence가 통과했다. 실제 Apple credential 연동은 explicit App ID와 key activation이 필요하다.
+- `WORK-019`에서 금액·`localDay`, private 사진 quota, 그룹·초대·불변 공개 설정, 저장 후 단일-group 공유와 profile fallback 정책을 2026-08-13 승인 기준으로 확정했다. Stage 3·6·7·8은 해당 runtime AC를 각 기능 테스트로 검증한다.
 - 작업별 실시간 상태와 의존성은 `AGENTS.md`가 아니라 `.ai/work/`가 소유한다.
 
 ## 제품 기준 문서
@@ -49,12 +49,13 @@
 ## 기술 스택
 - MVP 플랫폼: native iOS 전용, iOS 17+, Swift 6, SwiftUI, Swift Concurrency, Observation, AuthenticationServices, Keychain, PhotosUI, URLSession, SpriteKit
 - API: Java 21 LTS, Spring Boot 4.1.0, Gradle 9.5.1, REST/JSON, OpenAPI 3.1
+- API contract gate: test-only Swagger Parser `2.1.45`, NetworkNT JSON Schema Validator `3.0.6`, canonical `contracts/examples/v1/**`; 기본 server `test`와 iOS native test가 동일 fixture를 검증
 - 데이터: Neon PostgreSQL 18, dev/prod project 분리, Flyway, Spring Data JPA
 - DB 테스트: 테스트 실행 중에만 PostgreSQL 18 Testcontainers 사용
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned URL
 - 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
 - 서버 CI/CD: GitHub-hosted Ubuntu test/package → pinned SSH Ubuntu Docker development deploy
-- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 test/393x852 visual evidence → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
+- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 unit+UI test/393x852 visual evidence → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
 - CRITICAL: 표준 Workers는 Spring Boot runtime이 아니며 D1은 JPA datasource로 사용하지 않는다.
 - CRITICAL: Cloudflare Containers는 무료가 아니므로 월 최소 5 USD와 초과 과금 승인 전에는 활성화하거나 배포하지 않는다.
 - CRITICAL: 상시 Docker Compose PostgreSQL을 추가하지 않는다. 개발은 Neon dev, 운영은 Neon prod를 사용하며 테스트만 일회성 Testcontainers로 격리한다.
@@ -66,8 +67,17 @@
 - 로그아웃은 현재 device session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session·사용자 데이터를 삭제하고 Apple token을 revoke한다.
 - 점심·저녁 리마인더를 포함한 로컬 알림과 APNs 원격 알림은 MVP에서 제외한다.
 - Snap은 항상 개인 기록으로 먼저 저장하며 group 공유를 같은 command에 넣지 않는다.
+- Apple 인증·event request는 future field를 허용하지만 Snap·group·share 상태 변경 command는 선언되지 않은 field를 국소적으로 거부한다. `clientMutationId`는 actor 범위의 1~128자 nonblank opaque key이며 commit-unknown retry에서 바꾸지 않는다.
+- Snap 금액은 `1...999,999,999 KRW` 정수다. `localDay`는 server `Clock`과 제출된 tzdb region `ZoneId` 또는 `UTC`로 current day·직전 day만 허용하고 저장 후 바꾸지 않으며 numeric offset·short alias는 거부한다.
+- Stage 3은 사진 없는 category+amount 개인 Snap을 먼저 완성하고 Stage 6에서 camera·PhotosUI·private R2를 연결한다. Snap당 active image는 최대 1개이며 JPEG 최대 변 `1600px`, `2,097,152 bytes`, EXIF 제거를 요구한다.
+- 사진 grant는 최근 24시간 completed+nonexpired pending 20건과 active+pending `7,000,000,000 bytes` storage guardrail을 원자적으로 적용한다. direct PUT이 exact length·type·checksum을 강제하지 못하면 unrestricted grant 대신 backend bounded stream을 사용한다.
+- 그룹은 owner 한 명과 member, owner 포함 최대 20명이고 이름은 trim 후 1~30 grapheme cluster다. amount visibility는 생성 시 고정하며 초대는 최소 128-bit entropy·hash-only·168시간·group당 active 하나다.
+- 그룹 삭제·member 탈퇴·제거는 share 관계만 삭제하고 개인 Snap을 보존한다. owner 계정 탈퇴는 owned group/share를 삭제한 뒤 account cascade가 owner 개인 데이터를 삭제한다.
+- 공유는 durable 개인 Snap의 Home action에서 한 Snap→한 group으로만 실행한다. skip·취소·실패는 개인 save를 rollback하지 않고, 사진 없는 공유·대표 Snap은 category별 고정 placeholder와 최신 `sharedAt`을 사용한다.
 - 금액 비공개 group response에는 금액과 금액 기반 크기·정렬 필드를 포함하지 않는다. client-side hide로 구현하지 않는다.
+- Apple 이름이 첫 로그인에서 유효하게 제공되면 display name으로 저장하고, 없으면 `MoneySnap 사용자`를 사용한다. 이름 편집과 profile 사진은 MVP에서 제외하며 기본 avatar는 첫 grapheme 또는 MoneySnap mark다.
 - 사진 bucket은 private다. iOS에 R2 credential이나 permanent object URL을 넣지 않고 backend 권한 검사 후 짧은 PUT/GET grant만 사용한다.
+- complete된 미연결 media는 `completedAt`부터 24시간 동안 같은 사용자의 draft 복구를 위해 보존하고 explicit abort 또는 경계 이후에만 cleanup한다. 계정 탈퇴 전에는 media object key를 account-independent cleanup row로 옮겨 R2 orphan과 byte 회계 누락을 막는다.
 - 기존 Cloudflare account-wide R2 token을 재사용하지 않는다. Spring Boot media Adapter를 만들 때 dev/prod bucket별 최소 권한 credential을 생성해 저장소 밖 secret으로 주입한다.
 - Figma frame node와 393x852 screenshot을 화면 구현의 source of truth로 사용하며 macOS snapshot diff 없이 UI 작업을 완료 처리하지 않는다.
 - Windows에서는 source/project 파일을 작성할 수 있지만 Xcode, Simulator, signing, archive와 pixel verification은 macOS lane에서 수행한다.
@@ -79,7 +89,7 @@
 - GitHub workflow action은 full commit SHA로 고정하고 Dependabot PR로 갱신한다. workflow 기본 권한은 `contents: read`다.
 - `main` branch는 PR, linear history와 conversation resolution을 요구하고 force-push·delete를 금지한다. path-scoped CI를 required check로 지정하면 관련 없는 PR이 pending될 수 있으므로 항상 실행되는 gate를 설계하기 전에는 required status check를 추가하지 않는다.
 - public repository의 pull request CI와 server/iOS test job에는 Neon, SSH, R2, Tunnel, Apple secret을 주입하지 않는다. development CD는 성공한 `main` push의 checksum 검증 Docker image와 `server-development` environment만 사용한다.
-- `deploy-development` job만 `server-development`의 Neon·SSH·Apple runtime secret을 Ubuntu `/opt/moneysnap/.env`에 mode `600`으로 쓴다. R2와 Tunnel secret은 이 CD에 넣지 않는다.
+- `deploy-development` job만 `server-development`의 Neon·SSH·Apple runtime secret과, `R2_ENABLED=true`일 때 R2 bucket-scoped secret을 Ubuntu `/opt/moneysnap/.env`에 mode `600`으로 쓴다. Tunnel secret은 이 CD에 넣지 않는다.
 - application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus/Grafana 설정을 생성·변경·재시작하지 않는다. infrastructure lifecycle은 별도 승인 작업이 소유한다.
 - public API는 application `/` smoke만 허용하고 management `9091`과 actuator는 Docker `main` network 안에만 둔다.
 - SSH host identity는 pinned known_hosts로 검증하고 runtime secret file은 Ubuntu `/opt/moneysnap/.env` mode `600`으로 유지한다. 대화·로그에 노출된 key는 회전하며 장기적으로 최소 권한 deploy account를 사용한다.
@@ -114,13 +124,14 @@
 ## 명령어
 - CRITICAL: 존재하지 않거나 실행하지 않은 명령을 검증 증거로 기록하지 말 것
 - 서버 전체 테스트: `cd server; .\gradlew.bat test --no-daemon --console=plain`
+- OpenAPI semantic contract 테스트: `cd server; .\gradlew.bat test --tests "com.ansandy.moneysnap.contract.OpenApiContractTests" --no-daemon --console=plain`
 - 서버 production JAR 생성: `cd server; .\gradlew.bat bootJar --no-daemon --console=plain`
 - Windows iOS project 정적 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
 - Windows iOS visual baseline 계약 검증: `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
 - CI/CD repository 계약 검증: `powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1`
 - Ubuntu Docker deployment 동작 검증: `bash server/scripts/test-docker-deployment.sh`
 - Ubuntu Compose 계약 검증: `MONEYSNAP_IMAGE=moneysnap-server:validation MONEYSNAP_ENV_FILE=/path/to/runtime.env docker compose -f infra/ubuntu/compose.yaml config --quiet`
-- macOS native iOS 검증: `bash ios/scripts/test.sh` (GitHub-hosted Xcode 16.4·iPhone 16·iOS 18.5에서 통과)
-- macOS visual evidence 생성: `bash ios/scripts/capture-visual-baseline.sh` (393x852 app/reference/overlay/diff/report 생성 검증 완료)
+- macOS native iOS 검증: `bash ios/scripts/test.sh` (unit+non-parallel UI test, GitHub-hosted Xcode 16.4·iPhone 16·iOS 18.5)
+- macOS visual evidence 생성: `bash ios/scripts/capture-visual-baseline.sh` (앱을 한 번 build/install하고 manifest 순서의 모든 393x852 app/reference/overlay/diff/report를 생성한 뒤 실패를 집계)
 - 현재 AI 환경 문서 변경의 기본 검증 명령: `git diff --check`
 - 현재 필수 AI 환경 경로 검증 명령: `$required = @('AGENTS.md','CONTEXT.md','.ai/README.md','.ai/harness.yaml','.ai/GRAPHS.md','.ai/LOOPS.md','.ai/templates/work-item.md','docs/AI_ENVIRONMENT.md'); $missing = $required | Where-Object { -not (Test-Path -LiteralPath $_) }; if ($missing) { $missing; exit 1 }`

@@ -17,7 +17,7 @@ Money Snap에는 한 서비스에 모든 책임을 몰아넣기보다 다음 네
 |---|---|---|---|
 | Backend CI | GitHub-hosted Ubuntu | Java 21 설정, Gradle test, `bootJar`, checksum, JAR artifact | 없음 |
 | Backend CD | 전용 Windows self-hosted runner | 같은 run의 검증된 JAR 설치, Spring Boot origin 재시작, loopback health check, 실패 시 JAR rollback | GitHub가 아니라 origin host의 로컬 secret store |
-| iOS CI | GitHub-hosted `macos-15` | signing 없는 Simulator build/test와 result bundle 수집 | 없음 |
+| iOS CI | GitHub-hosted `macos-15` | Apple credential·provisioning 없는 Simulator build/test(Xcode ad-hoc 서명)와 result bundle 수집 | 없음 |
 | iOS CD | Xcode Cloud | Apple-managed build/sign/archive, TestFlight 배포 | repository나 GitHub Actions에 Apple signing private key를 두지 않음 |
 
 이 역할 분리는 다음 공식 사실에 근거한다.
@@ -70,7 +70,7 @@ standard Apple Silicon label은 `macos-latest`, `macos-14`, `macos-15`, `macos-2
 
 runner image는 지원하는 Xcode와 Simulator runtime을 계속 갱신한다. 공식 runner-images 정책상 macOS image당 지원 Xcode major와 platform tool/runtime 범위가 제한되고, 새 patch가 나오면 이전 patch가 교체될 수 있다. 따라서 설치돼 있다고 가정한 특정 simulator UDID를 workflow에 하드코딩하면 안 된다. run 시작 시 `xcodebuild -version`, `xcrun simctl list devices available`을 evidence로 남기고, repository의 `ios/scripts/test.sh`처럼 available destination을 발견해 test해야 한다. [GitHub runner-images](https://github.com/actions/runner-images), [macOS 15 installed software](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md)
 
-Apple Silicon macOS runner에는 static UDID가 없고 nested virtualization도 지원하지 않는다. 이 lane은 iOS Simulator build/test에만 쓰며 development provisioning profile로 실제 device에 설치하는 용도로 사용하지 않는다. signing 없이 `xcodebuild test`가 성공하는지를 CI gate로 삼는다. [GitHub-hosted macOS limitations](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#limitations-for-arm64-macos-runners)
+Apple Silicon macOS runner에는 static UDID가 없고 nested virtualization도 지원하지 않는다. 이 lane은 iOS Simulator build/test에만 쓰며 development provisioning profile로 실제 device에 설치하는 용도로 사용하지 않는다. Apple credential·provisioning 없이 Xcode 기본 ad-hoc(`Sign to Run Locally`) 서명으로 `xcodebuild test`가 성공하는지를 CI gate로 삼는다. [GitHub-hosted macOS limitations](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#limitations-for-arm64-macos-runners)
 
 public repository의 standard GitHub-hosted runner 사용은 무료다. 그래도 실행 시간과 피드백 지연을 줄이기 위해 `ios/**` 또는 shared contract가 바뀐 PR/main에서만 native lane을 실행하고, 문서-only 변경에는 실행하지 않는다. [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 
@@ -174,4 +174,4 @@ Windows self-hosted runner에는 `[self-hosted, Windows, X64, moneysnap-origin]`
 5. 승인된 dev hostname으로 named Tunnel/DNS를 생성하고 `cloudflared` Windows service를 설치한다.
 6. GitHub repository plan에서 private environment required reviewer가 실제 제공되는지 확인한다. 무료 범위에서는 제공되지 않는다는 전제로 production을 manual dispatch로 유지한다.
 
-이 gate가 열리기 전에도 GitHub-hosted Backend CI, signing 없는 iOS CI, deployment script의 dry-run/static validation은 완성할 수 있다. 반면 실제 TestFlight upload, named Tunnel/DNS 생성, origin service 등록과 production secret 저장은 외부 상태 변경이므로 별도 승인과 실행 evidence가 필요하다.
+이 gate가 열리기 전에도 GitHub-hosted Backend CI, Apple credential·provisioning 없는 Simulator iOS CI, deployment script의 dry-run/static validation은 완성할 수 있다. 반면 실제 TestFlight upload, named Tunnel/DNS 생성, origin service 등록과 production secret 저장은 외부 상태 변경이므로 별도 승인과 실행 evidence가 필요하다.

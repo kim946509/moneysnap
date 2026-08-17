@@ -48,6 +48,7 @@ function Require-FullActionShaPins {
 $workflowPath = Require-File '.github/workflows/server-ci-cd.yml'
 $iosWorkflowPath = Require-File '.github/workflows/ios-ci.yml'
 $iosTestPath = Require-File 'ios/scripts/test.sh'
+$iosVisualPath = Require-File 'ios/scripts/capture-visual-baseline.sh'
 $dockerfilePath = Require-File 'server/Dockerfile'
 $composePath = Require-File 'infra/ubuntu/compose.yaml'
 $deployPath = Require-File 'infra/ubuntu/deploy.sh'
@@ -55,6 +56,9 @@ $prometheusJobPath = Require-File 'infra/ubuntu/prometheus-moneysnap-job.yaml'
 $deploymentTestPath = Require-File 'server/scripts/test-docker-deployment.sh'
 $xcodeHookPath = Require-File 'ios/ci_scripts/ci_post_clone.sh'
 $dependabotPath = Require-File '.github/dependabot.yml'
+Require-File 'contracts/openapi/moneysnap-v1.yaml' | Out-Null
+Require-File 'contracts/examples/v1/identity/session-response.json' | Out-Null
+Require-File 'server/src/test/java/com/ansandy/moneysnap/contract/OpenApiContractTests.java' | Out-Null
 
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 Require-Match $workflow '(?m)^\s*pull_request:\s*$' 'pull request trigger'
@@ -92,7 +96,12 @@ foreach ($secretName in @(
     'APPLE_TEAM_ID',
     'APPLE_KEY_ID',
     'APPLE_PRIVATE_KEY_P8',
-    'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY'
+    'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY',
+    'R2_ENABLED',
+    'R2_BUCKET',
+    'R2_ENDPOINT',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY'
 )) {
     Require-Match `
         $workflow `
@@ -103,8 +112,8 @@ $workflowJobs = [regex]::Split($workflow, '(?m)^  deploy-development:')
 if ($workflowJobs.Count -lt 2) {
     throw 'Server workflow is missing the deploy-development job'
 }
-if ($workflowJobs[0] -match 'secrets\.APPLE_') {
-    throw 'Apple runtime secrets must stay out of the server build/PR job'
+if ($workflowJobs[0] -match 'secrets\.APPLE_|secrets\.R2_') {
+    throw 'Apple and R2 runtime secrets must stay out of the server build/PR job'
 }
 Require-Match $workflow 'missing required server-development secret' 'deploy-time required secret presence check'
 Require-Match $workflow "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" 'Apple PEM carriage-return strip'
@@ -127,6 +136,9 @@ $iosWorkflow = Get-Content -LiteralPath $iosWorkflowPath -Raw
 Require-Match $iosWorkflow 'runs-on:\s*macos-15' 'pinned GitHub-hosted macOS runner image'
 Require-Match $iosWorkflow 'bash\s+ios\/scripts\/test\.sh' 'native Swift test command'
 Require-Match $iosWorkflow 'RESULT_BUNDLE_PATH' 'failed test result bundle contract'
+if ([regex]::Matches($iosWorkflow, 'capture-visual-baseline\.sh').Count -ne 1) {
+    throw 'iOS workflow must invoke the build-once visual runner exactly once'
+}
 Require-Match $iosWorkflow 'if:\s*failure\(\)' 'failure-only diagnostics upload'
 Require-FullActionShaPins -Content $iosWorkflow -Description 'iOS workflow'
 if ($iosWorkflow -match 'secrets\.APPLE_|secrets\.NEON_|secrets\.SERVER_') {
@@ -134,8 +146,18 @@ if ($iosWorkflow -match 'secrets\.APPLE_|secrets\.NEON_|secrets\.SERVER_') {
 }
 
 $iosTest = Get-Content -LiteralPath $iosTestPath -Raw
-Require-Match $iosTest 'CODE_SIGNING_ALLOWED=NO' 'signing-free iOS test command'
+$unsignedNativeTestOverride = '(?i)\bCODE_SIGNING_ALLOWED\s*(?:=|:)\s*["'']?NO["'']?\b'
+if ($iosTest -match $unsignedNativeTestOverride -or $iosWorkflow -match $unsignedNativeTestOverride) {
+    throw 'Native iOS tests must keep Xcode Simulator ad-hoc signing enabled for Keychain entitlements'
+}
 Require-Match $iosTest 'RESULT_BUNDLE_PATH' 'optional iOS result bundle output'
+
+$iosVisual = Get-Content -LiteralPath $iosVisualPath -Raw
+if ([regex]::Matches($iosVisual, '(?m)^xcodebuild\s+\\?\r?$').Count -ne 1 -or
+    [regex]::Matches($iosVisual, 'simctl\s+install').Count -ne 1) {
+    throw 'Visual runner must build and install the app exactly once'
+}
+Require-Match $iosVisual 'visual_failures' 'aggregate visual scenario failures'
 
 $dockerfile = Get-Content -LiteralPath $dockerfilePath -Raw
 Require-Match $dockerfile '^FROM\s+[^\s]+@sha256:[0-9a-f]{64}' 'digest-pinned Java runtime image'

@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   simulator-test:
-    name: Build and test without signing
+    name: Build and test with Simulator ad-hoc signing
     runs-on: macos-15
     timeout-minutes: 30
     env:
@@ -48,9 +48,7 @@ jobs:
         run: bash ios/scripts/test.sh
 
       - name: Capture Figma visual evidence
-        env:
-          VISUAL_OUTPUT_DIR: ${{ runner.temp }}/MoneySnapVisual
-        run: bash ios/scripts/capture-visual-baseline.sh
+        run: VISUAL_OUTPUT_DIR="${RUNNER_TEMP}/MoneySnapVisual" bash ios/scripts/capture-visual-baseline.sh
 
       - name: Upload visual evidence
         if: always()

@@ -19,4 +19,13 @@ enum SnapCategory {
     String code() {
         return code;
     }
+
+    static SnapCategory fromCode(String code) {
+        for (SnapCategory category : values()) {
+            if (category.code.equals(code)) {
+                return category;
+            }
+        }
+        throw new IllegalArgumentException("Unknown Snap category");
+    }
 }

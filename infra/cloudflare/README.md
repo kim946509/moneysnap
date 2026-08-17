@@ -27,7 +27,17 @@
 - native iOS와 server-to-R2 호출에는 browser CORS가 필요하지 않으므로 불필요한 CORS allowlist를 만들지 않는다.
 - 비밀값은 `.env.*.local` 또는 다음 단계의 GitHub/배포 secret에만 저장한다.
 
-비밀값이 아닌 실제 resource ID와 endpoint는 `resources.yaml`이 소유한다. S3 credential은 아직 만들지 않았다. 지금 장기 credential을 보관하지 않고 Spring Boot media Adapter와 R2 contract test가 생기는 작업에서 dev/prod bucket scope로 각각 발급한다.
+비밀값이 아닌 실제 resource ID와 endpoint는 `resources.yaml`이 소유한다. Spring Boot는 `R2_ENABLED=true`일 때만 AWS SDK v2로 `moneysnap-media-dev`에 연결한다. S3 credential은 Cloudflare Dashboard의 R2 API token에서 bucket `moneysnap-media-dev` Object Read & Write로 만들고 GitHub `server-development` secret에만 넣는다.
+
+```text
+gh secret set R2_ENABLED --env server-development
+gh secret set R2_BUCKET --env server-development
+gh secret set R2_ENDPOINT --env server-development
+gh secret set R2_ACCESS_KEY_ID --env server-development
+gh secret set R2_SECRET_ACCESS_KEY --env server-development
+```
+
+값은 `true`, `moneysnap-media-dev`, `https://6bcae71f04b38cc620c6d3b5bd68cd78.r2.cloudflarestorage.com`, Access Key, Secret이다. 대화·Git에 붙이지 않는다.
 
 ## 남은 생성 순서
 

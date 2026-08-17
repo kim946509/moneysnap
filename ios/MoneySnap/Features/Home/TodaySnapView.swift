@@ -1,11 +1,9 @@
 import SwiftUI
 
 struct TodaySnapView: View {
-    @State private var viewModel: TodaySnapViewModel
-
-    init(client: any SnapJournalClient) {
-        _viewModel = State(initialValue: TodaySnapViewModel(client: client))
-    }
+    let viewModel: TodaySnapViewModel
+    let onRecord: () -> Void
+    var onOpen: (UUID) -> Void = { _ in }
 
     var body: some View {
         ZStack {
@@ -14,28 +12,63 @@ struct TodaySnapView: View {
             switch viewModel.state {
             case .loading:
                 ProgressView()
+                    .accessibilityIdentifier("home.loading")
+            case let .empty(day):
+                emptyState(day: day)
             case let .content(summary):
-                TodaySnapContent(summary: summary)
+                TodaySnapContent(summary: summary, onRecord: onRecord, onOpen: onOpen)
+                    .refreshable { await viewModel.refresh() }
+                    .overlay(alignment: .top) {
+                        if viewModel.refreshFailure {
+                            Button("다시 불러오기") {
+                                Task { await viewModel.retry() }
+                            }
+                            .frame(minWidth: 44, minHeight: 44)
+                            .accessibilityIdentifier("home.refresh-retry")
+                            .padding(.top, 72)
+                        }
+                    }
             case .failure:
-                ContentUnavailableView(
-                    "오늘 기록을 불러오지 못했어요",
-                    systemImage: "exclamationmark.arrow.triangle.2.circlepath"
-                )
+                ContentUnavailableView {
+                    Label("오늘 기록을 불러오지 못했어요", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                        .accessibilityIdentifier("screen.home")
+                } actions: {
+                    Button("다시 시도") {
+                        Task { await viewModel.retry() }
+                    }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .accessibilityIdentifier("home.retry")
+                }
             }
         }
         .task { await viewModel.load() }
+    }
+
+    private func emptyState(day: SnapDay) -> some View {
+        ContentUnavailableView {
+            Label("오늘 기록이 없어요", systemImage: "plus.circle")
+                .accessibilityIdentifier("screen.home")
+        } description: {
+            Text(day.displayLabel)
+        } actions: {
+            Button("기록하기", action: onRecord)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityIdentifier("home.record")
+        }
     }
 }
 
 private struct TodaySnapContent: View {
     let summary: TodaySnapSummary
+    let onRecord: () -> Void
+    var onOpen: (UUID) -> Void = { _ in }
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
                 header(availableWidth: proxy.size.width)
                 featuredCards(availableWidth: proxy.size.width)
-                recordButtonAppearance(availableWidth: proxy.size.width)
+                recordButton(availableWidth: proxy.size.width)
                 pageIndicator(availableWidth: proxy.size.width)
                 totalSection
                 recentSection
@@ -50,6 +83,7 @@ private struct TodaySnapContent: View {
                 Text("Today Snap")
                     .font(.moneySnap(size: 22, weight: .bold))
                     .foregroundStyle(MoneySnapVisualSystem.ink)
+                    .accessibilityIdentifier("screen.home")
                 Text(summary.day.displayLabel)
                     .font(.moneySnap(size: 13, weight: .medium))
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
@@ -77,6 +111,7 @@ private struct TodaySnapContent: View {
                     imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
                     layout: .landscape
                 )
+                .onTapGesture { onOpen(entry.id) }
                 .position(x: availableWidth * 0.357, y: 276)
             }
             if let entry = summary.featuredEntries[safe: 1], let maximumAmount {
@@ -85,6 +120,7 @@ private struct TodaySnapContent: View {
                     imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
                     layout: .portrait
                 )
+                .onTapGesture { onOpen(entry.id) }
                 .position(x: availableWidth * 0.736, y: 303)
             }
             if let entry = summary.featuredEntries[safe: 2] {
@@ -95,21 +131,24 @@ private struct TodaySnapContent: View {
         }
     }
 
-    private func recordButtonAppearance(availableWidth: CGFloat) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "plus")
-                .font(.system(size: 14, weight: .bold))
-                .frame(width: 28, height: 28)
-                .foregroundStyle(.white)
-                .background(.white.opacity(0.18), in: Circle())
-            Text("기록하기")
-                .font(.moneySnap(size: 20, weight: .bold))
+    private func recordButton(availableWidth: CGFloat) -> some View {
+        Button(action: onRecord) {
+            HStack(spacing: 10) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(width: 28, height: 28)
+                    .foregroundStyle(.white)
+                    .background(.white.opacity(0.18), in: Circle())
+                Text("기록하기")
+                    .font(.moneySnap(size: 20, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(width: 165, height: 64)
+            .background(MoneySnapVisualSystem.charcoal, in: Capsule())
+            .shadow(color: .black.opacity(0.18), radius: 14, y: 10)
         }
-        .foregroundStyle(.white)
-        .frame(width: 165, height: 64)
-        .background(MoneySnapVisualSystem.charcoal, in: Capsule())
-        .shadow(color: .black.opacity(0.18), radius: 14, y: 10)
-        .accessibilityHidden(true)
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home.record")
         .position(x: availableWidth / 2, y: 436)
     }
 
@@ -131,6 +170,7 @@ private struct TodaySnapContent: View {
                 .foregroundStyle(MoneySnapVisualSystem.secondaryText)
                 .offset(x: 28, y: 521)
             Text(summary.totalAmount.wonText)
+                .accessibilityIdentifier("home.total")
                 .font(.moneySnap(size: 64, weight: .black))
                 .foregroundStyle(.black)
                 .frame(height: 78, alignment: .topLeading)
@@ -147,6 +187,7 @@ private struct TodaySnapContent: View {
             HStack(spacing: 28) {
                 ForEach(summary.recentEntries) { entry in
                     RecentSnapRow(entry: entry)
+                        .onTapGesture { onOpen(entry.id) }
                 }
             }
             .offset(x: 26, y: 650)
@@ -160,6 +201,12 @@ private extension Collection {
     }
 }
 
+#if DEBUG
 #Preview {
-    TodaySnapView(client: InMemorySnapJournalClient.fixture)
+    TodaySnapView(
+        viewModel: TodaySnapViewModel(client: VisualTestSupport.snapJournalClient),
+        onRecord: {},
+        onOpen: { _ in }
+    )
 }
+#endif

@@ -73,14 +73,16 @@ class TodaySnapSummaryTests {
     }
 
     @Test
-    void rejectsAValueThatWouldOverflowKrwStorage() {
-        assertThatThrownBy(() -> new TodaySnapSummary(
+    void totalsMultipleMaximumSnapAmountsWithoutOverflow() {
+        var summary = new TodaySnapSummary(
             JUNE_THIRD,
             List.of(
-                entry(Long.MAX_VALUE, SnapCategory.FOOD),
-                entry(1, SnapCategory.CAFE)
+                entry(999_999_999, SnapCategory.FOOD),
+                entry(999_999_999, SnapCategory.CAFE)
             )
-        )).isInstanceOf(ArithmeticException.class);
+        );
+
+        assertThat(summary.totalAmount()).isEqualTo(1_999_999_998L);
     }
 
     private TodaySnapEntry entry(long amount, SnapCategory category) {

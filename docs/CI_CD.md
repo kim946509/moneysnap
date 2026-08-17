@@ -10,7 +10,7 @@
 |---|---|---|---|
 | server CI | GitHub-hosted `ubuntu-latest` | server·API contract 관련 pull request, `main` push, manual | Java 21 test, production JAR, immutable Docker image와 SHA-256 archive |
 | server development CD | GitHub-hosted `ubuntu-latest` → SSH Ubuntu Docker host | server CI가 성공한 `main` push만 | checksum 검증, `9090` origin 교체, container health gate, 실패 시 이전 image rollback |
-| iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | signing 없는 고정 Simulator build/test, 393x852 visual evidence, 실패 `.xcresult` |
+| iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | Simulator ad-hoc signed unit+UI test, unsigned build-once 393x852 visual evidence, 실패 `.xcresult` |
 | iOS CD | Xcode Cloud | Apple workflow에서 승인한 branch/release condition | Apple-managed signing, archive, internal TestFlight |
 | DNS/NPM·모니터링 | 승인된 infrastructure 작업 | hostname, proxy 또는 scrape 설정 변경 | Cloudflare DNS, Nginx Proxy Manager, Prometheus·Grafana |
 
@@ -25,6 +25,7 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 - pull request CI와 server test/package job은 Neon, SSH, R2, Cloudflare 또는 Apple secret을 받지 않는다.
 - `deploy-development`는 `server-development`의 Neon·SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 `/opt/moneysnap/.env`에만 쓴다.
 - `contracts/**` 변경도 server와 iOS lane을 함께 실행한다.
+- server 기본 `test`는 `contracts/openapi/moneysnap-v1.yaml`과 `contracts/examples/v1/**`의 semantic OpenAPI 3.1/Draft 2020-12 gate를 실행하고, iOS native test는 같은 canonical fixture resource를 decode한다.
 - test와 `bootJar`가 통과한 뒤 digest-pinned Java runtime으로 Docker image를 만든다.
 - image는 `docker save`와 gzip으로 고정하고 SHA-256 manifest와 함께 7일 보관한다.
 - deployment job은 `push`와 `refs/heads/main`을 동시에 검사하고 `server-development` environment를 요구한다.
@@ -76,6 +77,11 @@ Environment `server-development`는 `main` 전용 branch policy를 유지하고 
 - `APPLE_KEY_ID`
 - `APPLE_PRIVATE_KEY_P8`
 - `APPLE_REFRESH_TOKEN_ENCRYPTION_KEY`
+- `R2_ENABLED`
+- `R2_BUCKET`
+- `R2_ENDPOINT`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
 
 Apple `.p8`과 refresh-token 암호화 key는 대화·commit·PR log에 붙이지 않는다. 로컬 파일에서 environment secret만 등록한다.
 
@@ -89,7 +95,7 @@ Repository는 public이며 Secret Scanning과 Push Protection을 활성화한다
 
 ## iOS CI와 Xcode Cloud
 
-GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple credential 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 `bash ios/scripts/test.sh`를 실행한다. 앱을 393x852로 캡처해 Figma 홈 `9:2` reference, overlay, diff와 수치 report를 7일 보관한다.
+GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple 개발 credential·provisioning 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 Xcode 기본 ad-hoc 서명으로 `bash ios/scripts/test.sh`의 unit test와 non-parallel UI test를 실행한다. Keychain을 쓰지 않는 unsigned app을 한 번 build/install하고 manifest 순서의 Figma Home `9:2`, My `77:798`를 393x852로 캡처한다. 각 app/reference/overlay/diff/report는 한 화면이 threshold를 넘더라도 모두 생성한 뒤 실패를 집계하며 7일 보관한다.
 
 TestFlight CD는 Xcode Cloud가 소유한다. 최초 Mac/Xcode activation 때 pull request test workflow와 main internal TestFlight workflow를 만든다. Bundle ID는 `com.ansandy.moneysnap`이다. App Store Connect API key와 signing certificate는 GitHub `server-development`에 넣지 않는다. Sign in with Apple runtime `.p8`만 서버 CD secret이다.
 
@@ -103,7 +109,7 @@ TestFlight CD는 Xcode Cloud가 소유한다. 최초 Mac/Xcode activation 때 pu
 | Money Snap public HTTPS route | `/` 200, public actuator 403 |
 | Prometheus Money Snap target | `up=1` |
 | Grafana public health | HTTP 200 |
-| GitHub `server-development` environment | `main` policy, Neon/SSH 11개와 Apple runtime secret 6개 |
+| GitHub `server-development` environment | `main` policy, Neon/SSH 11개, Apple runtime secret 6개, R2 secret 5개 |
 | Secret Scanning / Push Protection | enabled / enabled |
 | GitHub remote workflow | 변경 push 후 `main` deployment 검증 필요 |
 | iOS GitHub native/visual CI | 활성화 |
