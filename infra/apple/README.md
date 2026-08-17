@@ -45,7 +45,7 @@ GitHub Actions iOS CI에는 Apple certificate, provisioning profile, App Store C
 
 Xcode Cloud의 기본 TestFlight post-action에는 별도 App Store Connect API key를 만들지 않는다. API 기반 tester/group 관리 같은 추가 자동화가 실제로 필요해진 뒤에만 key 작업을 연다. private key는 한 번만 다운로드할 수 있으므로 repository·log·artifact에 남기지 않고 가능한 최소 역할과 app 범위를 사용한다.
 
-Spring Boot runtime Apple 값은 GitHub `server-development` environment secret으로만 보관하고, `main` development CD가 `/opt/moneysnap/.env`에 쓴다. pull request CI와 iOS workflow에는 주입하지 않는다.
+Spring Boot runtime Apple 값은 GitHub `server-development` environment secret으로만 보관하고, `main` development CD가 `/opt/moneysnap/runtime.env`에 쓴다. pull request CI와 iOS workflow에는 주입하지 않는다.
 
 등록 이름:
 

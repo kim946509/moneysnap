@@ -23,14 +23,14 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 - workflow 전체 권한은 `contents: read`뿐이다.
 - 모든 외부 action은 전체 commit SHA로 고정하고 Dependabot으로 갱신한다.
 - pull request CI와 server test/package job은 Neon, SSH, R2, Cloudflare 또는 Apple secret을 받지 않는다.
-- `deploy-development`는 `server-development`의 Neon·SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 값은 single-quote로 `/opt/moneysnap/.env`에만 쓴다. Compose interpolation은 같은 디렉터리의 비밀 `.env`를 읽지 않는다.
+- `deploy-development`는 `server-development`의 Neon·SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 `/opt/moneysnap/runtime.env`에만 쓴다. `/opt/moneysnap/.env`는 Compose interpolation stub다.
 - `contracts/**` 변경도 server와 iOS lane을 함께 실행한다.
 - server 기본 `test`는 `contracts/openapi/moneysnap-v1.yaml`과 `contracts/examples/v1/**`의 semantic OpenAPI 3.1/Draft 2020-12 gate를 실행하고, iOS native test는 같은 canonical fixture resource를 decode한다.
 - test와 `bootJar`가 통과한 뒤 digest-pinned Java runtime으로 Docker image를 만든다.
 - image는 `docker save`와 gzip으로 고정하고 SHA-256 manifest와 함께 7일 보관한다.
 - deployment job은 `push`와 `refs/heads/main`을 동시에 검사하고 `server-development` environment를 요구한다.
 - GitHub-hosted deployment runner는 pinned host key와 private key로 tested image만 Ubuntu staging에 전송한다. host/user/port/key의 UTF-8 BOM과 CR을 제거하고, private key가 `ssh-keygen`으로 loadable하지 않으면 전송 전에 실패한다.
-- runtime secret file은 artifact에 포함하지 않으며 원격 `/opt/moneysnap/.env`에 mode `600`으로 설치한다.
+- runtime secret file은 artifact에 포함하지 않으며 원격 `/opt/moneysnap/runtime.env`에 mode `600`으로 설치한다.
 - main deployment는 cancel하지 않고 concurrency로 직렬화한다.
 
 ## Ubuntu Docker origin
