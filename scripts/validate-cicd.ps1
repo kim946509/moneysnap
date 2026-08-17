@@ -185,7 +185,7 @@ Require-Match $deploy '--env-file' 'compose interpolation env file is not the se
 $deploymentTest = Get-Content -LiteralPath $deploymentTestPath -Raw
 Require-Match $deploymentTest 'healthy deployment' 'healthy deployment behavior test'
 Require-Match $deploymentTest 'rollback' 'failed health rollback behavior test'
-Require-Match $deploymentTest 'PREVIOUS_SECRET=preserved' 'same-release secret restoration behavior test'
+Require-Match $deploymentTest 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
 
 $prometheusJob = Get-Content -LiteralPath $prometheusJobPath -Raw
 Require-Match $prometheusJob 'job_name:\s*moneysnap_server' 'Money Snap Prometheus job'
