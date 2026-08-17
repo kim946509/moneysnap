@@ -86,13 +86,29 @@ foreach ($secretName in @(
     'NEON_RUNTIME_DATABASE_PASSWORD',
     'NEON_MIGRATION_DATABASE_URL',
     'NEON_MIGRATION_DATABASE_USERNAME',
-    'NEON_MIGRATION_DATABASE_PASSWORD'
+    'NEON_MIGRATION_DATABASE_PASSWORD',
+    'APPLE_AUTH_ENABLED',
+    'APPLE_CLIENT_ID',
+    'APPLE_TEAM_ID',
+    'APPLE_KEY_ID',
+    'APPLE_PRIVATE_KEY_P8',
+    'APPLE_REFRESH_TOKEN_ENCRYPTION_KEY'
 )) {
     Require-Match `
         $workflow `
         ("{0}:\s*\$\{{\{{\s*secrets\.{0}\s*\}}\}}" -f $secretName) `
         "$secretName environment secret"
 }
+$workflowJobs = [regex]::Split($workflow, '(?m)^  deploy-development:')
+if ($workflowJobs.Count -lt 2) {
+    throw 'Server workflow is missing the deploy-development job'
+}
+if ($workflowJobs[0] -match 'secrets\.APPLE_') {
+    throw 'Apple runtime secrets must stay out of the server build/PR job'
+}
+Require-Match $workflow 'missing required server-development secret' 'deploy-time required secret presence check'
+Require-Match $workflow "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" 'Apple PEM carriage-return strip'
+Require-Match $workflow "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" 'Apple PEM literal newline flatten'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
@@ -113,6 +129,9 @@ Require-Match $iosWorkflow 'bash\s+ios\/scripts\/test\.sh' 'native Swift test co
 Require-Match $iosWorkflow 'RESULT_BUNDLE_PATH' 'failed test result bundle contract'
 Require-Match $iosWorkflow 'if:\s*failure\(\)' 'failure-only diagnostics upload'
 Require-FullActionShaPins -Content $iosWorkflow -Description 'iOS workflow'
+if ($iosWorkflow -match 'secrets\.APPLE_|secrets\.NEON_|secrets\.SERVER_') {
+    throw 'iOS workflow must not receive server-development secrets'
+}
 
 $iosTest = Get-Content -LiteralPath $iosTestPath -Raw
 Require-Match $iosTest 'CODE_SIGNING_ALLOWED=NO' 'signing-free iOS test command'

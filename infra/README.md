@@ -20,4 +20,4 @@
 - 예제 파일에는 key와 설명만 두고 실제 password, connection string, API token을 넣지 않는다.
 - Spring runtime은 pooled endpoint의 `moneysnap_app` 역할을 사용한다.
 - Flyway, dump/restore와 admin 작업만 direct endpoint의 owner 역할을 사용한다.
-- development Neon 비밀값은 GitHub `server-development` environment에서 deployment step에만 주입하고 Ubuntu origin의 mode `600` secret file로 옮긴다. pull request CI, 로그와 artifact에는 출력하지 않는다.
+- development Neon과 Apple runtime 비밀값은 GitHub `server-development` environment에서 `deploy-development`에만 주입하고 Ubuntu origin의 mode `600` secret file로 옮긴다. pull request CI, 로그와 artifact에는 출력하지 않는다.
