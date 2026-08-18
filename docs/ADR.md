@@ -59,7 +59,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-005: Windows authoring과 macOS verification 분리
 
-**결정**: Windows는 Spring Boot 전체 개발, Swift·Xcode 프로젝트 파일 작성과 Git 작업에 사용한다. Xcode 실행, iOS SDK build, Simulator, SwiftUI preview, signing, archive, TestFlight/App Store upload, pixel verification은 macOS lane에서 수행한다. Simulator CI와 첫 TestFlight archive는 GitHub-hosted `macos-15`가 소유한다. interactive pixel tuning과 로컬 device Run만 실제 Mac/Xcode가 필요하다.
+**결정**: Windows는 Spring Boot 전체 개발, Swift·Xcode 프로젝트 파일 작성과 Git 작업에 사용한다. Xcode 실행, iOS SDK build, Simulator, SwiftUI preview, signing, archive, TestFlight/App Store upload, pixel verification은 macOS lane에서 수행한다. Simulator CI는 GitHub-hosted `macos-15`가 소유하고, TestFlight archive는 App Store Connect iOS 26 SDK 요구 때문에 `macos-26` / Xcode 26이 소유한다. interactive pixel tuning과 로컬 device Run만 실제 Mac/Xcode가 필요하다.
 
 **이유**: Apple이 배포하는 Xcode toolchain은 지원 macOS를 요구한다. 유료 Apple Developer 계정은 배포 권한을 제공하지만 Windows에 Xcode runtime을 제공하지 않는다. GitHub-hosted macOS는 Windows-only 개발자가 레포를 나누지 않고 archive/upload를 돌릴 수 있다.
 
@@ -83,7 +83,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-008: GitHub Actions 서버 CD와 iOS TestFlight CD 분리
 
-**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 Apple 개발 credential·provisioning 없이 실행하되 Simulator app·test host는 Keychain entitlement를 위해 Xcode 기본 ad-hoc(`Sign to Run Locally`) 서명을 사용한다. archive·internal TestFlight 업로드는 같은 GitHub-hosted `macos-15`의 `ios-testflight` environment가 소유한다. App Store Connect API key는 PR/iOS test job과 `server-development`에 넣지 않는다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
+**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 Apple 개발 credential·provisioning 없이 실행하되 Simulator app·test host는 Keychain entitlement를 위해 Xcode 기본 ad-hoc(`Sign to Run Locally`) 서명을 사용한다. archive·internal TestFlight 업로드는 GitHub-hosted `macos-26`의 `ios-testflight` environment가 소유한다. App Store Connect API key는 PR/iOS test job과 `server-development`에 넣지 않는다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
 
 모든 GitHub Action reference는 전체 commit SHA로 고정하고 Dependabot이 갱신한다. workflow 기본 권한은 `contents: read`다. server secret은 `server-development` environment를 통과한 `main` deployment job과 Ubuntu mode `600` runtime file에만 존재하며 pull request CI나 artifact에는 전달하지 않는다.
 

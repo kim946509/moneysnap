@@ -12,6 +12,10 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'scripts\test-validate-pbx-object-ids.ps1'),
     (Join-Path $iosRoot 'scripts\test-validate-visual-baseline.ps1'),
     (Join-Path $iosRoot 'scripts\write-testflight-export-options.sh'),
+    (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\AppIcon.appiconset\Contents.json'),
+    (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\AppIcon.appiconset\AppIcon-1024.png'),
+    (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\AppIcon.appiconset\AppIcon-180.png'),
+    (Join-Path $iosRoot 'MoneySnap\Assets.xcassets\AppIcon.appiconset\AppIcon-120.png'),
     (Join-Path $iosRoot 'MoneySnap\App\MoneySnapApp.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\VisualTestSupport.swift'),
     (Join-Path $iosRoot 'MoneySnap\App\AppShellView.swift'),
@@ -235,6 +239,12 @@ if ($assets.info.author -ne 'xcode' -or $assets.info.version -ne 1) {
 $infoPlist = [xml](Get-Content -LiteralPath (Join-Path $iosRoot 'MoneySnap\Info.plist') -Raw)
 if ($infoPlist.plist.dict.array.string -notcontains 'NotoSansKR-VariableFont_wght.ttf') {
     throw 'Noto Sans KR must be registered in UIAppFonts.'
+}
+$infoKeys = @($infoPlist.plist.dict.key)
+$infoValues = @($infoPlist.plist.dict.string)
+$iconNameIndex = [array]::IndexOf($infoKeys, 'CFBundleIconName')
+if ($iconNameIndex -lt 0 -or $infoValues[$iconNameIndex] -ne 'AppIcon') {
+    throw 'Info.plist must declare CFBundleIconName AppIcon for App Store validation.'
 }
 
 $powerShellPath = (Get-Process -Id $PID).Path

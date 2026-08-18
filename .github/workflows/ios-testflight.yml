@@ -23,11 +23,11 @@ jobs:
           && github.event.workflow_run.event == 'push'
           && github.event.workflow_run.conclusion == 'success'
           && github.event.workflow_run.head_branch == 'main')
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 40
     environment: ios-testflight
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
 
     steps:
       - name: Check out exact revision
