@@ -23,7 +23,7 @@
 
 ## 아이폰 실기기 설치
 
-Windows에서 Xcode Run은 할 수 없다. TestFlight 업로드는 GitHub-hosted `macos-15`의 `.github/workflows/ios-testflight.yml`이 한다. 성공한 `main` iOS CI 또는 Actions `workflow_dispatch`가 `ios-testflight` secret으로 archive한 뒤 App Store Connect에 올린다. 앱은 `https://moneysnap-server.ansandy.co.kr`에 붙는다.
+Windows에서 Xcode Run은 할 수 없다. TestFlight 업로드는 GitHub-hosted `macos-26` / Xcode 26의 `.github/workflows/ios-testflight.yml`이 한다. 성공한 `main` iOS CI 또는 Actions `workflow_dispatch`가 `ios-testflight` secret으로 archive한 뒤 App Store Connect에 올린다. 앱은 `https://moneysnap-server.ansandy.co.kr`에 붙는다.
 
 ```text
 gh secret set APPLE_TEAM_ID --env ios-testflight

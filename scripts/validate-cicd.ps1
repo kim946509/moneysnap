@@ -156,6 +156,8 @@ $iosTestflight = Get-Content -LiteralPath $iosTestflightWorkflowPath -Raw
 if ($iosTestflight -match '(?m)^\s*pull_request:') {
     throw 'iOS TestFlight workflow must not run on pull requests'
 }
+Require-Match -Content $iosTestflight -Pattern 'runs-on:\s*macos-26' -Description 'TestFlight uses macos-26 for iOS 26 SDK'
+Require-Match -Content $iosTestflight -Pattern 'Xcode_26' -Description 'TestFlight uses Xcode 26'
 Require-Match -Content $iosTestflight -Pattern 'environment:\s*ios-testflight' -Description 'ios-testflight environment'
 Require-Match -Content $iosTestflight -Pattern 'workflow_dispatch:' -Description 'manual TestFlight dispatch'
 Require-Match -Content $iosTestflight -Pattern 'workflow_run:' -Description 'TestFlight waits for iOS CI'

@@ -11,7 +11,7 @@
 | server CI | GitHub-hosted `ubuntu-latest` | server·API contract 관련 pull request, `main` push, manual | Java 21 test, production JAR, immutable Docker image와 SHA-256 archive |
 | server development CD | GitHub-hosted `ubuntu-latest` → SSH Ubuntu Docker host | server CI가 성공한 `main` push만 | checksum 검증, `9090` origin 교체, container health gate, 실패 시 이전 image rollback |
 | iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | Simulator ad-hoc signed unit+UI test, unsigned build-once 393x852 visual evidence, 실패 `.xcresult` |
-| iOS TestFlight CD | GitHub-hosted `macos-15` | 성공한 `main` iOS CI **push** 또는 `main` manual | App Store Connect API key로 archive 후 internal TestFlight 업로드 |
+| iOS TestFlight CD | GitHub-hosted `macos-26` / Xcode 26 | 성공한 `main` iOS CI **push** 또는 `main` manual | App Store Connect API key로 archive 후 internal TestFlight 업로드 |
 | DNS/NPM·모니터링 | 승인된 infrastructure 작업 | hostname, proxy 또는 scrape 설정 변경 | Cloudflare DNS, Nginx Proxy Manager, Prometheus·Grafana |
 
 Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만들거나 변경하지 않는다. 이 리소스는 application image rollback과 독립된 infrastructure lifecycle로 운영한다.
