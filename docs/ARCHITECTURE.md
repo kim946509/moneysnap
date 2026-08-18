@@ -242,9 +242,9 @@ Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한
 - GitHub-hosted Ubuntu CI: Java 21 test·bootJar와 digest-pinned Docker image archive를 만들며 Neon/SSH/Apple secret을 주입하지 않는다.
 - GitHub-hosted Ubuntu CD: 성공한 `main` image만 pinned SSH Ubuntu origin에 전송하고, `server-development`의 Neon·Apple runtime secret으로 `/opt/moneysnap/runtime.env`를 다시 쓴 뒤 container health 실패 시 이전 image와 같은 release secret으로 rollback한다.
 - GitHub-hosted `macos-15`: iOS·contract 변경에만 Apple 개발 credential·provisioning 없이 Simulator unit+non-parallel UI test를 Xcode 기본 ad-hoc 서명으로 실행하고, Keychain을 쓰지 않는 visual evidence app은 한 번만 unsigned build/install해 manifest의 모든 화면을 순차 검증한다.
-- macOS/Xcode: SwiftUI preview, screenshot diff, interactive debugging과 첫 Xcode Cloud workflow 설정.
-- Xcode Cloud: Apple-managed build/test/sign/archive와 internal TestFlight. Apple Developer Program 포함 25 compute hours/month 안에서 PR test와 main/release archive를 분리한다.
-- interactive pixel tuning은 Xcode Cloud만으로 완료할 수 없으므로 실제 또는 원격 Mac 세션이 필요하다.
+- GitHub-hosted `macos-15` TestFlight CD: 성공한 `main` iOS CI 또는 `main` manual dispatch만 `ios-testflight` App Store Connect API key로 archive/upload한다. PR과 iOS test job에는 이 secret을 넣지 않는다.
+- macOS/Xcode: SwiftUI preview, screenshot diff, interactive debugging. 첫 TestFlight 업로드에 Mac이 필요하지는 않다.
+- interactive pixel tuning은 GitHub archive lane만으로 완료할 수 없으므로 실제 또는 원격 Mac 세션이 필요하다.
 
 세부 trigger, environment secret, checksum, health와 rollback 계약은 `docs/CI_CD.md`가 소유한다. DNS, Nginx Proxy Manager와 monitoring 설정은 application CD가 만들거나 재시작하지 않는다.
 

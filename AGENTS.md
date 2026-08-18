@@ -55,7 +55,7 @@
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned URL
 - 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
 - 서버 CI/CD: GitHub-hosted Ubuntu test/package → pinned SSH Ubuntu Docker development deploy
-- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 unit+UI test/393x852 visual evidence → Apple Developer Program에 포함된 Xcode Cloud archive/TestFlight
+- iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 unit+UI test/393x852 visual evidence → 성공한 `main` iOS CI 이후 별도 `macos-15` runner의 `ios-testflight` workflow가 archive/TestFlight 업로드
 - CRITICAL: 표준 Workers는 Spring Boot runtime이 아니며 D1은 JPA datasource로 사용하지 않는다.
 - CRITICAL: Cloudflare Containers는 무료가 아니므로 월 최소 5 USD와 초과 과금 승인 전에는 활성화하거나 배포하지 않는다.
 - CRITICAL: 상시 Docker Compose PostgreSQL을 추가하지 않는다. 개발은 Neon dev, 운영은 Neon prod를 사용하며 테스트만 일회성 Testcontainers로 격리한다.
@@ -88,7 +88,7 @@
 - 최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple explicit App ID와 App Store Connect app record 생성은 별도 Apple activation 작업에서 수행하며 private key·certificate·2FA code를 저장소에 넣지 않는다.
 - GitHub workflow action은 full commit SHA로 고정하고 Dependabot PR로 갱신한다. workflow 기본 권한은 `contents: read`다.
 - `main` branch는 PR, linear history와 conversation resolution을 요구하고 force-push·delete를 금지한다. path-scoped CI를 required check로 지정하면 관련 없는 PR이 pending될 수 있으므로 항상 실행되는 gate를 설계하기 전에는 required status check를 추가하지 않는다.
-- public repository의 pull request CI와 server/iOS test job에는 Neon, SSH, R2, Tunnel, Apple secret을 주입하지 않는다. development CD는 성공한 `main` push의 checksum 검증 Docker image와 `server-development` environment만 사용한다.
+- public repository의 pull request CI와 server/iOS test job에는 Neon, SSH, R2, Tunnel, Apple runtime, App Store Connect 배포 secret을 주입하지 않는다. development CD는 성공한 `main` push의 checksum 검증 Docker image와 `server-development` environment만 사용한다. iOS TestFlight CD는 `ios-testflight` environment만 사용한다.
 - `deploy-development` job만 `server-development`의 Neon·SSH·Apple runtime secret과, `R2_ENABLED=true`일 때 R2 bucket-scoped secret을 Ubuntu `/opt/moneysnap/runtime.env`에 mode `600`으로 쓴다. `/opt/moneysnap/.env`는 Compose interpolation stub만 둔다. Tunnel secret은 이 CD에 넣지 않는다.
 - application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus/Grafana 설정을 생성·변경·재시작하지 않는다. infrastructure lifecycle은 별도 승인 작업이 소유한다.
 - public API는 application `/` smoke만 허용하고 management `9091`과 actuator는 Docker `main` network 안에만 둔다.

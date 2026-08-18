@@ -47,6 +47,8 @@ function Require-FullActionShaPins {
 
 $workflowPath = Require-File '.github/workflows/server-ci-cd.yml'
 $iosWorkflowPath = Require-File '.github/workflows/ios-ci.yml'
+$iosTestflightWorkflowPath = Require-File '.github/workflows/ios-testflight.yml'
+$iosTestflightExportScriptPath = Require-File 'ios/scripts/write-testflight-export-options.sh'
 $iosTestPath = Require-File 'ios/scripts/test.sh'
 $iosVisualPath = Require-File 'ios/scripts/capture-visual-baseline.sh'
 $dockerfilePath = Require-File 'server/Dockerfile'
@@ -146,9 +148,33 @@ if ([regex]::Matches($iosWorkflow, 'capture-visual-baseline\.sh').Count -ne 1) {
 }
 Require-Match $iosWorkflow 'if:\s*failure\(\)' 'failure-only diagnostics upload'
 Require-FullActionShaPins -Content $iosWorkflow -Description 'iOS workflow'
-if ($iosWorkflow -match 'secrets\.APPLE_|secrets\.NEON_|secrets\.SERVER_') {
-    throw 'iOS workflow must not receive server-development secrets'
+if ($iosWorkflow -match 'secrets\.APPLE_|secrets\.NEON_|secrets\.SERVER_|secrets\.APP_STORE_CONNECT_') {
+    throw 'iOS workflow must not receive server-development or TestFlight secrets'
 }
+
+$iosTestflight = Get-Content -LiteralPath $iosTestflightWorkflowPath -Raw
+if ($iosTestflight -match '(?m)^\s*pull_request:') {
+    throw 'iOS TestFlight workflow must not run on pull requests'
+}
+Require-Match -Content $iosTestflight -Pattern 'environment:\s*ios-testflight' -Description 'ios-testflight environment'
+Require-Match -Content $iosTestflight -Pattern 'workflow_dispatch:' -Description 'manual TestFlight dispatch'
+Require-Match -Content $iosTestflight -Pattern 'workflow_run:' -Description 'TestFlight waits for iOS CI'
+Require-Match -Content $iosTestflight -Pattern "github\.ref\s*==\s*'refs\/heads\/main'" -Description 'manual TestFlight is main-only'
+Require-Match -Content $iosTestflight -Pattern 'workflow_run\.event\s*==\s*''push''' -Description 'workflow_run TestFlight is push-only'
+Require-Match -Content $iosTestflight -Pattern 'workflow_run\.head_branch\s*==\s*''main''' -Description 'workflow_run TestFlight is main-only'
+Require-Match -Content $iosTestflight -Pattern 'missing required ios-testflight secret' -Description 'TestFlight required secret presence check'
+Require-Match -Content $iosTestflight -Pattern 'write-testflight-export-options\.sh' -Description 'TestFlight export options script'
+Require-Match -Content $iosTestflight -Pattern '-exportArchive' -Description 'xcodebuild exportArchive upload'
+Require-Match -Content $iosTestflight -Pattern '-authenticationKeyPath' -Description 'App Store Connect API key authentication'
+Require-FullActionShaPins -Content $iosTestflight -Description 'iOS TestFlight workflow'
+if ($iosTestflight -match 'secrets\.NEON_|secrets\.SERVER_|secrets\.R2_') {
+    throw 'iOS TestFlight workflow must not receive server Neon/SSH/R2 secrets'
+}
+
+$iosTestflightExport = Get-Content -LiteralPath $iosTestflightExportScriptPath -Raw
+Require-Match -Content $iosTestflightExport -Pattern 'app-store-connect' -Description 'export options App Store Connect method'
+Require-Match -Content $iosTestflightExport -Pattern 'teamID' -Description 'export options team id'
+Require-Match -Content $iosTestflightExport -Pattern '\[A-Z0-9\]\{10\}' -Description 'export options 10-character team id guard'
 
 $iosTest = Get-Content -LiteralPath $iosTestPath -Raw
 $unsignedNativeTestOverride = '(?i)\bCODE_SIGNING_ALLOWED\s*(?:=|:)\s*["'']?NO["'']?\b'

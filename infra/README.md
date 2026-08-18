@@ -13,6 +13,7 @@
 - `neon/`: Neon project, role, connection 계약
 - `cloudflare/`: private R2 dev/prod resource inventory와 DNS 역할
 - `ubuntu/`: Docker development origin, rollback과 Prometheus scrape 계약
+- `apple/`: Bundle ID, Sign in with Apple 서버 secret, GitHub `ios-testflight` archive 계약
 
 ## 비밀값 규칙
 
@@ -21,3 +22,4 @@
 - Spring runtime은 pooled endpoint의 `moneysnap_app` 역할을 사용한다.
 - Flyway, dump/restore와 admin 작업만 direct endpoint의 owner 역할을 사용한다.
 - development Neon과 Apple runtime 비밀값은 GitHub `server-development` environment에서 `deploy-development`에만 주입하고 Ubuntu origin의 mode `600` secret file로 옮긴다. pull request CI, 로그와 artifact에는 출력하지 않는다.
+- iOS TestFlight App Store Connect API key는 GitHub `ios-testflight` environment에만 두고 PR·iOS test job·`server-development`에 넣지 않는다.

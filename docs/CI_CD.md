@@ -1,6 +1,6 @@
 # Money Snap CI/CD 운영 계약
 
-> 상태: Ubuntu development CD active, Apple runtime secret은 `server-development` environment로만 주입
+> 상태: Ubuntu development CD active, Apple runtime secret은 `server-development` environment로만 주입, iOS TestFlight는 `ios-testflight` environment
 >
 > 기준일: 2026-08-17
 
@@ -11,7 +11,7 @@
 | server CI | GitHub-hosted `ubuntu-latest` | server·API contract 관련 pull request, `main` push, manual | Java 21 test, production JAR, immutable Docker image와 SHA-256 archive |
 | server development CD | GitHub-hosted `ubuntu-latest` → SSH Ubuntu Docker host | server CI가 성공한 `main` push만 | checksum 검증, `9090` origin 교체, container health gate, 실패 시 이전 image rollback |
 | iOS CI | GitHub-hosted `macos-15` | iOS·contract pull request, `main` push, manual | Simulator ad-hoc signed unit+UI test, unsigned build-once 393x852 visual evidence, 실패 `.xcresult` |
-| iOS CD | Xcode Cloud | Apple workflow에서 승인한 branch/release condition | Apple-managed signing, archive, internal TestFlight |
+| iOS TestFlight CD | GitHub-hosted `macos-15` | 성공한 `main` iOS CI **push** 또는 `main` manual | App Store Connect API key로 archive 후 internal TestFlight 업로드 |
 | DNS/NPM·모니터링 | 승인된 infrastructure 작업 | hostname, proxy 또는 scrape 설정 변경 | Cloudflare DNS, Nginx Proxy Manager, Prometheus·Grafana |
 
 Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만들거나 변경하지 않는다. 이 리소스는 application image rollback과 독립된 infrastructure lifecycle로 운영한다.
@@ -93,11 +93,29 @@ gh secret set APPLE_PRIVATE_KEY_P8 --env server-development < AuthKey_<KEY_ID>.p
 
 Repository는 public이며 Secret Scanning과 Push Protection을 활성화한다. `main`은 PR, linear history와 conversation resolution을 요구하고 force-push·delete를 금지한다. 대화나 로그에 노출된 deployment credential은 회전하고, 장기적으로 root 대신 최소 권한 deploy account로 축소한다.
 
-## iOS CI와 Xcode Cloud
+Environment `ios-testflight`는 `main` 전용 branch policy를 유지하고 다음 secret만 보유한다. `server-development`와 섞지 않는다.
+
+- `APPLE_TEAM_ID`
+- `APP_STORE_CONNECT_ISSUER_ID`
+- `APP_STORE_CONNECT_KEY_ID`
+- `APP_STORE_CONNECT_API_KEY_P8`
+
+값은 대화·Git에 붙이지 않는다. API key는 App Store Connect → Users and Access → Integrations의 **Team** key여야 한다. Individual/app-scoped key는 `-allowProvisioningUpdates`에 쓸 수 없다. key에는 Certificates, Identifiers & Profiles 접근과 cloud-managed Apple Distribution signing 권한이 있어야 한다. Admin 또는 App Manager 역할만으로는 부족하다.
+
+```text
+gh secret set APPLE_TEAM_ID --env ios-testflight
+gh secret set APP_STORE_CONNECT_ISSUER_ID --env ios-testflight
+gh secret set APP_STORE_CONNECT_KEY_ID --env ios-testflight
+gh secret set APP_STORE_CONNECT_API_KEY_P8 --env ios-testflight < AuthKey_<KEY_ID>.p8
+```
+
+## iOS CI와 TestFlight CD
 
 GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple 개발 credential·provisioning 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 Xcode 기본 ad-hoc 서명으로 `bash ios/scripts/test.sh`의 unit test와 non-parallel UI test를 실행한다. Keychain을 쓰지 않는 unsigned app을 한 번 build/install하고 manifest 순서의 Figma Home `9:2`, My `77:798`를 393x852로 캡처한다. 각 app/reference/overlay/diff/report는 한 화면이 threshold를 넘더라도 모두 생성한 뒤 실패를 집계하며 7일 보관한다.
 
-TestFlight CD는 Xcode Cloud가 소유한다. 최초 Mac/Xcode activation 때 pull request test workflow와 main internal TestFlight workflow를 만든다. Bundle ID는 `com.ansandy.moneysnap`이다. App Store Connect API key와 signing certificate는 GitHub `server-development`에 넣지 않는다. Sign in with Apple runtime `.p8`만 서버 CD secret이다.
+TestFlight CD는 `.github/workflows/ios-testflight.yml`이 소유한다. 성공한 `main` **push** iOS CI 또는 `main`의 `workflow_dispatch`에서만 실행하고 `ios-testflight` environment secret만 사용한다. PR에서 성공한 iOS CI는 TestFlight를 시작하지 않는다. PR과 `ios-ci.yml`에는 App Store Connect API key를 넣지 않는다. Bundle ID는 `com.ansandy.moneysnap`이다. Sign in with Apple runtime `.p8`은 서버 `server-development` secret이며 TestFlight 업로드 키와 분리한다. 레포는 분리하지 않는다.
+
+첫 업로드는 secret 등록 뒤 Actions에서 `iOS TestFlight` workflow를 `main`에 `workflow_dispatch`한다. 업로드 후 App Store Connect에서 Internal Tester를 넣고 아이폰 TestFlight에서 설치한다.
 
 ## 현재 활성화 상태
 
@@ -113,6 +131,6 @@ TestFlight CD는 Xcode Cloud가 소유한다. 최초 Mac/Xcode activation 때 pu
 | Secret Scanning / Push Protection | enabled / enabled |
 | GitHub remote workflow | 변경 push 후 `main` deployment 검증 필요 |
 | iOS GitHub native/visual CI | 활성화 |
-| Xcode Cloud/TestFlight | Apple gate와 Mac/Xcode activation 대기 |
+| iOS TestFlight GitHub CD | environment·`main` policy 생성. secret 등록 후 첫 업로드 |
 
 이전 Windows self-hosted/named Tunnel 조사는 `docs/CI_CD_RESEARCH.md`에 역사적 근거로 남기되 현재 실행 계약으로 사용하지 않는다.

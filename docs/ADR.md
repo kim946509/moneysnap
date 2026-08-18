@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-> 기준일: 2026-08-13
+> 기준일: 2026-08-17
 
 ## 철학
 
@@ -17,7 +17,7 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 | ADR-005 | accepted | Windows 개발과 macOS iOS 검증 lane 분리 |
 | ADR-006 | rejected | D1을 Spring Boot 주 데이터베이스로 사용하지 않음 |
 | ADR-007 | accepted | 개발·운영 PostgreSQL은 분리된 Neon Free 프로젝트 사용 |
-| ADR-008 | accepted | 서버는 GitHub Actions CI/CD, iOS는 GitHub Simulator CI와 Xcode Cloud CD 사용 |
+| ADR-008 | accepted | 서버는 GitHub Actions CI/CD, iOS는 GitHub Simulator CI와 GitHub-hosted TestFlight CD 사용 |
 | ADR-009 | accepted | Bundle ID와 iOS visual verification toolchain 고정 |
 | ADR-010 | accepted | Sign in with Apple 단독 인증과 서버 소유 장기 session |
 | ADR-011 | accepted | 기록 리마인더와 원격 알림은 MVP에서 제외 |
@@ -59,11 +59,11 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-005: Windows authoring과 macOS verification 분리
 
-**결정**: Windows는 Spring Boot 전체 개발, Swift·Xcode 프로젝트 파일 작성과 Git 작업에 사용한다. Xcode 실행, iOS SDK build, Simulator, SwiftUI preview, signing, archive, TestFlight/App Store upload, pixel verification은 macOS lane에서 수행한다. Apple Developer Program에 포함된 Xcode Cloud 월 25시간을 CI 기본 후보로 사용하되 첫 workflow와 interactive 조정에는 Mac/Xcode 접근이 필요하다.
+**결정**: Windows는 Spring Boot 전체 개발, Swift·Xcode 프로젝트 파일 작성과 Git 작업에 사용한다. Xcode 실행, iOS SDK build, Simulator, SwiftUI preview, signing, archive, TestFlight/App Store upload, pixel verification은 macOS lane에서 수행한다. Simulator CI와 첫 TestFlight archive는 GitHub-hosted `macos-15`가 소유한다. interactive pixel tuning과 로컬 device Run만 실제 Mac/Xcode가 필요하다.
 
-**이유**: Apple이 배포하는 Xcode toolchain은 지원 macOS를 요구한다. 유료 Apple Developer 계정은 배포 권한과 Xcode Cloud quota를 제공하지만 Windows에 Xcode runtime을 제공하지 않는다.
+**이유**: Apple이 배포하는 Xcode toolchain은 지원 macOS를 요구한다. 유료 Apple Developer 계정은 배포 권한을 제공하지만 Windows에 Xcode runtime을 제공하지 않는다. GitHub-hosted macOS는 Windows-only 개발자가 레포를 나누지 않고 archive/upload를 돌릴 수 있다.
 
-**트레이드오프**: Mac 접근이 확보되기 전까지 iOS 결과를 완료로 판정할 수 없다. Xcode Cloud는 자동 build/test/archive에는 적합하지만 interactive pixel tuning을 대체하지 않는다.
+**트레이드오프**: Mac 없이 첫 TestFlight 업로드는 가능하지만, Figma pixel tuning과 Xcode UI 디버깅은 원격 또는 실제 Mac이 필요하다.
 
 ## ADR-006: D1을 Spring Boot 주 DB에서 제외
 
@@ -81,13 +81,13 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 **트레이드오프**: 인터넷이 없으면 통합 개발 DB를 사용할 수 없고, Free는 project당 storage 0.5GB와 월 100 CU-hour·5GB public transfer 한도 및 SLA 부재가 있다. 한도 도달 시 compute가 월말까지 중단될 수 있다. 생성 도구가 region 선택을 지원하지 않아 dev는 AWS us-east-1, prod는 AWS us-west-2에 생성됐으며 공개 출시 전 한국 사용자·origin 기준 latency와 data migration을 재평가한다.
 
-## ADR-008: GitHub Actions와 Xcode Cloud CI/CD 분리
+## ADR-008: GitHub Actions 서버 CD와 iOS TestFlight CD 분리
 
-**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 Apple 개발 credential·provisioning 없이 실행하되 Simulator app·test host는 Keychain entitlement를 위해 Xcode 기본 ad-hoc(`Sign to Run Locally`) 서명을 사용한다. archive·배포 signing·internal TestFlight CD는 Xcode Cloud가 소유한다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
+**결정**: Spring Boot의 test·JAR·Docker image packaging과 development deployment orchestration은 GitHub-hosted Ubuntu에서 수행한다. 성공한 `main` image artifact만 pinned SSH host key로 개발자 소유 Ubuntu Docker origin에 전송한다. iOS pull request native test는 path-scoped GitHub-hosted `macos-15`에서 Apple 개발 credential·provisioning 없이 실행하되 Simulator app·test host는 Keychain entitlement를 위해 Xcode 기본 ad-hoc(`Sign to Run Locally`) 서명을 사용한다. archive·internal TestFlight 업로드는 같은 GitHub-hosted `macos-15`의 `ios-testflight` environment가 소유한다. App Store Connect API key는 PR/iOS test job과 `server-development`에 넣지 않는다. DNS/Nginx Proxy Manager와 monitoring lifecycle은 application release workflow와 분리한다.
 
 모든 GitHub Action reference는 전체 commit SHA로 고정하고 Dependabot이 갱신한다. workflow 기본 권한은 `contents: read`다. server secret은 `server-development` environment를 통과한 `main` deployment job과 Ubuntu mode `600` runtime file에만 존재하며 pull request CI나 artifact에는 전달하지 않는다.
 
-**이유**: public repository에서 persistent self-hosted runner를 제거하면 PR 또는 workflow 변경이 장기 실행 host를 침해할 면적이 줄어든다. GitHub-hosted runner가 매 run 격리된 환경에서 image를 만들고, pinned SSH identity와 checksum으로 배포 경계를 고정한다. iOS는 GitHub macOS runner와 Apple-managed Xcode Cloud가 각각 PR feedback과 signing surface를 담당한다.
+**이유**: public repository에서 persistent self-hosted runner를 제거하면 PR 또는 workflow 변경이 장기 실행 host를 침해할 면적이 줄어든다. GitHub-hosted runner가 매 run 격리된 환경에서 image를 만들고, pinned SSH identity와 checksum으로 배포 경계를 고정한다. iOS는 같은 GitHub macOS runner가 PR Simulator feedback과 `ios-testflight` archive를 담당하므로 레포를 나누거나 첫 Xcode Cloud workflow용 Mac이 필요하지 않다.
 
 **트레이드오프**: GitHub-hosted deployment job이 Ubuntu SSH private key를 일시적으로 사용하므로 environment branch policy, pinned known_hosts, secret scanning과 key rotation이 필수다. 현재 activation은 사용자 제공 root key를 사용했으므로 최소 권한 deploy account로 축소하는 hardening 작업이 남는다. 자동 image rollback과 양방향 DB migration을 결합하지 않으며 schema는 expand-first 호환성을 별도 AC로 요구한다.
 

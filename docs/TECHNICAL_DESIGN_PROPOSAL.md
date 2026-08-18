@@ -15,7 +15,7 @@
 - 데이터: Neon PostgreSQL 18 dev/prod 분리, Flyway, Spring Data JPA
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, exact-bound presigned PUT 또는 bounded backend upload fallback, short-lived presigned GET
 - 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
-- iOS CI: Apple Developer Program에 포함된 Xcode Cloud 월 25시간, 단 최초 workflow와 화면 조정에는 Mac/Xcode 필요
+- iOS CI/CD: GitHub-hosted `macos-15` Simulator test와 별도 `macos-15` runner에서 수행되는 `ios-testflight` archive. 화면 조정에만 Mac/Xcode 필요
 - 디자인 검증: Figma frame node별 393x852 reference와 SwiftUI snapshot overlay/diff
 
 표준 Cloudflare Workers에는 JVM이 없고 Cloudflare Containers는 Workers Paid 전용이라 월 최소 5 USD다. 현재는 이미 운영 중인 Ubuntu Docker/Nginx Proxy Manager를 재사용해 추가 cloud compute 비용 없이 시작한다. 공개 출시 단계에서는 Cloudflare Tunnel, Containers 또는 managed JVM origin을 다시 비교한다.
@@ -95,11 +95,8 @@ Windows에서도 repository, Swift source, asset, `.xcodeproj` 관련 파일을 
 권장 lane은 다음과 같다.
 
 - Windows: 일상적인 Swift·Java authoring, Gradle test, contract와 asset 작업
-- Mac/Xcode 1회: scheme, signing, App Store Connect app record, 첫 Xcode Cloud workflow 구성
-- Xcode Cloud: push 기반 build, unit/UI test, archive와 TestFlight 전달
-- interactive Mac: Figma pixel tuning, Simulator·실기기 동작 확인
-
-Apple Developer 계정 결제가 되어 있으므로 Xcode Cloud 월 25시간은 추가 비용 없이 쓸 수 있다. 빠른 unit workflow는 pull request, 전체 screenshot/XCUITest와 archive는 main 또는 수동 release에만 실행해 quota를 보호한다.
+- GitHub-hosted `macos-15`: Simulator unit+UI test, visual evidence, `ios-testflight` archive/upload
+- interactive Mac: Figma pixel tuning, Simulator·실기기 디버깅. 첫 TestFlight 업로드에 Mac이 필요하지는 않다.
 
 ## TDD와 검증
 
@@ -117,11 +114,11 @@ Apple Developer 계정 결제가 되어 있으므로 Xcode Cloud 월 25시간은
 
 ### Phase 0 — 실행 기반
 
-1. Mac/Xcode 접근 경로와 첫 Xcode Cloud workflow 방법 확정
+1. **완료**: GitHub-hosted iOS Simulator CI. TestFlight는 같은 레포의 `ios-testflight` environment
 2. **완료**: monorepo directory, OpenAPI skeleton, Spring Boot, PostgreSQL Testcontainers, iOS project scaffold
-3. **부분 완료**: backend build/test와 Windows iOS 정적 검증을 `AGENTS.md`에 기록; macOS native build/test는 대기
+3. **부분 완료**: backend build/test와 Windows iOS 정적 검증을 `AGENTS.md`에 기록; macOS native build/test는 GitHub-hosted
 4. **완료**: 최초 `code-review-graph` full build와 change detection
-5. **repository 준비 완료**: server GitHub Actions CI/CD, iOS GitHub Simulator CI와 Xcode Cloud hook. remote workflow run, Windows runner/environment secret, Xcode Cloud activation은 외부 gate 대기
+5. **repository 준비 완료**: server GitHub Actions CI/CD, iOS GitHub Simulator CI. TestFlight secret 등록과 첫 `workflow_dispatch`는 외부 gate
 
 ### Phase 1 — 개인 Snap vertical slice
 
@@ -150,7 +147,7 @@ Apple Developer 계정 결제가 되어 있으므로 Xcode Cloud 월 25시간은
 
 1. Ubuntu Docker Spring Boot와 기존 private R2, Neon backup·restore 절차를 검증
 2. Docker restart policy·Nginx Proxy Manager·Prometheus/Grafana recovery와 external health 확인
-3. Xcode Cloud archive와 TestFlight closed cohort
+3. GitHub-hosted `ios-testflight` archive와 TestFlight closed cohort
 4. 성능, 장애, R2/DB 사용량을 4~8주 관찰
 
 ### Phase 5 — public readiness gate
