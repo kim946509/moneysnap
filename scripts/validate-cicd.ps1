@@ -160,6 +160,7 @@ Require-Match -Content $iosTestflight -Pattern 'environment:\s*ios-testflight' -
 Require-Match -Content $iosTestflight -Pattern 'workflow_dispatch:' -Description 'manual TestFlight dispatch'
 Require-Match -Content $iosTestflight -Pattern 'workflow_run:' -Description 'TestFlight waits for iOS CI'
 Require-Match -Content $iosTestflight -Pattern "github\.ref\s*==\s*'refs\/heads\/main'" -Description 'manual TestFlight is main-only'
+Require-Match -Content $iosTestflight -Pattern 'workflow_run\.event\s*==\s*''push''' -Description 'workflow_run TestFlight is push-only'
 Require-Match -Content $iosTestflight -Pattern 'workflow_run\.head_branch\s*==\s*''main''' -Description 'workflow_run TestFlight is main-only'
 Require-Match -Content $iosTestflight -Pattern 'missing required ios-testflight secret' -Description 'TestFlight required secret presence check'
 Require-Match -Content $iosTestflight -Pattern 'write-testflight-export-options\.sh' -Description 'TestFlight export options script'

@@ -15,7 +15,7 @@
 - 데이터: Neon PostgreSQL 18 dev/prod 분리, Flyway, Spring Data JPA
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, exact-bound presigned PUT 또는 bounded backend upload fallback, short-lived presigned GET
 - 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
-- iOS CI/CD: GitHub-hosted `macos-15` Simulator test와 같은 runner의 `ios-testflight` archive. 화면 조정에만 Mac/Xcode 필요
+- iOS CI/CD: GitHub-hosted `macos-15` Simulator test와 별도 `macos-15` runner에서 수행되는 `ios-testflight` archive. 화면 조정에만 Mac/Xcode 필요
 - 디자인 검증: Figma frame node별 393x852 reference와 SwiftUI snapshot overlay/diff
 
 표준 Cloudflare Workers에는 JVM이 없고 Cloudflare Containers는 Workers Paid 전용이라 월 최소 5 USD다. 현재는 이미 운영 중인 Ubuntu Docker/Nginx Proxy Manager를 재사용해 추가 cloud compute 비용 없이 시작한다. 공개 출시 단계에서는 Cloudflare Tunnel, Containers 또는 managed JVM origin을 다시 비교한다.

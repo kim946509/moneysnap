@@ -32,7 +32,7 @@ gh secret set APP_STORE_CONNECT_KEY_ID --env ios-testflight
 gh secret set APP_STORE_CONNECT_API_KEY_P8 --env ios-testflight
 ```
 
-`.p8`은 대화에 붙이지 않는다. API key 역할은 Admin 또는 App Manager여야 automatic signing이 Distribution 인증서를 만들 수 있다. 업로드 후 App Store Connect에서 본인 Apple ID를 Internal Tester로 넣고 아이폰 TestFlight에서 설치한다.
+`.p8`은 대화에 붙이지 않는다. API key는 Team key여야 하며 Certificates, Identifiers & Profiles 접근과 cloud-managed Apple Distribution signing이 필요하다. Individual/app-scoped key와 Admin/App Manager 역할만으로는 `-allowProvisioningUpdates`가 실패한다. 업로드 후 App Store Connect에서 본인 Apple ID를 Internal Tester로 넣고 아이폰 TestFlight에서 설치한다.
 
 ## iOS project와 TestFlight
 
@@ -54,7 +54,7 @@ GitHub Actions iOS CI와 pull request job에는 Apple certificate, provisioning 
 
 ## 자동화 credential
 
-TestFlight CD는 App Store Connect API key가 필요하다. private key는 한 번만 다운로드할 수 있으므로 repository·log·artifact·대화에 남기지 않고 `ios-testflight` environment에만 넣는다. 가능한 최소 역할과 Money Snap app 범위를 사용한다. Sign in with Apple 서버 `.p8`과 같은 파일을 재사용하지 않는다.
+TestFlight CD는 App Store Connect **Team** API key가 필요하다. Team key는 팀의 모든 앱에 적용된다. Individual/app-scoped key는 provisioning에 사용할 수 없다. private key는 한 번만 다운로드할 수 있으므로 repository·log·artifact·대화에 남기지 않고 `ios-testflight` environment에만 넣는다. Sign in with Apple 서버 `.p8`과 같은 파일을 재사용하지 않는다.
 
 Spring Boot runtime Apple 값은 GitHub `server-development` environment secret으로만 보관하고, `main` development CD가 `/opt/moneysnap/runtime.env`에 쓴다. pull request CI와 iOS workflow에는 주입하지 않는다.
 
