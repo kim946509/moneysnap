@@ -72,7 +72,10 @@ final class MoneySnapUITests: XCTestCase {
         let categoryScreen = element("screen.record.category", in: app)
         XCTAssertTrue(categoryScreen.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
-        dismissFullScreenSheet(in: app)
+        categoryScreen.swipeDown()
+        if categoryScreen.waitForExistence(timeout: 1) {
+            dismissFullScreenSheet(in: app)
+        }
         XCTAssertTrue(categoryScreen.waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.buttons["home.record"].waitForExistence(timeout: 5))
 

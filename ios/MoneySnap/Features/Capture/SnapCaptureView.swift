@@ -31,6 +31,7 @@ struct SnapCaptureView: View {
         }
         .presentationDetents(detents)
         .presentationDragIndicator(model.layout == .staged ? .hidden : .visible)
+        .presentationContentInteraction(model.layout == .combined ? .resizes : .automatic)
         .onAppear { voiceOverFocus = model.focusTarget }
         .onChange(of: model.focusTarget) { _, focusTarget in
             voiceOverFocus = focusTarget
