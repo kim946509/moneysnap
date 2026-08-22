@@ -42,6 +42,7 @@ class TodaySnapRulesTests {
                 "food",
                 amountWon,
                 localDay,
-                Instant.parse("2026-08-13T15:30:00Z"));
+                Instant.parse("2026-08-13T15:30:00Z"),
+                null);
     }
 }

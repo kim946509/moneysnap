@@ -58,6 +58,27 @@ struct TodaySnapViewModelTests {
     }
 
     @Test
+    func placeholderCanvasSizeStillScalesByAmount() throws {
+        let larger = TodaySnapEntry(
+            id: UUID(),
+            category: .living,
+            amount: try KrwAmount(18_900)
+        )
+        let smaller = TodaySnapEntry(
+            id: UUID(),
+            category: .transportation,
+            amount: try KrwAmount(2_800)
+        )
+        let largest = TodayCanvasLayout.imageSize(for: larger, maximumAmount: larger.amount)
+        let reduced = TodayCanvasLayout.imageSize(for: smaller, maximumAmount: larger.amount)
+
+        #expect(largest == CGSize(width: 144, height: 144))
+        #expect(reduced.width == 104)
+        #expect(reduced.height == 104)
+        #expect(reduced.width < largest.width)
+    }
+
+    @Test
     func loadsTheFigmaHomeFixtureThroughTheJournalClient() async {
         let viewModel = TodaySnapViewModel(client: VisualTestSupport.snapJournalClient)
 
@@ -171,13 +192,64 @@ struct TodaySnapViewModelTests {
     }
 
     @Test
-    func emptyCanonicalTodayShowsEmptyState() async {
+    func emptyCanonicalTodayShowsZeroTotalCanvas() async {
         let viewModel = TodaySnapViewModel(client: EmptySnapJournalClient())
 
         await viewModel.load()
 
-        #expect(viewModel.state == .empty(SnapDay(year: 2026, month: 8, day: 14, weekday: .friday)))
+        guard case let .content(summary) = viewModel.state else {
+            Issue.record("Expected an empty Home canvas with a zero total")
+            return
+        }
+        #expect(summary.day == SnapDay(year: 2026, month: 8, day: 14, weekday: .friday))
+        #expect(summary.entries.isEmpty)
+        #expect(summary.totalAmount == 0)
         #expect(!viewModel.refreshFailure)
+    }
+
+    @Test
+    func applyKeepsLocalJpegOnTheSessionHomeCanvas() async {
+        let viewModel = TodaySnapViewModel(client: EmptySnapJournalClient())
+        await viewModel.load()
+        let jpeg = Data([0xFF, 0xD8, 0xFF, 0x01])
+
+        #expect(viewModel.apply(
+            SnapRecordReceipt(
+                id: UUID(uuidString: "22222222-2222-4222-8222-222222222222")!,
+                category: .food,
+                amountWon: 18_900,
+                localDay: "2026-08-14",
+                createdAt: Date(timeIntervalSince1970: 1_786_582_800),
+                imageRef: UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+            ),
+            previewJPEG: jpeg
+        ))
+
+        guard case let .content(summary) = viewModel.state else {
+            Issue.record("Expected Home content after applying a photographed Snap")
+            return
+        }
+        #expect(summary.featuredEntries.first?.previewJPEG == jpeg)
+        #expect(summary.featuredEntries.first?.artwork == nil)
+    }
+
+    @Test
+    func hydratesTodayPhotosThroughTheMediaClient() async {
+        let imageRef = UUID(uuidString: "018f1e2d-cccc-7abc-8def-0123456789ab")!
+        let jpeg = Data([0xFF, 0xD8, 0xFF, 0x02])
+        let viewModel = TodaySnapViewModel(
+            client: PhotoTodayClient(imageRef: imageRef),
+            media: StubMediaClient(jpeg: jpeg)
+        )
+
+        await viewModel.load()
+
+        guard case let .content(summary) = viewModel.state else {
+            Issue.record("Expected hydrated Home content")
+            return
+        }
+        #expect(summary.entries.first?.imageRef == imageRef)
+        #expect(summary.entries.first?.previewJPEG == jpeg)
     }
 
     @Test
@@ -318,6 +390,44 @@ private actor RecordingTodayClient: SnapJournalClient {
 
     func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
         throw FixtureError.unavailable
+    }
+}
+
+private struct PhotoTodayClient: SnapJournalClient {
+    let imageRef: UUID
+
+    func fetchToday() async throws -> TodaySnapSummary {
+        try TodaySnapSummary(
+            day: SnapDay(year: 2026, month: 8, day: 14, weekday: .friday),
+            entries: [
+                TodaySnapEntry(
+                    id: UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!,
+                    category: .food,
+                    amount: try KrwAmount(100),
+                    imageRef: imageRef
+                )
+            ],
+            featuredEntryIDs: [UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!],
+            recentEntryIDs: [UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!]
+        )
+    }
+
+    func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        throw FixtureError.unavailable
+    }
+}
+
+private struct StubMediaClient: MediaClient {
+    let jpeg: Data
+
+    func publish(_ jpeg: NormalizedJpeg) async throws -> UUID {
+        _ = jpeg
+        throw FixtureError.unavailable
+    }
+
+    func fetchJPEG(_ imageRef: UUID) async throws -> Data {
+        _ = imageRef
+        return jpeg
     }
 }
 

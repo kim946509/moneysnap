@@ -1155,6 +1155,10 @@ components:
         createdAt:
           type: string
           format: date-time
+        imageRef:
+          type: string
+          format: uuid
+          description: Present only when the personal Snap has a linked JPEG.
     TodaySnapResponse:
       type: object
       additionalProperties: false
@@ -1209,6 +1213,10 @@ components:
         version:
           type: integer
           minimum: 1
+        imageRef:
+          type: string
+          format: uuid
+          description: Present only when the personal Snap has a linked JPEG.
     SnapReviseRequest:
       type: object
       additionalProperties: false

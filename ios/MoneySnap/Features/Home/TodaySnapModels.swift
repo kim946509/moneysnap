@@ -112,6 +112,24 @@ struct TodaySnapEntry: Identifiable, Equatable, Sendable {
     let category: SnapCategory
     let amount: KrwAmount
     let artwork: SnapArtwork?
+    let imageRef: UUID?
+    let previewJPEG: Data?
+
+    init(
+        id: UUID,
+        category: SnapCategory,
+        amount: KrwAmount,
+        artwork: SnapArtwork? = nil,
+        imageRef: UUID? = nil,
+        previewJPEG: Data? = nil
+    ) {
+        self.id = id
+        self.category = category
+        self.amount = amount
+        self.artwork = artwork
+        self.imageRef = imageRef
+        self.previewJPEG = previewJPEG
+    }
 }
 
 struct TodaySnapSummary: Equatable, Sendable {

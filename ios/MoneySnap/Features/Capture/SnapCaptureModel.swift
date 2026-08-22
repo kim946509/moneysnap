@@ -4,10 +4,16 @@ import Observation
 @MainActor
 @Observable
 final class SnapCaptureModel {
+    enum Layout: Equatable, Sendable {
+        case staged
+        case combined
+    }
+
     enum Phase: Equatable, Sendable {
         case source
         case category
         case amount
+        case details
     }
 
     enum FocusTarget: Hashable, Sendable {
@@ -17,6 +23,7 @@ final class SnapCaptureModel {
         case retryAction
     }
 
+    private(set) var layout: Layout
     private(set) var phase: Phase
     let photoQueue = PhotoQueueModel()
     private(set) var selectedCategory: SnapCategory?
@@ -27,6 +34,8 @@ final class SnapCaptureModel {
     private var digits = ""
     private var frozenCommand: SnapRecordCommand?
     private var succeeded = false
+    private var publishTask: Task<UUID, Error>?
+    private let allowsPhotos: Bool
     private let record: @Sendable (SnapRecordCommand) async throws -> SnapRecordReceipt
     private let publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)?
     private let now: @Sendable () -> Date
@@ -39,6 +48,7 @@ final class SnapCaptureModel {
         timeZone: @escaping @Sendable () -> TimeZone = { .current },
         mutationID: @escaping @Sendable () -> UUID = UUID.init,
         allowsPhotos: Bool = false,
+        layout: Layout = .combined,
         publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)? = nil
     ) {
         self.record = record
@@ -46,8 +56,18 @@ final class SnapCaptureModel {
         self.now = now
         self.timeZone = timeZone
         self.mutationID = mutationID
-        self.phase = allowsPhotos ? .source : .category
-        self.focusTarget = allowsPhotos ? .sourceHeader : .categoryHeader
+        self.allowsPhotos = allowsPhotos
+        self.layout = layout
+        if allowsPhotos {
+            self.phase = .source
+            self.focusTarget = .sourceHeader
+        } else if layout == .combined {
+            self.phase = .details
+            self.focusTarget = .categoryHeader
+        } else {
+            self.phase = .category
+            self.focusTarget = .categoryHeader
+        }
     }
 
     var amountText: String {
@@ -57,6 +77,7 @@ final class SnapCaptureModel {
 
     var canSubmit: Bool {
         guard !isSubmitting, !succeeded, failure == nil || failure?.isRetryable == true,
+              selectedCategory != nil,
               let amount = Int64(digits) else { return false }
         return (1...999_999_999).contains(amount)
             && Self.serverTimeZoneIdentifier(timeZone(), at: now()) != nil
@@ -73,8 +94,8 @@ final class SnapCaptureModel {
     var accessibilityAnnouncement: String {
         switch focusTarget {
         case .sourceHeader: "사진 선택 단계"
-        case .categoryHeader: "카테고리 선택 단계"
-        case .amountHeader: "금액 입력 단계"
+        case .categoryHeader: layout == .combined ? "카테고리와 금액 입력" : "카테고리 선택 단계"
+        case .amountHeader: layout == .combined ? "카테고리와 금액 입력" : "금액 입력 단계"
         case .retryAction: "저장 결과를 확인하지 못했습니다"
         }
     }
@@ -82,14 +103,17 @@ final class SnapCaptureModel {
     func select(_ category: SnapCategory) {
         guard !isSubmitting, frozenCommand == nil else { return }
         selectedCategory = category
-        phase = .amount
-        focusTarget = .amountHeader
+        if layout == .staged {
+            phase = .amount
+            focusTarget = .amountHeader
+        } else {
+            focusTarget = .amountHeader
+        }
     }
 
     func skipPhotos() {
         guard !isSubmitting, frozenCommand == nil else { return }
-        phase = .category
-        focusTarget = .categoryHeader
+        enterDetails()
     }
 
     func prepareNextPhoto() {
@@ -97,19 +121,26 @@ final class SnapCaptureModel {
         frozenCommand = nil
         succeeded = false
         failure = nil
-        phase = .category
-        focusTarget = .categoryHeader
+        publishTask = nil
+        startPrefetch()
+        enterDetails()
     }
 
     func attach(_ photos: [NormalizedJpeg]) {
         guard !isSubmitting, frozenCommand == nil else { return }
         photoQueue.enqueue(photos)
-        phase = .category
-        focusTarget = .categoryHeader
+        startPrefetch()
+        enterDetails()
     }
 
     func goBack() {
         guard !isSubmitting, frozenCommand == nil else { return }
+        if layout == .combined {
+            guard allowsPhotos else { return }
+            phase = .source
+            focusTarget = .sourceHeader
+            return
+        }
         phase = .category
         focusTarget = .categoryHeader
     }
@@ -146,11 +177,7 @@ final class SnapCaptureModel {
             failure = nil
             let imageRef: UUID?
             do {
-                if let currentPhoto = photoQueue.current, let publishPhoto {
-                    imageRef = try await publishPhoto(currentPhoto)
-                } else {
-                    imageRef = nil
-                }
+                imageRef = try await resolvedImageRef()
             } catch let error as SnapRecordError {
                 isSubmitting = false
                 failure = error
@@ -197,6 +224,37 @@ final class SnapCaptureModel {
             focusTarget = .retryAction
             return nil
         }
+    }
+
+    private func enterDetails() {
+        if layout == .combined {
+            phase = .details
+        } else {
+            phase = .category
+        }
+        focusTarget = .categoryHeader
+    }
+
+    private func startPrefetch() {
+        guard publishTask == nil, let currentPhoto = photoQueue.current, let publishPhoto else { return }
+        publishTask = Task {
+            try await publishPhoto(currentPhoto)
+        }
+    }
+
+    private func resolvedImageRef() async throws -> UUID? {
+        if let publishTask {
+            do {
+                return try await publishTask.value
+            } catch {
+                self.publishTask = nil
+                throw error
+            }
+        }
+        guard let currentPhoto = photoQueue.current, let publishPhoto else { return nil }
+        let task = Task { try await publishPhoto(currentPhoto) }
+        publishTask = task
+        return try await task.value
     }
 
     private static func serverTimeZoneIdentifier(_ zone: TimeZone, at date: Date) -> String? {

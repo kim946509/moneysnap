@@ -22,7 +22,7 @@ struct AppShellView: View {
         initialCaptureModel: SnapCaptureModel? = nil
     ) {
         _selectedTab = selectedTab
-        _todayViewModel = State(initialValue: TodaySnapViewModel(client: snapJournalClient))
+        _todayViewModel = State(initialValue: TodaySnapViewModel(client: snapJournalClient, media: mediaClient))
         _presentedSheet = State(initialValue: initialCaptureModel == nil ? nil : .record)
         self.authentication = authentication
         self.snapJournalClient = snapJournalClient
@@ -41,7 +41,11 @@ struct AppShellView: View {
                                 switch route {
                                 case let .snapDetail(id):
                                     SnapDetailView(
-                                        model: SnapDetailModel(snapID: id, client: snapJournalClient),
+                                        model: SnapDetailModel(
+                                            snapID: id,
+                                            client: snapJournalClient,
+                                            media: mediaClient
+                                        ),
                                         onChanged: { detail in
                                             todayViewModel.replace(detail)
                                         },
@@ -87,7 +91,7 @@ struct AppShellView: View {
             case .record:
                 SnapCaptureView(
                     model: initialCaptureModel ?? makeCaptureModel(),
-                    onSaved: apply
+                    onSaved: { receipt, jpeg in apply(receipt, previewJPEG: jpeg) }
                 )
             case let .share(receipt):
                 ShareAfterSaveView(
@@ -139,7 +143,8 @@ struct AppShellView: View {
                 summaryClient: URLSessionAccountSummaryClient(
                     baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!,
                     accessToken: { try await authentication.accessTokenForRequest() }
-                )
+                ),
+                groupClient: groupClient
             )
         default:
             PlaceholderView(
@@ -149,8 +154,8 @@ struct AppShellView: View {
         }
     }
 
-    private func apply(_ receipt: SnapRecordReceipt) {
-        _ = todayViewModel.apply(receipt)
+    private func apply(_ receipt: SnapRecordReceipt, previewJPEG: Data? = nil) {
+        _ = todayViewModel.apply(receipt, previewJPEG: previewJPEG)
         selectedTab = .home
         Task { await todayViewModel.refresh() }
         if !shareGroups.isEmpty {

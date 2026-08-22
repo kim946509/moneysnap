@@ -29,6 +29,23 @@ struct SnapRecordReceipt: Equatable, Sendable {
     let amountWon: Int64
     let localDay: String
     let createdAt: Date
+    let imageRef: UUID?
+
+    init(
+        id: UUID,
+        category: SnapCategory,
+        amountWon: Int64,
+        localDay: String,
+        createdAt: Date,
+        imageRef: UUID? = nil
+    ) {
+        self.id = id
+        self.category = category
+        self.amountWon = amountWon
+        self.localDay = localDay
+        self.createdAt = createdAt
+        self.imageRef = imageRef
+    }
 }
 
 struct SnapDetail: Equatable, Sendable {
@@ -39,6 +56,27 @@ struct SnapDetail: Equatable, Sendable {
     let createdAt: Date
     let updatedAt: Date
     let version: Int
+    let imageRef: UUID?
+
+    init(
+        id: UUID,
+        category: SnapCategory,
+        amountWon: Int64,
+        localDay: String,
+        createdAt: Date,
+        updatedAt: Date,
+        version: Int,
+        imageRef: UUID? = nil
+    ) {
+        self.id = id
+        self.category = category
+        self.amountWon = amountWon
+        self.localDay = localDay
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.version = version
+        self.imageRef = imageRef
+    }
 }
 
 struct SnapReviseCommand: Codable, Equatable, Sendable {

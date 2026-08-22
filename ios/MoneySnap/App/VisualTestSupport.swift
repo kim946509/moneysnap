@@ -87,7 +87,8 @@ enum VisualTestSupport {
             record: { try await client.record($0) },
             now: { Date(timeIntervalSince1970: 1_780_415_400) },
             timeZone: { TimeZone(identifier: "Asia/Seoul")! },
-            mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! }
+            mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! },
+            layout: .staged
         )
         if scenario == .recordCategory {
             model.select(.food)
@@ -170,6 +171,21 @@ private struct InMemorySnapJournalClient: SnapJournalClient {
             createdAt: Date(timeIntervalSince1970: 1_786_582_800),
             updatedAt: Date(timeIntervalSince1970: 1_786_582_800),
             version: 1
+        )
+    }
+
+    func archive(from: String, to: String, cursor: String?) async throws -> ArchivePage {
+        let localDay = String(
+            format: "%04d-%02d-%02d",
+            summary.day.year,
+            summary.day.month,
+            summary.day.day
+        )
+        let inRange = (from...to).contains(localDay)
+        return ArchivePage(
+            snaps: from == to && from == localDay ? summary.entries : [],
+            nextCursor: nil,
+            occupiedLocalDays: inRange ? [localDay] : []
         )
     }
 }

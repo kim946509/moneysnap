@@ -2,6 +2,7 @@ import Foundation
 
 protocol MediaClient: Sendable {
     func publish(_ jpeg: NormalizedJpeg) async throws -> UUID
+    func fetchJPEG(_ imageRef: UUID) async throws -> Data
 }
 
 actor URLSessionMediaClient: MediaClient {
@@ -24,6 +25,27 @@ actor URLSessionMediaClient: MediaClient {
         let intent = try await createIntent(jpeg, token: token)
         try await upload(jpeg, path: intent.uploadPath, token: token)
         return try await complete(intent.imageRef, token: token)
+    }
+
+    func fetchJPEG(_ imageRef: UUID) async throws -> Data {
+        let token = try await accessToken()
+        var request = URLRequest(
+            url: baseURL.appending(path: "/api/v1/media/\(imageRef.uuidString.lowercased())")
+        )
+        request.httpMethod = "GET"
+        request.setValue("image/jpeg", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw SnapRecordError.transportFailure
+        }
+        guard let response = response as? HTTPURLResponse, response.statusCode == 200, !data.isEmpty else {
+            throw SnapRecordError.transportFailure
+        }
+        return data
     }
 
     private func createIntent(_ jpeg: NormalizedJpeg, token: String) async throws -> MediaIntentResponse {

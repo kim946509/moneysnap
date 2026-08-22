@@ -5,8 +5,25 @@ import Testing
 @MainActor
 struct SnapCaptureModelTests {
     @Test
-    func categoryAndAmountDraftSurviveBackNavigation() {
+    func categoryAndAmountStayTogetherOnTheCombinedSheet() {
         let model = makeModel()
+
+        #expect(model.phase == .details)
+        model.select(.food)
+        #expect(model.phase == .details)
+        model.appendDigit(1)
+        model.appendDigit(8)
+        model.goBack()
+
+        #expect(model.phase == .details)
+        #expect(model.selectedCategory == .food)
+        #expect(model.amountText == "₩18")
+        #expect(model.accessibilityAnnouncement == "카테고리와 금액 입력")
+    }
+
+    @Test
+    func stagedCategoryAndAmountDraftSurviveBackNavigation() {
+        let model = makeModel(layout: .staged)
 
         model.select(.food)
         #expect(model.phase == .amount)
@@ -114,6 +131,28 @@ struct SnapCaptureModelTests {
     }
 
     @Test
+    func attachStartsPhotoPublishBeforeSubmit() async {
+        let imageRef = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        let publisher = GatedPhotoPublisher(imageRef: imageRef)
+        let journal = RecordingSnapJournalClient(result: .success(.fixture))
+        let model = makeModel(journal: journal, publishPhoto: publisher.publish)
+        model.attach([
+            NormalizedJpeg(bytes: Data([0xFF, 0xD8, 0xFF]), checksumSha256: "ab", width: 8, height: 8)
+        ])
+
+        await publisher.waitUntilStarted()
+        #expect(await publisher.publishCount == 1)
+        #expect(await journal.commands.isEmpty)
+
+        enterValidAmount(in: model)
+        let submit = Task { await model.submit() }
+        await publisher.release()
+        #expect(await submit.value != nil)
+        #expect(await publisher.publishCount == 1)
+        #expect(await journal.commands.first?.imageRef == imageRef)
+    }
+
+    @Test
     func attachedPhotoIsUploadedOnceAndFrozenOnRecordRetry() async {
         let imageRef = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
         let publisher = RecordingPhotoPublisher(imageRef: imageRef)
@@ -164,6 +203,7 @@ struct SnapCaptureModelTests {
 
     private func makeModel(
         journal: RecordingSnapJournalClient = RecordingSnapJournalClient(result: .success(.fixture)),
+        layout: SnapCaptureModel.Layout = .combined,
         publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)? = nil
     ) -> SnapCaptureModel {
         SnapCaptureModel(
@@ -171,6 +211,7 @@ struct SnapCaptureModelTests {
             now: { Date(timeIntervalSince1970: 1_786_582_800) },
             timeZone: { TimeZone(identifier: "Asia/Seoul")! },
             mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! },
+            layout: layout,
             publishPhoto: publishPhoto
         )
     }
@@ -178,6 +219,38 @@ struct SnapCaptureModelTests {
     private func enterValidAmount(in model: SnapCaptureModel) {
         model.select(.food)
         [1, 8, 9, 0, 0].forEach(model.appendDigit)
+    }
+}
+
+private actor GatedPhotoPublisher {
+    private let imageRef: UUID
+    private(set) var publishCount = 0
+    private var started = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    private var gate: CheckedContinuation<Void, Never>?
+
+    init(imageRef: UUID) {
+        self.imageRef = imageRef
+    }
+
+    func publish(_ jpeg: NormalizedJpeg) async throws -> UUID {
+        _ = jpeg
+        publishCount += 1
+        started = true
+        startWaiters.forEach { $0.resume() }
+        startWaiters.removeAll()
+        await withCheckedContinuation { gate = $0 }
+        return imageRef
+    }
+
+    func waitUntilStarted() async {
+        guard !started else { return }
+        await withCheckedContinuation { startWaiters.append($0) }
+    }
+
+    func release() {
+        gate?.resume()
+        gate = nil
     }
 }
 

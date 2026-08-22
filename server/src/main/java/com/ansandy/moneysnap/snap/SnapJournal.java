@@ -39,19 +39,14 @@ final class SnapJournal {
         ZoneId zone = SnapTimeZones.requireRegionOrUtc(timeZone);
         LocalDate localDay = LocalDate.ofInstant(clock.instant(), zone);
         List<SnapRecordReceipt> snaps = jdbc.sql("""
-                SELECT id, category, amount_won, local_day, created_at
+                SELECT id, category, amount_won, local_day, created_at, image_id
                 FROM snaps
                 WHERE owner_id = :ownerId AND local_day = :localDay
                 ORDER BY created_at DESC, id DESC
                 """)
                 .param("ownerId", ownerId)
                 .param("localDay", Date.valueOf(localDay))
-                .query((row, rowNumber) -> new SnapRecordReceipt(
-                        row.getObject("id", UUID.class),
-                        row.getString("category"),
-                        row.getLong("amount_won"),
-                        row.getObject("local_day", LocalDate.class),
-                        row.getTimestamp("created_at").toInstant()))
+                .query(this::mapReceipt)
                 .list();
         return TodaySnapshot.of(localDay, snaps);
     }
@@ -81,7 +76,7 @@ final class SnapJournal {
         }
         ArchiveCursor decoded = cursor == null || cursor.isBlank() ? null : ArchiveCursor.decode(cursor, from, to, limit);
         String sql = """
-                SELECT id, category, amount_won, local_day, created_at
+                SELECT id, category, amount_won, local_day, created_at, image_id
                 FROM snaps
                 WHERE owner_id = :ownerId
                   AND local_day BETWEEN :fromDay AND :toDay
@@ -102,12 +97,7 @@ final class SnapJournal {
                     .param("cursorCreatedAt", Timestamp.from(decoded.createdAt()))
                     .param("cursorId", decoded.id());
         }
-        List<SnapRecordReceipt> rows = query.query((row, rowNumber) -> new SnapRecordReceipt(
-                row.getObject("id", UUID.class),
-                row.getString("category"),
-                row.getLong("amount_won"),
-                row.getObject("local_day", LocalDate.class),
-                row.getTimestamp("created_at").toInstant())).list();
+        List<SnapRecordReceipt> rows = query.query(this::mapReceipt).list();
         boolean hasMore = rows.size() > limit;
         if (hasMore) {
             rows = rows.subList(0, limit);
@@ -166,7 +156,8 @@ final class SnapJournal {
                     command.category().code(),
                     command.amount().value(),
                     command.localDay(),
-                    existing.createdAt());
+                    existing.createdAt(),
+                    command.imageRef());
         }
 
         command.validateLocalDay(clock);
@@ -354,22 +345,17 @@ final class SnapJournal {
 
     private Optional<SnapRecordReceipt> findSnap(UUID snapId) {
         return jdbc.sql("""
-                SELECT id, category, amount_won, local_day, created_at
+                SELECT id, category, amount_won, local_day, created_at, image_id
                 FROM snaps WHERE id = :snapId
                 """)
                 .param("snapId", snapId)
-                .query((row, rowNumber) -> new SnapRecordReceipt(
-                        row.getObject("id", UUID.class),
-                        row.getString("category"),
-                        row.getLong("amount_won"),
-                        row.getObject("local_day", LocalDate.class),
-                        row.getTimestamp("created_at").toInstant()))
+                .query(this::mapReceipt)
                 .optional();
     }
 
     private Optional<SnapDetail> findOwnedDetail(UUID ownerId, UUID snapId) {
         return jdbc.sql("""
-                SELECT id, category, amount_won, local_day, created_at, updated_at, version
+                SELECT id, category, amount_won, local_day, created_at, updated_at, version, image_id
                 FROM snaps
                 WHERE id = :id AND owner_id = :ownerId
                 """)
@@ -381,7 +367,7 @@ final class SnapJournal {
 
     private Optional<SnapDetail> findOwnedDetailForUpdate(UUID ownerId, UUID snapId) {
         return jdbc.sql("""
-                SELECT id, category, amount_won, local_day, created_at, updated_at, version
+                SELECT id, category, amount_won, local_day, created_at, updated_at, version, image_id
                 FROM snaps
                 WHERE id = :id AND owner_id = :ownerId
                 FOR UPDATE
@@ -408,7 +394,8 @@ final class SnapJournal {
                         row.getObject("local_day", LocalDate.class),
                         row.getTimestamp("snap_created_at").toInstant(),
                         row.getTimestamp("updated_at").toInstant(),
-                        row.getInt("version")))
+                        row.getInt("version"),
+                        null))
                 .optional();
     }
 
@@ -439,6 +426,16 @@ final class SnapJournal {
                 .optional();
     }
 
+    private SnapRecordReceipt mapReceipt(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
+        return new SnapRecordReceipt(
+                row.getObject("id", UUID.class),
+                row.getString("category"),
+                row.getLong("amount_won"),
+                row.getObject("local_day", LocalDate.class),
+                row.getTimestamp("created_at").toInstant(),
+                row.getObject("image_id", UUID.class));
+    }
+
     private SnapDetail mapDetail(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
         return new SnapDetail(
                 row.getObject("id", UUID.class),
@@ -447,7 +444,8 @@ final class SnapJournal {
                 row.getObject("local_day", LocalDate.class),
                 row.getTimestamp("created_at").toInstant(),
                 row.getTimestamp("updated_at").toInstant(),
-                row.getInt("version"));
+                row.getInt("version"),
+                row.getObject("image_id", UUID.class));
     }
 
     private record MutationRecord(String fingerprint, UUID snapId, Instant createdAt) {
@@ -457,12 +455,14 @@ final class SnapJournal {
     }
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record SnapRecordReceipt(
         UUID id,
         String category,
         long amountWon,
         LocalDate localDay,
-        Instant createdAt) {
+        Instant createdAt,
+        UUID imageRef) {
 }
 
 record TodaySnapshot(LocalDate localDay, long totalAmountWon, List<SnapRecordReceipt> snaps) {
@@ -480,6 +480,7 @@ record TodaySnapshot(LocalDate localDay, long totalAmountWon, List<SnapRecordRec
     }
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 record SnapDetail(
         UUID id,
         String category,
@@ -487,7 +488,8 @@ record SnapDetail(
         LocalDate localDay,
         Instant createdAt,
         Instant updatedAt,
-        int version) {
+        int version,
+        UUID imageRef) {
 }
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)

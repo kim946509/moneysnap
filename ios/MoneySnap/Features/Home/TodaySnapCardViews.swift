@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct FeaturedSnapCard: View {
     enum Layout: Equatable {
@@ -42,9 +43,17 @@ struct FeaturedSnapCard: View {
                     .frame(width: imageSize.width, height: imageSize.height)
                     .clipShape(RoundedRectangle(cornerRadius: layout == .landscape ? 19 : 14))
                     .rotationEffect(.degrees(rotation))
+            } else if let jpeg = entry.previewJPEG, let image = UIImage(data: jpeg) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: imageSize.width, height: imageSize.height)
+                    .clipShape(RoundedRectangle(cornerRadius: layout == .landscape ? 19 : 14))
+                    .rotationEffect(.degrees(rotation))
+                    .accessibilityIdentifier("home.photo.featured.\(entry.id.uuidString.lowercased())")
             } else {
                 SnapCategoryPlaceholder(entry: entry, surface: .featured)
-                    .frame(width: layout == .landscape ? 96 : 86, height: layout == .landscape ? 96 : 86)
+                    .frame(width: imageSize.width, height: imageSize.height)
                     .rotationEffect(.degrees(rotation))
             }
         }
@@ -87,6 +96,13 @@ struct RecentSnapRow: View {
                     .scaledToFill()
                     .frame(width: 34, height: 34)
                     .clipShape(RoundedRectangle(cornerRadius: 7))
+            } else if let jpeg = entry.previewJPEG, let image = UIImage(data: jpeg) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 34, height: 34)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                    .accessibilityIdentifier("home.photo.recent.\(entry.id.uuidString.lowercased())")
             } else {
                 SnapCategoryPlaceholder(entry: entry, surface: .recent)
                     .frame(width: 34, height: 34)

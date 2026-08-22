@@ -263,7 +263,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
                     id: item.id,
                     category: item.category,
                     amount: try KrwAmount(item.amountWon),
-                    artwork: nil
+                    imageRef: item.imageRef
                 )
             }
             return ArchivePage(
@@ -364,9 +364,9 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
     }
 
     private func decodeDetail(_ data: Data) throws -> SnapDetail {
-        guard hasExactKeys(data, expected: [
+        guard hasAllowedKeys(data, required: [
             "id", "category", "amountWon", "localDay", "createdAt", "updatedAt", "version"
-        ]) else {
+        ], optional: ["imageRef"]) else {
             throw SnapRecordError.malformedResponse
         }
         do {
@@ -385,7 +385,8 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
                 localDay: response.localDay,
                 createdAt: response.createdAt,
                 updatedAt: response.updatedAt,
-                version: response.version
+                version: response.version,
+                imageRef: response.imageRef
             )
         } catch let error as SnapRecordError {
             throw error
@@ -454,9 +455,10 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
     }
 
     private func decodeReceipt(_ data: Data) throws -> SnapRecordReceipt {
-        guard hasExactKeys(
+        guard hasAllowedKeys(
             data,
-            expected: ["id", "category", "amountWon", "localDay", "createdAt"]
+            required: ["id", "category", "amountWon", "localDay", "createdAt"],
+            optional: ["imageRef"]
         ) else {
             throw SnapRecordError.malformedResponse
         }
@@ -473,7 +475,8 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
                 category: response.category,
                 amountWon: response.amountWon,
                 localDay: response.localDay,
-                createdAt: response.createdAt
+                createdAt: response.createdAt,
+                imageRef: response.imageRef
             )
         } catch let error as SnapRecordError {
             throw error
@@ -497,10 +500,27 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
     }
 
     private func hasExactKeys(_ data: Data, expected: Set<String>) -> Bool {
+        hasAllowedKeys(data, required: expected)
+    }
+
+    private func hasAllowedKeys(
+        _ data: Data,
+        required: Set<String>,
+        optional: Set<String> = []
+    ) -> Bool {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return false
         }
-        return Set(object.keys) == expected
+        return hasAllowedKeys(object, required: required, optional: optional)
+    }
+
+    private func hasAllowedKeys(
+        _ object: [String: Any],
+        required: Set<String>,
+        optional: Set<String> = []
+    ) -> Bool {
+        let keys = Set(object.keys)
+        return required.isSubset(of: keys) && keys.isSubset(of: required.union(optional))
     }
 
     private static func decodeInstant(_ decoder: Decoder) throws -> Date {
@@ -576,7 +596,13 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
             }
             guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let snaps = object["snaps"] as? [[String: Any]],
-                  snaps.allSatisfy({ Set($0.keys) == ["id", "category", "amountWon", "localDay", "createdAt"] })
+                  snaps.allSatisfy({
+                      hasAllowedKeys(
+                          $0,
+                          required: ["id", "category", "amountWon", "localDay", "createdAt"],
+                          optional: ["imageRef"]
+                      )
+                  })
             else {
                 throw SnapRecordError.malformedResponse
             }
@@ -588,7 +614,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
                     id: item.id,
                     category: item.category,
                     amount: try KrwAmount(item.amountWon),
-                    artwork: nil
+                    imageRef: item.imageRef
                 )
             }
             return try TodaySnapSummary(
@@ -642,6 +668,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
         let createdAt: Date
         let updatedAt: Date
         let version: Int
+        let imageRef: UUID?
     }
 
     private struct TodayResponse: Decodable {
@@ -656,6 +683,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
         let amountWon: Int64
         let localDay: String
         let createdAt: Date
+        let imageRef: UUID?
     }
 
     private struct ErrorEnvelope: Decodable {
