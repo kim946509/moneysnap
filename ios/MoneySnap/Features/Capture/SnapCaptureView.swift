@@ -23,6 +23,7 @@ struct SnapCaptureView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .background(Color.white)
                     .ignoresSafeArea()
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier(combinedScreenIdentifier)
             } else {
                 steps

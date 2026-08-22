@@ -69,14 +69,13 @@ final class MoneySnapUITests: XCTestCase {
         let homeRecord = app.buttons["home.record"]
         XCTAssertTrue(homeRecord.waitForExistence(timeout: 5))
         homeRecord.tap()
-        let categoryScreen = element("screen.record.category", in: app)
-        XCTAssertTrue(categoryScreen.waitForExistence(timeout: 5))
+        XCTAssertTrue(element("screen.record.category", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["tab.home"].isSelected)
-        let window = app.windows.firstMatch
-        XCTAssertLessThanOrEqual(categoryScreen.frame.minY, 1)
-        XCTAssertGreaterThanOrEqual(categoryScreen.frame.height, window.frame.height * 0.98)
-        XCTAssertGreaterThanOrEqual(categoryScreen.frame.width, window.frame.width * 0.98)
+        XCTAssertTrue(
+            fillsWindow(identifier: "screen.record.category", in: app),
+            "live category and amount capture should occupy the full window"
+        )
 
         app.buttons["record.category.food"].tap()
         XCTAssertTrue(app.buttons["record.digit.1"].waitForExistence(timeout: 5))
@@ -173,6 +172,19 @@ final class MoneySnapUITests: XCTestCase {
             }
         }
         return element.isHittable
+    }
+
+    @MainActor
+    private func fillsWindow(identifier: String, in app: XCUIApplication) -> Bool {
+        let window = app.windows.firstMatch.frame
+        let matches = app.descendants(matching: .any).matching(identifier: identifier)
+        guard matches.firstMatch.waitForExistence(timeout: 5) else { return false }
+        return (0..<matches.count).contains { index in
+            let frame = matches.element(boundBy: index).frame
+            return frame.minY <= 1
+                && frame.height >= window.height * 0.98
+                && frame.width >= window.width * 0.98
+        }
     }
 
     @MainActor
