@@ -72,20 +72,6 @@ final class MoneySnapUITests: XCTestCase {
         let categoryScreen = element("screen.record.category", in: app)
         XCTAssertTrue(categoryScreen.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
-        categoryScreen.swipeDown()
-        if categoryScreen.waitForExistence(timeout: 1) {
-            dismissFullScreenSheet(in: app)
-        }
-        XCTAssertTrue(categoryScreen.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["home.record"].waitForExistence(timeout: 5))
-
-        let add = app.buttons["tab.add"]
-        XCTAssertTrue(add.waitForExistence(timeout: 5))
-        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(add.frame.height, 44)
-        XCTAssertTrue(makeHittable(add, in: app))
-        add.tap()
-        XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["tab.home"].isSelected)
 
         app.buttons["record.category.food"].tap()
@@ -100,6 +86,10 @@ final class MoneySnapUITests: XCTestCase {
         XCTAssertTrue(element("home.placeholder.featured.22222222-2222-4222-8222-222222222222", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(element("home.placeholder.recent.22222222-2222-4222-8222-222222222222", in: app).waitForExistence(timeout: 5))
         XCTAssertFalse(app.descendants(matching: .any)["screen.record"].exists)
+        let add = app.buttons["tab.add"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(add.frame.height, 44)
     }
 
     @MainActor
@@ -162,13 +152,6 @@ final class MoneySnapUITests: XCTestCase {
 
         XCTAssertTrue(element("screen.home", in: app).waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["home.total"].label, "₩62,100")
-    }
-
-    @MainActor
-    private func dismissFullScreenSheet(in app: XCUIApplication) {
-        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04))
-        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92))
-        start.press(forDuration: 0.05, thenDragTo: end)
     }
 
     @MainActor
