@@ -7,7 +7,7 @@ struct ArchiveCalendarTests {
     func june2026SundayGridPlacesTheFirstOnMonday() {
         let cells = ArchiveCalendar.cells(for: date("2026-06-01"), calendar: utcGregorian)
 
-        #expect(cells.prefix(1).allSatisfy(\.isPadding))
+        #expect(cells[0].isPadding)
         #expect(cells[1] == .day(localDay: "2026-06-01", dayNumber: 1))
         #expect(cells[3] == .day(localDay: "2026-06-03", dayNumber: 3))
         #expect(cells.filter { !$0.isPadding }.count == 30)
@@ -38,7 +38,10 @@ struct ArchiveViewModelTests {
         #expect(viewModel.selectedDayTotal == 18_900)
         #expect(viewModel.emptyCopy == nil)
         #expect(viewModel.monthTitle == "2026년 6월")
-        #expect(await client.ranges == [("2026-06-01", "2026-06-30"), ("2026-06-03", "2026-06-03")])
+        let ranges = await client.ranges
+        #expect(ranges.count == 2)
+        #expect(ranges[0].0 == "2026-06-01" && ranges[0].1 == "2026-06-30")
+        #expect(ranges[1].0 == "2026-06-03" && ranges[1].1 == "2026-06-03")
     }
 
     @Test
@@ -74,7 +77,8 @@ struct ArchiveViewModelTests {
 
         #expect(viewModel.monthTitle == "2026년 7월")
         #expect(viewModel.selectedDay == "2026-07-01")
-        #expect(await client.ranges.contains { $0 == ("2026-07-01", "2026-07-31") })
+        let ranges = await client.ranges
+        #expect(ranges.contains { $0.0 == "2026-07-01" && $0.1 == "2026-07-31" })
     }
 
     private static let foodEntry = TodaySnapEntry(

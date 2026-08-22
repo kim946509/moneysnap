@@ -296,7 +296,7 @@ struct SnapCaptureView: View {
         case .source, .amount:
             [.height(374)]
         case .details:
-            [.fraction(0.8)]
+            [.large]
         }
     }
 
