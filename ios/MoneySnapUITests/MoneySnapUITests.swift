@@ -72,7 +72,7 @@ final class MoneySnapUITests: XCTestCase {
         let categoryScreen = element("screen.record.category", in: app)
         XCTAssertTrue(categoryScreen.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
-        categoryScreen.swipeDown()
+        dismissFullScreenSheet(in: app)
         XCTAssertTrue(categoryScreen.waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.buttons["home.record"].waitForExistence(timeout: 5))
 
@@ -159,6 +159,13 @@ final class MoneySnapUITests: XCTestCase {
 
         XCTAssertTrue(element("screen.home", in: app).waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["home.total"].label, "₩62,100")
+    }
+
+    @MainActor
+    private func dismissFullScreenSheet(in app: XCUIApplication) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92))
+        start.press(forDuration: 0.05, thenDragTo: end)
     }
 
     @MainActor
