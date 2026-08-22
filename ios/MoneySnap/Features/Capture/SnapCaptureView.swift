@@ -19,12 +19,15 @@ struct SnapCaptureView: View {
     var body: some View {
         Group {
             if model.layout == .combined {
-                steps
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .background(Color.white)
-                    .ignoresSafeArea()
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier(combinedScreenIdentifier)
+                VStack(spacing: 0) {
+                    dismissHandle
+                    steps
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.white)
+                .ignoresSafeArea()
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier(combinedScreenIdentifier)
             } else {
                 steps
             }
@@ -189,9 +192,6 @@ struct SnapCaptureView: View {
 
     private var detailsStep: some View {
         VStack(spacing: 0) {
-            if model.layout == .combined {
-                dismissHandle
-            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .center) {

@@ -50,8 +50,9 @@ git diff --check
 - 실행 명령:
   - `git diff --check` → 통과
   - `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1` → visual baseline probe 실패. `capture-visual-baseline.sh`가 이 작업 트리에서 CRLF라 `xcodebuild` 한 줄 계약 정규식이 0건. 이번 diff와 무관한 Windows checkout 이슈.
-- 결과: 라이브 combined 기록은 `fullScreenCover`로 화면 전체를 쓰고, staged visual 시나리오는 기존 시트 높이를 유지한다. native iOS 테스트와 393x852 visual은 Windows에서 실행하지 못한다.
-- 리뷰: code-review-graph MCP가 이 세션에 없어 skipped. GitHub-hosted iOS CI가 UITest frame 단언을 검증한다.
+  - GitHub-hosted `macos-15` iOS CI `32575620739` → Swift native tests + `bash ios/scripts/capture-visual-baseline.sh` 성공. artifact `ios-visual-evidence`. staged `record-category` (`108:465`)와 `record-amount` (`108:549`) visual 유지.
+- 결과: 라이브 combined 기록은 `fullScreenCover`로 화면 전체를 쓰고, staged visual 시나리오는 기존 시트 높이를 유지한다. UITest는 기록 화면이 윈도우를 채우는지를 검증한다.
+- 리뷰: CodeRabbit source 단계 닫기 핸들을 공통 chrome으로 옮겼다. code-review-graph MCP는 이 세션 도구 목록에 없어 skipped.
 
 ## Agent rules impact
 
@@ -63,9 +64,9 @@ git diff --check
 
 - 코드 변경 여부: yes
 - graph action: skipped
-- base:
+- base: origin/main `30fd160`
 - risk: low
-- findings와 처리 결과: code-review-graph MCP가 이 세션에 없어 skipped
+- findings와 처리 결과: 이 세션의 사용 가능 도구에 `code-review-graph` MCP가 없다. 그래프 결과는 보조 증거이며 iOS CI UITest·visual capture가 이 변경의 검증을 소유한다.
 
 ## Decisions and risks
 
