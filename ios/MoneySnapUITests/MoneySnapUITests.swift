@@ -73,6 +73,10 @@ final class MoneySnapUITests: XCTestCase {
         XCTAssertTrue(categoryScreen.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["tab.home"].isSelected)
+        let window = app.windows.firstMatch
+        XCTAssertLessThanOrEqual(categoryScreen.frame.minY, 1)
+        XCTAssertGreaterThanOrEqual(categoryScreen.frame.height, window.frame.height * 0.98)
+        XCTAssertGreaterThanOrEqual(categoryScreen.frame.width, window.frame.width * 0.98)
 
         app.buttons["record.category.food"].tap()
         XCTAssertTrue(app.buttons["record.digit.1"].waitForExistence(timeout: 5))

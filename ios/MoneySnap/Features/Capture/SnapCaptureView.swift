@@ -18,15 +18,14 @@ struct SnapCaptureView: View {
 
     var body: some View {
         Group {
-            switch model.phase {
-            case .source:
-                sourceStep
-            case .category:
-                categoryStep
-            case .amount:
-                amountStep
-            case .details:
-                detailsStep
+            if model.layout == .combined {
+                steps
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .background(Color.white)
+                    .ignoresSafeArea()
+                    .accessibilityIdentifier(combinedScreenIdentifier)
+            } else {
+                steps
             }
         }
         .presentationDetents(detents)
@@ -49,6 +48,28 @@ struct SnapCaptureView: View {
         }
     }
 
+    @ViewBuilder
+    private var steps: some View {
+        switch model.phase {
+        case .source:
+            sourceStep
+        case .category:
+            categoryStep
+        case .amount:
+            amountStep
+        case .details:
+            detailsStep
+        }
+    }
+
+    private var combinedScreenIdentifier: String {
+        switch model.phase {
+        case .source: "screen.record.source"
+        case .amount: "screen.record.amount"
+        case .category, .details: "screen.record.category"
+        }
+    }
+
     private var sourceStep: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("사진")
@@ -56,7 +77,6 @@ struct SnapCaptureView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
                 .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("screen.record.source")
             Button("사진 없이 기록") { model.skipPhotos() }
                 .frame(minWidth: 44, minHeight: 44)
                 .padding(.horizontal, 24)
@@ -167,9 +187,13 @@ struct SnapCaptureView: View {
     }
 
     private var detailsStep: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .center) {
+        VStack(spacing: 0) {
+            if model.layout == .combined {
+                dismissHandle
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .center) {
                     if model.photoQueue.current != nil {
                         Button {
                             handleBack()
@@ -245,10 +269,34 @@ struct SnapCaptureView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, model.failure == nil ? 16 : 8)
                     .padding(.bottom, 24)
+                }
             }
+            .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
-        .accessibilityIdentifier("screen.record.category")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var dismissHandle: some View {
+        Capsule()
+            .fill(MoneySnapVisualSystem.secondaryText.opacity(0.45))
+            .frame(width: 36, height: 5)
+            .padding(.top, 10 + topSafeInset)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 12)
+                    .onEnded { value in
+                        if value.translation.height > 70 {
+                            requestDismiss()
+                        }
+                    }
+            )
+            .onTapGesture(perform: requestDismiss)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("닫기")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("record.dismiss")
     }
 
     private var categoryGrid: some View {
@@ -383,6 +431,23 @@ struct SnapCaptureView: View {
         } else {
             model.goBack()
         }
+    }
+
+    private func requestDismiss() {
+        guard !model.isSubmitting else { return }
+        if model.requiresAbandonConfirmation {
+            confirmsAbandon = true
+        } else {
+            dismiss()
+        }
+    }
+
+    private var topSafeInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .safeAreaInsets.top ?? 59
     }
 
     private func submit() async {
