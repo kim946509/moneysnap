@@ -5,6 +5,7 @@ struct AppShellView: View {
     @Binding var selectedTab: AppTab
     @State private var tabRouter = TabRouter()
     @State private var presentedSheet: AppSheet?
+    @State private var pendingShare: SnapRecordReceipt?
     @State private var todayViewModel: TodaySnapViewModel
     @State private var shareGroups: [MoneySnapGroup] = []
     private let authentication: AuthenticationModel
@@ -86,13 +87,13 @@ struct AppShellView: View {
                 .padding(.bottom, 21)
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .sheet(item: $presentedSheet) { sheet in
+        .fullScreenCover(isPresented: fullScreenRecordPresented, onDismiss: presentPendingShare) {
+            recordCaptureView
+        }
+        .sheet(item: sheetItem, onDismiss: presentPendingShare) { sheet in
             switch sheet {
             case .record:
-                SnapCaptureView(
-                    model: initialCaptureModel ?? makeCaptureModel(),
-                    onSaved: { receipt, jpeg in apply(receipt, previewJPEG: jpeg) }
-                )
+                recordCaptureView
             case let .share(receipt):
                 ShareAfterSaveView(
                     groups: shareGroups,
@@ -154,13 +155,61 @@ struct AppShellView: View {
         }
     }
 
+    private var usesStagedRecordSheet: Bool {
+        initialCaptureModel?.layout == .staged
+    }
+
+    private var fullScreenRecordPresented: Binding<Bool> {
+        Binding(
+            get: {
+                guard case .record = presentedSheet else { return false }
+                return !usesStagedRecordSheet
+            },
+            set: { isPresented in
+                if !isPresented, case .record = presentedSheet {
+                    presentedSheet = nil
+                }
+            }
+        )
+    }
+
+    private var sheetItem: Binding<AppSheet?> {
+        Binding(
+            get: {
+                switch presentedSheet {
+                case .record where usesStagedRecordSheet:
+                    .record
+                case .share(_):
+                    presentedSheet
+                default:
+                    nil
+                }
+            },
+            set: { presentedSheet = $0 }
+        )
+    }
+
+    @ViewBuilder
+    private var recordCaptureView: some View {
+        SnapCaptureView(
+            model: initialCaptureModel ?? makeCaptureModel(),
+            onSaved: { receipt, jpeg in apply(receipt, previewJPEG: jpeg) }
+        )
+    }
+
     private func apply(_ receipt: SnapRecordReceipt, previewJPEG: Data? = nil) {
         _ = todayViewModel.apply(receipt, previewJPEG: previewJPEG)
         selectedTab = .home
         Task { await todayViewModel.refresh() }
         if !shareGroups.isEmpty {
-            presentedSheet = .share(receipt)
+            pendingShare = receipt
         }
+    }
+
+    private func presentPendingShare() {
+        guard let pendingShare else { return }
+        self.pendingShare = nil
+        presentedSheet = .share(pendingShare)
     }
 
     private func makeCaptureModel() -> SnapCaptureModel {
