@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SnapDetailView: View {
     @State private var model: SnapDetailModel
@@ -69,6 +70,16 @@ struct SnapDetailView: View {
 
     private func detailForm(_ detail: SnapDetail) -> some View {
         Form {
+            if let jpeg = model.previewJPEG, let image = UIImage(data: jpeg) {
+                Section {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .accessibilityIdentifier("snap.detail.photo")
+                }
+            }
             Section("날짜") {
                 Text(detail.localDay)
                     .accessibilityIdentifier("snap.detail.day")

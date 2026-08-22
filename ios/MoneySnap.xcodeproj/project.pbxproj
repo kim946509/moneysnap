@@ -58,6 +58,15 @@
 		B00000000000000000000049 /* GroupDetailModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000054 /* GroupDetailModel.swift */; };
 		B00000000000000000000050 /* AccountSummaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000055 /* AccountSummaryClient.swift */; };
 		B00000000000000000000051 /* GroupDetailModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000056 /* GroupDetailModelTests.swift */; };
+		B00000000000000000000052 /* ArchiveCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000057 /* ArchiveCalendar.swift */; };
+		B00000000000000000000053 /* ArchiveViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000058 /* ArchiveViewModel.swift */; };
+		B00000000000000000000054 /* ArchiveViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000059 /* ArchiveViewModelTests.swift */; };
+		B00000000000000000000055 /* TodayCanvasPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000060 /* TodayCanvasPlacement.swift */; };
+		B00000000000000000000056 /* TodayCanvasScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000061 /* TodayCanvasScene.swift */; };
+		B00000000000000000000057 /* TodayCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000062 /* TodayCanvasView.swift */; };
+		B00000000000000000000058 /* TodayCanvasPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000063 /* TodayCanvasPlacementTests.swift */; };
+		B00000000000000000000059 /* HelpGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000064 /* HelpGuideView.swift */; };
+		B00000000000000000000060 /* HelpTopicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000065 /* HelpTopicTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -134,6 +143,15 @@
 		F00000000000000000000054 /* GroupDetailModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailModel.swift; sourceTree = "<group>"; };
 		F00000000000000000000055 /* AccountSummaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSummaryClient.swift; sourceTree = "<group>"; };
 		F00000000000000000000056 /* GroupDetailModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailModelTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000057 /* ArchiveCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveCalendar.swift; sourceTree = "<group>"; };
+		F00000000000000000000058 /* ArchiveViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveViewModel.swift; sourceTree = "<group>"; };
+		F00000000000000000000059 /* ArchiveViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveViewModelTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000060 /* TodayCanvasPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasPlacement.swift; sourceTree = "<group>"; };
+		F00000000000000000000061 /* TodayCanvasScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasScene.swift; sourceTree = "<group>"; };
+		F00000000000000000000062 /* TodayCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasView.swift; sourceTree = "<group>"; };
+		F00000000000000000000063 /* TodayCanvasPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasPlacementTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000064 /* HelpGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpGuideView.swift; sourceTree = "<group>"; };
+		F00000000000000000000065 /* HelpTopicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpTopicTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -243,6 +261,9 @@
 				F00000000000000000000050 /* JpegNormalizerTests.swift */,
 				F00000000000000000000052 /* MediaClientTests.swift */,
 				F00000000000000000000056 /* GroupDetailModelTests.swift */,
+				F00000000000000000000059 /* ArchiveViewModelTests.swift */,
+				F00000000000000000000063 /* TodayCanvasPlacementTests.swift */,
+				F00000000000000000000065 /* HelpTopicTests.swift */,
 				F00000000000000000000032 /* identity */,
 				F00000000000000000000041 /* snaps */,
 			);
@@ -257,6 +278,9 @@
 				F00000000000000000000013 /* TodaySnapViewModel.swift */,
 				F00000000000000000000014 /* TodaySnapView.swift */,
 				F00000000000000000000017 /* TodayCanvasLayout.swift */,
+				F00000000000000000000060 /* TodayCanvasPlacement.swift */,
+				F00000000000000000000061 /* TodayCanvasScene.swift */,
+				F00000000000000000000062 /* TodayCanvasView.swift */,
 				F00000000000000000000018 /* TodaySnapCardViews.swift */,
 				F00000000000000000000042 /* SnapDetailModel.swift */,
 				F00000000000000000000043 /* SnapDetailView.swift */,
@@ -307,6 +331,7 @@
 			children = (
 				F00000000000000000000027 /* MySettingsView.swift */,
 				F00000000000000000000055 /* AccountSummaryClient.swift */,
+				F00000000000000000000064 /* HelpGuideView.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -347,6 +372,8 @@
 			isa = PBXGroup;
 			children = (
 				F00000000000000000000046 /* ArchiveView.swift */,
+				F00000000000000000000057 /* ArchiveCalendar.swift */,
+				F00000000000000000000058 /* ArchiveViewModel.swift */,
 			);
 			path = Archive;
 			sourceTree = "<group>";
@@ -494,6 +521,9 @@
 				B00000000000000000000011 /* TodaySnapViewModel.swift in Sources */,
 				B00000000000000000000012 /* TodaySnapView.swift in Sources */,
 				B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */,
+				B00000000000000000000055 /* TodayCanvasPlacement.swift in Sources */,
+				B00000000000000000000056 /* TodayCanvasScene.swift in Sources */,
+				B00000000000000000000057 /* TodayCanvasView.swift in Sources */,
 				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
 				B00000000000000000000038 /* SnapDetailModel.swift in Sources */,
 				B00000000000000000000039 /* SnapDetailView.swift in Sources */,
@@ -515,9 +545,12 @@
 				B00000000000000000000040 /* GroupModels.swift in Sources */,
 				B00000000000000000000041 /* GroupListView.swift in Sources */,
 				B00000000000000000000042 /* ArchiveView.swift in Sources */,
+				B00000000000000000000052 /* ArchiveCalendar.swift in Sources */,
+				B00000000000000000000053 /* ArchiveViewModel.swift in Sources */,
 				B00000000000000000000043 /* GroupDetailView.swift in Sources */,
 				B00000000000000000000049 /* GroupDetailModel.swift in Sources */,
 				B00000000000000000000050 /* AccountSummaryClient.swift in Sources */,
+				B00000000000000000000059 /* HelpGuideView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -536,6 +569,9 @@
 				B00000000000000000000046 /* JpegNormalizerTests.swift in Sources */,
 				B00000000000000000000048 /* MediaClientTests.swift in Sources */,
 				B00000000000000000000051 /* GroupDetailModelTests.swift in Sources */,
+				B00000000000000000000054 /* ArchiveViewModelTests.swift in Sources */,
+				B00000000000000000000058 /* TodayCanvasPlacementTests.swift in Sources */,
+				B00000000000000000000060 /* HelpTopicTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

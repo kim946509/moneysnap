@@ -15,21 +15,25 @@ final class SnapDetailModel {
     private(set) var isSaving = false
     private(set) var isDeleting = false
     private(set) var failure: SnapRecordError?
+    private(set) var previewJPEG: Data?
     var draftCategory: SnapCategory?
     var draftAmount: String = ""
     private var frozenRevise: SnapReviseCommand?
     private var frozenDeleteMutation: String?
     private let snapID: UUID
     private let client: any SnapJournalClient
+    private let media: (any MediaClient)?
     private let mutationID: @Sendable () -> UUID
 
     init(
         snapID: UUID,
         client: any SnapJournalClient,
+        media: (any MediaClient)? = nil,
         mutationID: @escaping @Sendable () -> UUID = UUID.init
     ) {
         self.snapID = snapID
         self.client = client
+        self.media = media
         self.mutationID = mutationID
     }
 
@@ -40,6 +44,11 @@ final class SnapDetailModel {
             draftCategory = detail.category
             draftAmount = String(detail.amountWon)
             failure = nil
+            if let imageRef = detail.imageRef, let media {
+                previewJPEG = try? await media.fetchJPEG(imageRef)
+            } else {
+                previewJPEG = nil
+            }
         } catch let error as SnapRecordError where error.isGone {
             state = .gone
         } catch {

@@ -3,8 +3,9 @@ import SwiftUI
 struct MySettingsView: View {
     let authentication: AuthenticationModel
     var summaryClient: (any AccountSummaryClient)? = nil
+    var groupClient: any GroupClient = UnavailableGroupClient()
 
-    @State private var presentsAccountSettings = false
+    @State private var presentedSheet: MySettingsSheet?
     @State private var summary: AccountSummary?
 
     var body: some View {
@@ -18,8 +19,24 @@ struct MySettingsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .sheet(isPresented: $presentsAccountSettings) {
-            AccountSettingsView(authentication: authentication)
+        .sheet(item: $presentedSheet) { sheet in
+            switch sheet {
+            case .groups:
+                NavigationStack {
+                    GroupListView(client: groupClient)
+                        .navigationTitle("내 그룹 관리")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("닫기") { presentedSheet = nil }
+                            }
+                        }
+                }
+            case .account:
+                AccountSettingsView(authentication: authentication)
+            case .help:
+                HelpGuideView()
+            }
         }
         .task { await loadSummary() }
     }
@@ -94,15 +111,28 @@ struct MySettingsView: View {
 
     private var settingsRows: some View {
         VStack(spacing: 16) {
-            settingsRow(title: "내 그룹 관리", subtitle: "그룹과 초대 설정")
+            Button {
+                presentedSheet = .groups
+            } label: {
+                settingsRow(title: "내 그룹 관리", subtitle: "그룹과 초대 설정")
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("my.groups")
             Button {
                 authentication.clearIssue()
-                presentsAccountSettings = true
+                presentedSheet = .account
             } label: {
                 settingsRow(title: "앱 설정", subtitle: "접근성, 계정")
             }
             .buttonStyle(.plain)
-            settingsRow(title: "도움말", subtitle: "Money Snap 사용 가이드")
+            .accessibilityIdentifier("my.settings")
+            Button {
+                presentedSheet = .help
+            } label: {
+                settingsRow(title: "도움말", subtitle: "Money Snap 사용 가이드")
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("my.help")
         }
         .offset(x: 24, y: 396)
     }
@@ -141,7 +171,18 @@ struct MySettingsView: View {
         .profileSurface(cornerRadius: 16)
     }
 
-    private func loadSummary() async {
+}
+
+private enum MySettingsSheet: String, Identifiable {
+    case groups
+    case account
+    case help
+
+    var id: String { rawValue }
+}
+
+private extension MySettingsView {
+    func loadSummary() async {
         let zone = TimeZone.current.identifier.contains("/") ? TimeZone.current.identifier : "UTC"
         summary = try? await summaryClient?.summary(timeZone: zone)
     }

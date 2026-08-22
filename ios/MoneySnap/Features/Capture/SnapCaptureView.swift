@@ -9,9 +9,9 @@ struct SnapCaptureView: View {
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var presentsCamera = false
     @AccessibilityFocusState private var voiceOverFocus: SnapCaptureModel.FocusTarget?
-    let onSaved: (SnapRecordReceipt) -> Void
+    let onSaved: (SnapRecordReceipt, Data?) -> Void
 
-    init(model: SnapCaptureModel, onSaved: @escaping (SnapRecordReceipt) -> Void) {
+    init(model: SnapCaptureModel, onSaved: @escaping (SnapRecordReceipt, Data?) -> Void) {
         _model = State(initialValue: model)
         self.onSaved = onSaved
     }
@@ -25,10 +25,12 @@ struct SnapCaptureView: View {
                 categoryStep
             case .amount:
                 amountStep
+            case .details:
+                detailsStep
             }
         }
-        .presentationDetents(model.phase == .category ? [.height(214)] : [.height(374)])
-        .presentationDragIndicator(.hidden)
+        .presentationDetents(detents)
+        .presentationDragIndicator(model.layout == .staged ? .hidden : .visible)
         .onAppear { voiceOverFocus = model.focusTarget }
         .onChange(of: model.focusTarget) { _, focusTarget in
             voiceOverFocus = focusTarget
@@ -96,43 +98,8 @@ struct SnapCaptureView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 7)
 
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(48), spacing: 38), count: 4),
-                    alignment: .center,
-                    spacing: 15
-                ) {
-                    ForEach(SnapCategory.allCases, id: \.rawValue) { category in
-                        Button {
-                            model.select(category)
-                        } label: {
-                            VStack(spacing: 4) {
-                                Image(systemName: category.captureSystemImage)
-                                    .font(.system(size: 21, weight: .medium))
-                                    .frame(width: 48, height: 48)
-                                    .background(
-                                        model.selectedCategory == category
-                                            ? Color.white : MoneySnapVisualSystem.profileNeutralFill,
-                                        in: RoundedRectangle(cornerRadius: 13)
-                                    )
-                                    .overlay {
-                                        if model.selectedCategory == category {
-                                            RoundedRectangle(cornerRadius: 13)
-                                                .stroke(MoneySnapVisualSystem.ink, lineWidth: 2)
-                                        }
-                                    }
-                                Text(category.title)
-                                    .font(.moneySnap(size: 12, weight: .medium))
-                                    .foregroundStyle(MoneySnapVisualSystem.profileBadgeText)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .frame(minWidth: 48, minHeight: 70)
-                        .accessibilityIdentifier("record.category.\(category.rawValue)")
-                        .accessibilityAddTraits(model.selectedCategory == category ? .isSelected : [])
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 16)
+                categoryGrid
+                    .padding(.top, 16)
             }
         }
         .scrollIndicators(.hidden)
@@ -196,6 +163,141 @@ struct SnapCaptureView: View {
         }
         .scrollIndicators(.hidden)
         .accessibilityIdentifier("screen.record.amount")
+    }
+
+    private var detailsStep: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .center) {
+                    if model.photoQueue.current != nil {
+                        Button {
+                            handleBack()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 22, weight: .medium))
+                                .frame(width: 44, height: 44)
+                                .background(MoneySnapVisualSystem.profileNeutralFill, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(model.isSubmitting)
+                        .accessibilityLabel("뒤로")
+                        .accessibilityIdentifier("record.back")
+                    }
+                    Text("기록")
+                        .font(.moneySnap(size: 24, weight: .bold))
+                        .foregroundStyle(MoneySnapVisualSystem.ink)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityFocused($voiceOverFocus, equals: .categoryHeader)
+                    Spacer()
+                    if let progress = model.photoQueue.progressLabel {
+                        stepPill(progress)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
+
+                if let jpeg = model.photoQueue.current,
+                   let image = UIImage(data: jpeg.bytes) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 72, height: 72)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
+                        .accessibilityHidden(true)
+                }
+
+                Text("카테고리")
+                    .font(.moneySnap(size: 15, weight: .bold))
+                    .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+
+                categoryGrid
+                    .padding(.top, 12)
+
+                Text("금액")
+                    .font(.moneySnap(size: 15, weight: .bold))
+                    .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+
+                Text(model.amountText)
+                    .font(.moneySnap(size: 46, weight: .black))
+                    .foregroundStyle(MoneySnapVisualSystem.ink)
+                    .minimumScaleFactor(0.65)
+                    .frame(maxWidth: .infinity, minHeight: 64, alignment: .center)
+                    .padding(.horizontal, 24)
+                    .accessibilityLabel("금액 \(model.amountText)")
+                    .accessibilityIdentifier("record.amount")
+                    .accessibilityFocused($voiceOverFocus, equals: .amountHeader)
+
+                if let failure = model.failure {
+                    failureView(failure)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                }
+
+                keypad
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 24)
+                    .padding(.top, model.failure == nil ? 16 : 8)
+                    .padding(.bottom, 24)
+            }
+        }
+        .scrollIndicators(.hidden)
+        .accessibilityIdentifier("screen.record.category")
+    }
+
+    private var categoryGrid: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.fixed(48), spacing: 38), count: 4),
+            alignment: .center,
+            spacing: 15
+        ) {
+            ForEach(SnapCategory.allCases, id: \.rawValue) { category in
+                Button {
+                    model.select(category)
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: category.captureSystemImage)
+                            .font(.system(size: 21, weight: .medium))
+                            .frame(width: 48, height: 48)
+                            .background(
+                                model.selectedCategory == category
+                                    ? Color.white : MoneySnapVisualSystem.profileNeutralFill,
+                                in: RoundedRectangle(cornerRadius: 13)
+                            )
+                            .overlay {
+                                if model.selectedCategory == category {
+                                    RoundedRectangle(cornerRadius: 13)
+                                        .stroke(MoneySnapVisualSystem.ink, lineWidth: 2)
+                                }
+                            }
+                        Text(category.title)
+                            .font(.moneySnap(size: 12, weight: .medium))
+                            .foregroundStyle(MoneySnapVisualSystem.profileBadgeText)
+                    }
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 48, minHeight: 70)
+                .accessibilityIdentifier("record.category.\(category.rawValue)")
+                .accessibilityAddTraits(model.selectedCategory == category ? .isSelected : [])
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var detents: Set<PresentationDetent> {
+        switch model.phase {
+        case .category:
+            [.height(214)]
+        case .source, .amount:
+            [.height(374)]
+        case .details:
+            [.large]
+        }
     }
 
     private var keypad: some View {
@@ -283,8 +385,9 @@ struct SnapCaptureView: View {
     }
 
     private func submit() async {
+        let previewJPEG = model.photoQueue.current?.bytes
         guard let receipt = await model.submit() else { return }
-        onSaved(receipt)
+        onSaved(receipt, previewJPEG)
         if model.photoQueue.photos.isEmpty || model.photoQueue.isFinished {
             dismiss()
         } else {

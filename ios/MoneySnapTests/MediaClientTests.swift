@@ -54,6 +54,30 @@ struct MediaClientTests {
         #expect(json["contentType"] as? String == "image/jpeg")
         #expect(json["checksumSha256"] as? String == "abcd")
     }
+
+    @Test
+    func fetchesLinkedJpegBytes() async throws {
+        let imageRef = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        let jpeg = Data([0xFF, 0xD8, 0xFF, 0xAA])
+        MediaSequenceStub.configure(responses: [
+            MediaSequenceStub.Response(status: 200, body: jpeg)
+        ])
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MediaSequenceStub.self]
+        let client = URLSessionMediaClient(
+            baseURL: URL(string: "https://moneysnap.example")!,
+            session: URLSession(configuration: configuration),
+            accessToken: { "access-token" }
+        )
+
+        let fetched = try await client.fetchJPEG(imageRef)
+
+        #expect(fetched == jpeg)
+        let requests = MediaSequenceStub.recordedRequests()
+        #expect(requests.map(\.httpMethod) == ["GET"])
+        #expect(requests.first?.url?.path == "/api/v1/media/\(imageRef.uuidString.lowercased())")
+        #expect(requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer access-token")
+    }
 }
 
 private final class MediaSequenceStub: URLProtocol, @unchecked Sendable {

@@ -35,6 +35,27 @@ struct SnapJournalClientTests {
     }
 
     @Test
+    func fetchTodayDecodesOptionalImageRefWithoutRejectingCanonicalKeys() async throws {
+        let body = Data("""
+        {"localDay":"2026-08-14","totalAmountWon":100,"snaps":[{
+          "id":"018f1e2d-1234-7abc-8def-0123456789ab",
+          "category":"food",
+          "amountWon":100,
+          "localDay":"2026-08-14",
+          "createdAt":"2026-08-13T15:30:00Z",
+          "imageRef":"018f1e2d-cccc-7abc-8def-0123456789ab"
+        }]}
+        """.utf8)
+        let harness = Harness(responses: [.init(status: 200, body: body)])
+
+        let summary = try await harness.client.fetchToday()
+
+        #expect(summary.entries.first?.imageRef == UUID(uuidString: "018f1e2d-cccc-7abc-8def-0123456789ab"))
+        #expect(summary.entries.first?.previewJPEG == nil)
+        #expect(summary.totalAmount == 100)
+    }
+
+    @Test
     func recordSendsTheCanonicalEnvelopeWithTheLatestBearer() async throws {
         let requestFixture = try canonicalFixture("record-request")
         let responseFixture = try canonicalFixture("record-response")

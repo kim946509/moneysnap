@@ -13,8 +13,6 @@ struct TodaySnapView: View {
             case .loading:
                 ProgressView()
                     .accessibilityIdentifier("home.loading")
-            case let .empty(day):
-                emptyState(day: day)
             case let .content(summary):
                 TodaySnapContent(summary: summary, onRecord: onRecord, onOpen: onOpen)
                     .refreshable { await viewModel.refresh() }
@@ -43,19 +41,6 @@ struct TodaySnapView: View {
         }
         .task { await viewModel.load() }
     }
-
-    private func emptyState(day: SnapDay) -> some View {
-        ContentUnavailableView {
-            Label("오늘 기록이 없어요", systemImage: "plus.circle")
-                .accessibilityIdentifier("screen.home")
-        } description: {
-            Text(day.displayLabel)
-        } actions: {
-            Button("기록하기", action: onRecord)
-                .frame(minWidth: 44, minHeight: 44)
-                .accessibilityIdentifier("home.record")
-        }
-    }
 }
 
 private struct TodaySnapContent: View {
@@ -67,7 +52,13 @@ private struct TodaySnapContent: View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
                 header(availableWidth: proxy.size.width)
-                featuredCards(availableWidth: proxy.size.width)
+                TodayCanvasView(
+                    entries: summary.featuredEntries,
+                    maximumAmount: summary.featuredEntries.map(\.amount).max(),
+                    canvasSize: proxy.size,
+                    onOpen: onOpen
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 recordButton(availableWidth: proxy.size.width)
                 pageIndicator(availableWidth: proxy.size.width)
                 totalSection
@@ -98,36 +89,6 @@ private struct TodaySnapContent: View {
                 .shadow(color: .black.opacity(0.15), radius: 12, y: 9)
                 .accessibilityHidden(true)
                 .position(x: availableWidth - 40, y: 34)
-        }
-    }
-
-    private func featuredCards(availableWidth: CGFloat) -> some View {
-        let maximumAmount = summary.featuredEntries.map(\.amount).max()
-
-        return Group {
-            if let entry = summary.featuredEntries[safe: 0], let maximumAmount {
-                FeaturedSnapCard(
-                    entry: entry,
-                    imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
-                    layout: .landscape
-                )
-                .onTapGesture { onOpen(entry.id) }
-                .position(x: availableWidth * 0.357, y: 276)
-            }
-            if let entry = summary.featuredEntries[safe: 1], let maximumAmount {
-                FeaturedSnapCard(
-                    entry: entry,
-                    imageSize: TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount),
-                    layout: .portrait
-                )
-                .onTapGesture { onOpen(entry.id) }
-                .position(x: availableWidth * 0.736, y: 303)
-            }
-            if let entry = summary.featuredEntries[safe: 2] {
-                PriceTicket(entry: entry)
-                    .rotationEffect(.degrees(-4))
-                    .position(x: availableWidth * 0.256, y: 354)
-            }
         }
     }
 
@@ -192,12 +153,6 @@ private struct TodaySnapContent: View {
             }
             .offset(x: 26, y: 650)
         }
-    }
-}
-
-private extension Collection {
-    subscript(safe index: Index) -> Element? {
-        indices.contains(index) ? self[index] : nil
     }
 }
 

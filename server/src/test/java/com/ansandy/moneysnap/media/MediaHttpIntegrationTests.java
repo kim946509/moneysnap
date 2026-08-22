@@ -103,17 +103,38 @@ class MediaHttpIntegrationTests {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.imageRef").value(imageRef));
-        mockMvc.perform(post("/api/v1/snaps")
+        String recordBody = mockMvc.perform(post("/api/v1/snaps")
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType("application/json")
                         .content("""
                                 {"clientMutationId":"with-photo","localDay":"2026-08-14","timeZone":"Asia/Seoul",\
                                 "category":"food","amountWon":100,"imageRef":"%s"}
                                 """.formatted(imageRef)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.imageRef").value(imageRef))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String snapId = JsonPath.read(recordBody, "$.id");
         mockMvc.perform(get("/api/v1/media/" + imageRef)
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/snaps/today")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .queryParam("timeZone", "Asia/Seoul"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.snaps[0].id").value(snapId))
+                .andExpect(jsonPath("$.snaps[0].imageRef").value(imageRef));
+        mockMvc.perform(get("/api/v1/snaps/" + snapId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageRef").value(imageRef));
+        mockMvc.perform(get("/api/v1/snaps/archive")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .queryParam("fromLocalDay", "2026-08-14")
+                        .queryParam("toLocalDay", "2026-08-14"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.snaps[0].imageRef").value(imageRef));
     }
 
     @Test
