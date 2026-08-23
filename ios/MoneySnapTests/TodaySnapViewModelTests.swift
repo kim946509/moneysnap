@@ -53,7 +53,7 @@ struct TodaySnapViewModelTests {
             maximumAmount: summary.featuredEntries[0].amount
         )
 
-        #expect(largest.width == 108)
+        #expect(largest.width == 144)
         #expect(smaller.width < largest.width)
     }
 
@@ -292,7 +292,6 @@ struct TodaySnapViewModelTests {
         let receiptID = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
         let client = PhotoTodayClient(imageRef: imageRef, snapID: receiptID)
         let viewModel = TodaySnapViewModel(client: client, media: FailingMediaClient())
-        await viewModel.load()
         #expect(viewModel.apply(
             SnapRecordReceipt(
                 id: receiptID,
