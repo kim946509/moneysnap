@@ -42,7 +42,8 @@ actor URLSessionMediaClient: MediaClient {
         } catch {
             throw SnapRecordError.transportFailure
         }
-        guard let response = response as? HTTPURLResponse, response.statusCode == 200, !data.isEmpty else {
+        guard let response = response as? HTTPURLResponse, response.statusCode == 200,
+              data.starts(with: [0xFF, 0xD8, 0xFF]) else {
             throw SnapRecordError.transportFailure
         }
         return data

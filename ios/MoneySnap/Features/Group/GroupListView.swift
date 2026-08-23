@@ -31,27 +31,31 @@ struct GroupListView: View {
                         .accessibilityIdentifier("group.create")
                 }
             } else {
-                List(groups) { group in
-                    NavigationLink {
-                        GroupDetailView(group: group, client: client) {
-                            Task { await load() }
+                List {
+                    ForEach(groups) { group in
+                        NavigationLink {
+                            GroupDetailView(group: group, client: client) {
+                                Task { await load() }
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(group.name)
+                                    .font(.moneySnap(size: 17, weight: .bold))
+                                Text(group.amountVisible ? "금액 공개" : "금액 비공개")
+                                    .font(.moneySnap(size: 13, weight: .medium))
+                                    .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                            }
+                            .frame(minHeight: 44)
                         }
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(group.name)
-                                .font(.moneySnap(size: 17, weight: .bold))
-                            Text(group.amountVisible ? "금액 공개" : "금액 비공개")
-                                .font(.moneySnap(size: 13, weight: .medium))
-                                .foregroundStyle(MoneySnapVisualSystem.secondaryText)
-                        }
-                        .frame(minHeight: 44)
                     }
+                    .onMove(perform: moveGroups)
                 }
                 .accessibilityIdentifier("screen.group")
             }
         }
         .task { await load() }
         .toolbar {
+            EditButton()
             Button("가입") { presentsJoin = true }
                 .frame(minWidth: 44, minHeight: 44)
             Button("만들기") { presentsCreate = true }
@@ -108,11 +112,16 @@ struct GroupListView: View {
 
     private func load() async {
         do {
-            groups = try await client.list().groups
+            groups = GroupCanvasOrder.apply(try await client.list().groups)
             failed = false
         } catch {
             failed = true
         }
+    }
+
+    private func moveGroups(from source: IndexSet, to destination: Int) {
+        groups.move(fromOffsets: source, toOffset: destination)
+        GroupCanvasOrder.save(groups)
     }
 
     private func create() async {
@@ -148,6 +157,24 @@ struct GroupListView: View {
         } catch {
             failed = true
         }
+    }
+}
+
+enum GroupCanvasOrder {
+    private static let key = "moneysnap.group-canvas-order"
+
+    static func apply(_ groups: [MoneySnapGroup]) -> [MoneySnapGroup] {
+        let saved = (UserDefaults.standard.stringArray(forKey: key) ?? []).compactMap { UUID(uuidString: $0) }
+        return groups.sorted { lhs, rhs in
+            let left = saved.firstIndex(of: lhs.id) ?? Int.max
+            let right = saved.firstIndex(of: rhs.id) ?? Int.max
+            if left != right { return left < right }
+            return lhs.createdAt < rhs.createdAt
+        }
+    }
+
+    static func save(_ groups: [MoneySnapGroup]) {
+        UserDefaults.standard.set(groups.map { $0.id.uuidString.lowercased() }, forKey: key)
     }
 }
 

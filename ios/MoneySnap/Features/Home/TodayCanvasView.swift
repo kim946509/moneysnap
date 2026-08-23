@@ -47,7 +47,9 @@ struct TodayCanvasView: View {
     }
 
     private var canvasSignature: String {
-        entries.map { "\($0.id.uuidString.lowercased()):\($0.amount.value)" }.joined(separator: ",")
+        entries.map {
+            "\($0.id.uuidString.lowercased()):\($0.amount.value):\($0.previewJPEG?.count ?? 0):\($0.revealsAmount)"
+        }.joined(separator: ",")
             + ":\(maximumAmount?.value ?? 0)"
     }
 
@@ -60,21 +62,22 @@ struct TodayCanvasView: View {
         count: Int,
         motion: TodayCanvasMotion
     ) -> CGSize {
-        guard motion == .physics, let maximumAmount else {
+        guard motion == .physics else {
             return TodayCanvasPlacement.cardSize(index: 0)
         }
-        return TodayCanvasPlacement.physicsSize(for: entry, maximumAmount: maximumAmount, count: count)
+        let largest = maximumAmount ?? entry.amount
+        return TodayCanvasPlacement.physicsSize(for: entry, maximumAmount: largest, count: count)
     }
 
     @ViewBuilder
     private func canvasCard(_ entry: TodaySnapEntry, index: Int, motion: TodayCanvasMotion) -> some View {
-        if motion == .physics, let maximumAmount {
+        if motion == .physics {
             CanvasSnapToken(
                 entry: entry,
-                imageSize: TodayCanvasPlacement.physicsSize(
+                imageSize: tokenSize(
                     for: entry,
-                    maximumAmount: maximumAmount,
-                    count: visibleEntries(motion).count
+                    count: visibleEntries(motion).count,
+                    motion: motion
                 )
             )
         } else if index == 2 {

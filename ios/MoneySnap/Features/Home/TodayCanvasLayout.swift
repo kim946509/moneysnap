@@ -1,14 +1,14 @@
 import Foundation
 
 enum TodayCanvasLayout {
-    static let placeholderLongestSide: CGFloat = 144
+    static let placeholderLongestSide: CGFloat = 108
 
     static func imageSize(
         for entry: TodaySnapEntry,
         maximumAmount: KrwAmount
     ) -> CGSize {
         let amountRatio = CGFloat(entry.amount.value) / CGFloat(maximumAmount.value)
-        let readableScale = max(CGFloat(0.72), amountRatio.squareRoot())
+        let readableScale = max(CGFloat(0.62), amountRatio.squareRoot())
         let aspectRatio = entry.artwork?.canvasAspectRatio ?? 1
         let longestSide = (entry.artwork?.canvasLongestSide ?? placeholderLongestSide) * readableScale
 

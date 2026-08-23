@@ -5,6 +5,18 @@ import Testing
 @MainActor
 struct SnapCaptureModelTests {
     @Test
+    func photoCaptureStartsOnTheCameraSourceStep() {
+        let model = makeModel(allowsPhotos: true)
+
+        #expect(model.phase == .source)
+        #expect(model.focusTarget == .sourceHeader)
+        #expect(model.accessibilityAnnouncement == "사진 선택 단계")
+        model.skipPhotos()
+        #expect(model.phase == .details)
+        #expect(model.needsCategoryPrompt)
+    }
+
+    @Test
     func categoryAndAmountStayTogetherOnTheCombinedSheet() {
         let model = makeModel()
 

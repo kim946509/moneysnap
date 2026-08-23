@@ -72,9 +72,9 @@ struct TodaySnapViewModelTests {
         let largest = TodayCanvasLayout.imageSize(for: larger, maximumAmount: larger.amount)
         let reduced = TodayCanvasLayout.imageSize(for: smaller, maximumAmount: larger.amount)
 
-        #expect(largest == CGSize(width: 144, height: 144))
-        #expect(reduced.width == 104)
-        #expect(reduced.height == 104)
+        #expect(largest == CGSize(width: 108, height: 108))
+        #expect(reduced.width == 67)
+        #expect(reduced.height == 67)
         #expect(reduced.width < largest.width)
     }
 
@@ -253,6 +253,23 @@ struct TodaySnapViewModelTests {
     }
 
     @Test
+    func hydrateIgnoresNonJpegMediaBodies() async {
+        let imageRef = UUID(uuidString: "018f1e2d-cccc-7abc-8def-0123456789ab")!
+        let viewModel = TodaySnapViewModel(
+            client: PhotoTodayClient(imageRef: imageRef),
+            media: StubMediaClient(jpeg: Data(#"{"bytes":"nope"}"#.utf8))
+        )
+
+        await viewModel.load()
+
+        guard case let .content(summary) = viewModel.state else {
+            Issue.record("Expected Home content after a non-JPEG media body")
+            return
+        }
+        #expect(summary.entries.first?.previewJPEG == nil)
+    }
+
+    @Test
     func refreshFailureKeepsExistingContent() async {
         let client = FlakyTodayClient(summary: VisualTestSupport.homeSummary)
         let viewModel = TodaySnapViewModel(client: client)
@@ -266,6 +283,34 @@ struct TodaySnapViewModelTests {
             return
         }
         #expect(viewModel.refreshFailure)
+    }
+
+    @Test
+    func refreshKeepsLocalJpegWhenMediaFetchFails() async {
+        let imageRef = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        let jpeg = Data([0xFF, 0xD8, 0xFF, 0x03])
+        let receiptID = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let client = PhotoTodayClient(imageRef: imageRef, snapID: receiptID)
+        let viewModel = TodaySnapViewModel(client: client, media: FailingMediaClient())
+        #expect(viewModel.apply(
+            SnapRecordReceipt(
+                id: receiptID,
+                category: .food,
+                amountWon: 18_900,
+                localDay: "2026-08-14",
+                createdAt: Date(timeIntervalSince1970: 1_786_582_800),
+                imageRef: imageRef
+            ),
+            previewJPEG: jpeg
+        ))
+
+        await viewModel.refresh()
+
+        guard case let .content(summary) = viewModel.state else {
+            Issue.record("Expected Home content after refresh")
+            return
+        }
+        #expect(summary.entries.first?.previewJPEG == jpeg)
     }
 
     @Test
@@ -395,24 +440,37 @@ private actor RecordingTodayClient: SnapJournalClient {
 
 private struct PhotoTodayClient: SnapJournalClient {
     let imageRef: UUID
+    var snapID: UUID = UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!
 
     func fetchToday() async throws -> TodaySnapSummary {
         try TodaySnapSummary(
             day: SnapDay(year: 2026, month: 8, day: 14, weekday: .friday),
             entries: [
                 TodaySnapEntry(
-                    id: UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!,
+                    id: snapID,
                     category: .food,
                     amount: try KrwAmount(100),
                     imageRef: imageRef
                 )
             ],
-            featuredEntryIDs: [UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!],
-            recentEntryIDs: [UUID(uuidString: "018f1e2d-1234-7abc-8def-0123456789ab")!]
+            featuredEntryIDs: [snapID],
+            recentEntryIDs: [snapID]
         )
     }
 
     func record(_ command: SnapRecordCommand) async throws -> SnapRecordReceipt {
+        throw FixtureError.unavailable
+    }
+}
+
+private struct FailingMediaClient: MediaClient {
+    func publish(_ jpeg: NormalizedJpeg) async throws -> UUID {
+        _ = jpeg
+        throw FixtureError.unavailable
+    }
+
+    func fetchJPEG(_ imageRef: UUID) async throws -> Data {
+        _ = imageRef
         throw FixtureError.unavailable
     }
 }

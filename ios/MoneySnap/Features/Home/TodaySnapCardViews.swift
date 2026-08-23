@@ -8,9 +8,11 @@ struct CanvasSnapToken: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             snapImage
-            PriceTicket(entry: entry)
-                .scaleEffect(min(1, imageSize.width / 112), anchor: .bottom)
-                .offset(y: 10)
+            if entry.revealsAmount {
+                PriceTicket(entry: entry)
+                    .scaleEffect(min(1, imageSize.width / 112), anchor: .bottom)
+                    .offset(y: 10)
+            }
         }
         .frame(width: imageSize.width, height: imageSize.height)
     }

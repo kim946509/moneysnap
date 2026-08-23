@@ -64,7 +64,7 @@ class MediaController {
         return vault.complete(actor.userId(), mediaId);
     }
 
-    @GetMapping("/{mediaId}")
+    @GetMapping(path = "/{mediaId}", produces = MediaType.IMAGE_JPEG_VALUE)
     ResponseEntity<byte[]> read(Authentication authentication, @PathVariable UUID mediaId) {
         AuthenticatedUser actor = (AuthenticatedUser) authentication.getPrincipal();
         MediaReadGrant grant = vault.read(actor.userId(), mediaId);

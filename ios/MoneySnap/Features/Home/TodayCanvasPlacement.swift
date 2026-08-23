@@ -14,10 +14,12 @@ enum TodayCanvasPlacement {
     static let floorY: CGFloat = 400
     static let ceilingY: CGFloat = 92
     static let dropY: CGFloat = 108
-    static let recordButtonCenterY: CGFloat = 436
-    static let recordButtonHeight: CGFloat = 64
+    static let recordButtonCenterY: CGFloat = 448
+    static let recordButtonHeight: CGFloat = 51
+    static let recordButtonWidth: CGFloat = 132
     static let physicsCeilingY: CGFloat = 96
-    static let physicsFloorY: CGFloat = 392
+    static let physicsFloorY: CGFloat = 416
+    static let floatSpeedLimit: CGFloat = 42
 
     static func motion(reduceMotion: Bool, visualScenario: String?) -> TodayCanvasMotion {
         if reduceMotion { return .staticRest }
@@ -72,12 +74,10 @@ enum TodayCanvasPlacement {
             return TodayCanvasPose(center: restCenter(index: index, canvasWidth: canvasWidth), rotation: 0)
         }
         if isNew {
-            let jitter = CGFloat(id.uuid.0 % 37) - 18
+            let rest = packedCenter(index: index, count: count, canvasWidth: canvasWidth, size: size)
+            let jitter = CGFloat(id.uuid.0 % 21) - 10
             return TodayCanvasPose(
-                center: CGPoint(
-                    x: min(max(40, packedCenter(index: index, count: count, canvasWidth: canvasWidth, size: size).x + jitter), canvasWidth - 40),
-                    y: dropCenterY(size: size)
-                ),
+                center: CGPoint(x: min(max(40, rest.x + jitter), canvasWidth - 40), y: rest.y),
                 rotation: 0
             )
         }
@@ -100,11 +100,14 @@ enum TodayCanvasPlacement {
         maximumAmount: KrwAmount,
         count: Int
     ) -> CGSize {
+        if !entry.revealsAmount {
+            return CGSize(width: 72, height: 72)
+        }
         let base = TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
         let crowding = min(1, 3.2 / CGFloat(max(count, 1)))
         let scale = max(0.42, 0.52 + 0.48 * crowding)
-        let width = min(120, max(48, (base.width * scale).rounded()))
-        let height = min(120, max(48, (base.height * scale).rounded()))
+        let width = min(88, max(40, (base.width * scale).rounded()))
+        let height = min(88, max(40, (base.height * scale).rounded()))
         return CGSize(width: width, height: height)
     }
 
