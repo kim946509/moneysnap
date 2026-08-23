@@ -308,7 +308,6 @@ private struct TodaySnapContent: View {
                 }
                 .padding(.leading, 26)
                 .padding(.bottom, 96)
-                .accessibilityIdentifier("home.recent")
             }
         }
     }
