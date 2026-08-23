@@ -98,14 +98,17 @@ final class TodayCanvasScene: SKScene {
 
     override func didMove(to view: SKView) {
         physicsWorld.gravity = .zero
-        physicsWorld.speed = 0.88
+        physicsWorld.speed = 1
         view.allowsTransparency = true
         backgroundColor = .clear
     }
 
     func sync(specs: [BodySpec], canvasSize: CGSize) {
+        let resized = size != canvasSize
         size = canvasSize
-        rebuildEnclosure()
+        if resized || childNode(withName: "enclosure") == nil {
+            rebuildEnclosure()
+        }
         let incoming = Set(specs.map(\.id))
         for child in children where child.name != "enclosure" {
             guard let name = child.name, let id = UUID(uuidString: name) else { continue }
@@ -117,7 +120,11 @@ final class TodayCanvasScene: SKScene {
 
         for spec in specs {
             if let existing = childNode(withName: spec.id.uuidString.lowercased()) {
-                applyCollisionBody(spec.size, to: existing)
+                let radius = TodayCanvasPlacement.collisionRadius(size: spec.size)
+                let stored = (existing.userData?["radius"] as? NSNumber).map { CGFloat(truncating: $0) }
+                if stored == nil || abs((stored ?? 0) - radius) > 0.5 {
+                    applyCollisionBody(spec.size, to: existing)
+                }
                 continue
             }
             addBody(spec)
@@ -151,17 +158,27 @@ final class TodayCanvasScene: SKScene {
             if insertedAt[id] == nil {
                 insertedAt[id] = currentTime
             }
+            let heading = CGFloat(currentTime * 0.32 + Double(id.uuid.0) / 26)
+            let cruise = TodayCanvasPlacement.floatCruiseSpeed
+            let target = CGVector(dx: cos(heading) * cruise, dy: sin(heading * 1.13) * cruise)
             let speed = hypot(body.velocity.dx, body.velocity.dy)
-            let limit = TodayCanvasPlacement.floatSpeedLimit
-            if speed > limit {
-                let scale = limit / speed
+            if speed < cruise * 0.4 {
+                body.velocity = target
+            } else {
+                let blend = CGFloat(0.06 + min(dt, 0.04) * 0.8)
+                body.velocity = CGVector(
+                    dx: body.velocity.dx * (1 - blend) + target.dx * blend,
+                    dy: body.velocity.dy * (1 - blend) + target.dy * blend
+                )
+            }
+            let limited = hypot(body.velocity.dx, body.velocity.dy)
+            let cap = TodayCanvasPlacement.floatSpeedLimit
+            if limited > cap {
+                let scale = cap / limited
                 body.velocity = CGVector(dx: body.velocity.dx * scale, dy: body.velocity.dy * scale)
             }
-            let phase = currentTime * 0.55 + Double(id.uuid.0) / 40
-            let drift = CGFloat(0.9 + min(dt, 0.04) * 8)
-            body.applyForce(CGVector(dx: CGFloat(cos(phase)) * drift, dy: CGFloat(sin(phase * 1.17)) * drift))
-            if abs(body.angularVelocity) > 1.2 {
-                body.angularVelocity *= 0.86
+            if abs(body.angularVelocity) > 1.6 {
+                body.angularVelocity *= 0.9
             }
         }
     }
@@ -174,23 +191,23 @@ final class TodayCanvasScene: SKScene {
         applyCollisionBody(spec.size, to: node)
         addChild(node)
         insertedAt[spec.id] = nil
-        if spec.isNew {
-            node.physicsBody?.velocity = CGVector(
-                dx: CGFloat(Int(spec.id.uuid.1) % 11) - 5,
-                dy: CGFloat(Int(spec.id.uuid.2) % 9) - 4
-            )
-            node.physicsBody?.angularVelocity = CGFloat(Int(spec.id.uuid.3) % 5) / 18 - 0.12
-        }
+        let heading = CGFloat(Int(spec.id.uuid.1) % 360) * .pi / 180
+        let cruise = TodayCanvasPlacement.floatCruiseSpeed
+        node.physicsBody?.velocity = CGVector(
+            dx: cos(heading) * cruise,
+            dy: sin(heading) * cruise
+        )
+        node.physicsBody?.angularVelocity = spec.isNew ? CGFloat(Int(spec.id.uuid.3) % 5) / 10 - 0.2 : 0.08
     }
 
     private func applyCollisionBody(_ size: CGSize, to node: SKNode) {
         let radius = TodayCanvasPlacement.collisionRadius(size: size)
         let body = SKPhysicsBody(circleOfRadius: radius)
-        body.mass = max(0.16, (size.width * size.height) / 22_000)
-        body.restitution = 0.72
+        body.mass = max(0.12, (size.width * size.height) / 28_000)
+        body.restitution = TodayCanvasPlacement.floatRestitution
         body.friction = 0
-        body.linearDamping = 3.4
-        body.angularDamping = 4.2
+        body.linearDamping = TodayCanvasPlacement.floatLinearDamping
+        body.angularDamping = TodayCanvasPlacement.floatAngularDamping
         body.affectedByGravity = false
         body.allowsRotation = true
         body.isDynamic = true
@@ -201,6 +218,10 @@ final class TodayCanvasScene: SKScene {
             body.angularVelocity = current.angularVelocity
         }
         node.physicsBody = body
+        if node.userData == nil {
+            node.userData = NSMutableDictionary()
+        }
+        node.userData?["radius"] = NSNumber(value: Double(radius))
     }
 
     private func rebuildEnclosure() {

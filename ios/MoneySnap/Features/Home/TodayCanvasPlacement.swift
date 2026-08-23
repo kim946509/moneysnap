@@ -19,7 +19,11 @@ enum TodayCanvasPlacement {
     static let recordButtonWidth: CGFloat = 132
     static let physicsCeilingY: CGFloat = 96
     static let physicsFloorY: CGFloat = 416
-    static let floatSpeedLimit: CGFloat = 42
+    static let floatSpeedLimit: CGFloat = 58
+    static let floatCruiseSpeed: CGFloat = 24
+    static let floatLinearDamping: CGFloat = 0.22
+    static let floatAngularDamping: CGFloat = 0.55
+    static let floatRestitution: CGFloat = 0.68
 
     static func motion(reduceMotion: Bool, visualScenario: String?) -> TodayCanvasMotion {
         if reduceMotion { return .staticRest }
@@ -101,13 +105,13 @@ enum TodayCanvasPlacement {
         count: Int
     ) -> CGSize {
         if !entry.revealsAmount {
-            return CGSize(width: 72, height: 72)
+            return CGSize(width: 79, height: 79)
         }
         let base = TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
         let crowding = min(1, 3.2 / CGFloat(max(count, 1)))
-        let scale = max(0.42, 0.52 + 0.48 * crowding)
-        let width = min(88, max(40, (base.width * scale).rounded()))
-        let height = min(88, max(40, (base.height * scale).rounded()))
+        let scale = max(0.46, 0.57 + 0.53 * crowding)
+        let width = min(97, max(44, (base.width * scale).rounded()))
+        let height = min(97, max(44, (base.height * scale).rounded()))
         return CGSize(width: width, height: height)
     }
 

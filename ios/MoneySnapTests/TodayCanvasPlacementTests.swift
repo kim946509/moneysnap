@@ -59,15 +59,16 @@ struct TodayCanvasPlacementTests {
             count: 2
         )
 
-        #expect(few.width <= 88)
+        #expect(few.width <= 97)
+        #expect(few.width >= 88)
         #expect(many.width < few.width)
         #expect(cheaper.width < few.width)
-        #expect(many.width >= 40)
+        #expect(many.width >= 44)
     }
 
     @Test
     func packedCentersStayInsideThePhysicsPlayArea() {
-        let size = CGSize(width: 88, height: 88)
+        let size = CGSize(width: 97, height: 97)
         for index in 0..<6 {
             let center = TodayCanvasPlacement.packedCenter(
                 index: index,
@@ -132,15 +133,32 @@ struct TodayCanvasPlacementTests {
                 for: hidden,
                 maximumAmount: visible.amount,
                 count: 2
-            ) == CGSize(width: 72, height: 72)
+            ) == CGSize(width: 79, height: 79)
         )
         #expect(
             TodayCanvasPlacement.physicsSize(
                 for: visible,
                 maximumAmount: visible.amount,
                 count: 2
-            ).width <= 88
+            ).width <= 97
         )
+        #expect(
+            TodayCanvasPlacement.physicsSize(
+                for: visible,
+                maximumAmount: visible.amount,
+                count: 2
+            ).width >= 88
+        )
+    }
+
+    @Test
+    func liveFloatUsesCruiseSpeedInsteadOfFreezingInPlace() {
+        #expect(TodayCanvasPlacement.floatLinearDamping <= 0.3)
+        #expect(TodayCanvasPlacement.floatAngularDamping <= 0.8)
+        #expect(TodayCanvasPlacement.floatCruiseSpeed >= 18)
+        #expect(TodayCanvasPlacement.floatCruiseSpeed < TodayCanvasPlacement.floatSpeedLimit)
+        #expect(TodayCanvasPlacement.floatSpeedLimit >= 50)
+        #expect(TodayCanvasPlacement.floatRestitution >= 0.55)
     }
 
     @Test
