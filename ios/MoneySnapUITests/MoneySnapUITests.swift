@@ -24,6 +24,24 @@ final class MoneySnapUITests: XCTestCase {
     }
 
     @MainActor
+    func testHomeMenuOpensSidebarAndNavigatesToArchive() {
+        let app = XCUIApplication()
+        app.launchEnvironment["MONEYSNAP_VISUAL_SCENARIO"] = "home"
+        app.launch()
+
+        let menu = app.buttons["app.menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(menu.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(menu.frame.height, 44)
+        menu.tap()
+
+        XCTAssertTrue(element("screen.menu", in: app).waitForExistence(timeout: 5))
+        app.buttons["menu.archive"].tap()
+        XCTAssertTrue(element("screen.archive", in: app).waitForExistence(timeout: 5))
+        XCTAssertFalse(element("screen.menu", in: app).exists)
+    }
+
+    @MainActor
     func testUnknownScenarioFailsClosed() {
         let app = XCUIApplication()
         app.launchEnvironment["MONEYSNAP_VISUAL_SCENARIO"] = "unknown"

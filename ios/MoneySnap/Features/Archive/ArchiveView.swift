@@ -3,15 +3,26 @@ import SwiftUI
 struct ArchiveView: View {
     @State private var viewModel: ArchiveViewModel
     var onOpen: (UUID) -> Void = { _ in }
+    var onMenu: () -> Void = {}
 
-    init(client: any SnapJournalClient, onOpen: @escaping (UUID) -> Void = { _ in }) {
+    init(
+        client: any SnapJournalClient,
+        onMenu: @escaping () -> Void = {},
+        onOpen: @escaping (UUID) -> Void = { _ in }
+    ) {
         _viewModel = State(initialValue: ArchiveViewModel(client: client))
         self.onOpen = onOpen
+        self.onMenu = onMenu
     }
 
-    init(viewModel: ArchiveViewModel, onOpen: @escaping (UUID) -> Void = { _ in }) {
+    init(
+        viewModel: ArchiveViewModel,
+        onMenu: @escaping () -> Void = {},
+        onOpen: @escaping (UUID) -> Void = { _ in }
+    ) {
         _viewModel = State(initialValue: viewModel)
         self.onOpen = onOpen
+        self.onMenu = onMenu
     }
 
     var body: some View {
@@ -41,13 +52,7 @@ struct ArchiveView: View {
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
             }
             Spacer()
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 25, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(MoneySnapVisualSystem.navy, in: Circle())
-                .shadow(color: .black.opacity(0.15), radius: 12, y: 9)
-                .accessibilityHidden(true)
+            MoneySnapMenuButton(action: onMenu)
         }
     }
 

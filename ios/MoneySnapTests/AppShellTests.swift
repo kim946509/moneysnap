@@ -10,6 +10,11 @@ struct AppShellTests {
     }
 
     @Test
+    func sidebarListsPrimaryDestinationsWithoutTheAddTab() {
+        #expect(AppTab.allCases.filter { $0 != .add } == [.home, .group, .archive, .profile])
+    }
+
+    @Test
     func tabsKeepIndependentNavigationHistory() {
         let tabRouter = TabRouter()
         let snapID = UUID(uuidString: "4A97DF9D-CB7C-4D2B-93C7-904C1B759C95")!

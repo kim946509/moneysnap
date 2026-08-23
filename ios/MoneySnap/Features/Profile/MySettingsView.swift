@@ -4,6 +4,7 @@ struct MySettingsView: View {
     let authentication: AuthenticationModel
     var summaryClient: (any AccountSummaryClient)? = nil
     var groupClient: any GroupClient = UnavailableGroupClient()
+    var onMenu: () -> Void = {}
 
     @State private var presentedSheet: MySettingsSheet?
     @State private var summary: AccountSummary?
@@ -54,13 +55,7 @@ struct MySettingsView: View {
             }
             .offset(x: 28, y: 7)
 
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 25, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(MoneySnapVisualSystem.navy, in: Circle())
-                .shadow(color: .black.opacity(0.15), radius: 12, y: 9)
-                .accessibilityHidden(true)
+            MoneySnapMenuButton(action: onMenu)
                 .position(x: availableWidth - 40, y: 34)
         }
     }
