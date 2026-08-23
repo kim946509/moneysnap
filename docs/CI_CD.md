@@ -113,7 +113,7 @@ gh secret set APP_STORE_CONNECT_API_KEY_P8 --env ios-testflight < AuthKey_<KEY_I
 
 GitHub Actions의 `.github/workflows/ios-ci.yml`은 Apple 개발 credential·provisioning 없이 `macos-15`의 Xcode 16.4, iPhone 16, iOS 18.5에서 Xcode 기본 ad-hoc 서명으로 `bash ios/scripts/test.sh`의 unit test와 non-parallel UI test를 실행한다. Keychain을 쓰지 않는 unsigned app을 한 번 build/install하고 manifest 순서의 Figma Home `9:2`, My `77:798`를 393x852로 캡처한다. 각 app/reference/overlay/diff/report는 한 화면이 threshold를 넘더라도 모두 생성한 뒤 실패를 집계하며 7일 보관한다.
 
-TestFlight CD는 `.github/workflows/ios-testflight.yml`이 소유한다. 성공한 `main` **push** iOS CI 또는 `main`의 `workflow_dispatch`에서만 실행하고 `ios-testflight` environment secret만 사용한다. PR에서 성공한 iOS CI는 TestFlight를 시작하지 않는다. PR과 `ios-ci.yml`에는 App Store Connect API key를 넣지 않는다. Bundle ID는 `com.ansandy.moneysnap`이다. Sign in with Apple runtime `.p8`은 서버 `server-development` secret이며 TestFlight 업로드 키와 분리한다. 레포는 분리하지 않는다.
+TestFlight CD는 `.github/workflows/ios-testflight.yml`이 소유한다. 성공한 `main` **push** iOS CI 또는 `main`의 `workflow_dispatch`에서만 실행하고 `ios-testflight` environment secret만 사용한다. archive는 `CODE_SIGN_IDENTITY="Apple Distribution"`으로 cloud-managed Distribution만 쓰며 iOS Development 인증서를 새로 만들지 않는다. PR에서 성공한 iOS CI는 TestFlight를 시작하지 않는다. PR과 `ios-ci.yml`에는 App Store Connect API key를 넣지 않는다. Bundle ID는 `com.ansandy.moneysnap`이다. Sign in with Apple runtime `.p8`은 서버 `server-development` secret이며 TestFlight 업로드 키와 분리한다. 레포는 분리하지 않는다.
 
 첫 업로드는 secret 등록 뒤 Actions에서 `iOS TestFlight` workflow를 `main`에 `workflow_dispatch`한다. 업로드 후 App Store Connect에서 Internal Tester를 넣고 아이폰 TestFlight에서 설치한다.
 
