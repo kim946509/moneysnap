@@ -82,11 +82,7 @@ private struct TodaySnapContent: View {
             } else {
                 ScrollView(.vertical, showsIndicators: summary.recentEntries.count > 2) {
                     chrome(canvasSize: proxy.size)
-                        .frame(
-                            width: proxy.size.width,
-                            height: recentContentHeight(viewportHeight: proxy.size.height),
-                            alignment: .topLeading
-                        )
+                        .frame(minWidth: proxy.size.width, minHeight: proxy.size.height, alignment: .topLeading)
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .accessibilityIdentifier("home.recent.scroll")
@@ -113,18 +109,7 @@ private struct TodaySnapContent: View {
             totalSection
             recentSection
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private func recentContentHeight(viewportHeight: CGFloat) -> CGFloat {
-        let count = summary.recentEntries.count
-        guard count > 0 else { return viewportHeight }
-        let rows = (count + 1) / 2
-        let listBottom = 650
-            + CGFloat(rows) * 46
-            + CGFloat(max(rows - 1, 0)) * 12
-            + 96
-        return max(viewportHeight, listBottom)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     @ViewBuilder
@@ -309,6 +294,9 @@ private struct TodaySnapContent: View {
                 .offset(x: 26, y: 650)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
+                    Color.clear
+                        .frame(height: 650)
+                        .allowsHitTesting(false)
                     ForEach(Array(stride(from: 0, to: summary.recentEntries.count, by: 2)), id: \.self) { start in
                         HStack(spacing: 28) {
                             recentCell(summary.recentEntries[start])
@@ -319,7 +307,7 @@ private struct TodaySnapContent: View {
                     }
                 }
                 .padding(.leading, 26)
-                .padding(.top, 650)
+                .padding(.bottom, 96)
                 .accessibilityIdentifier("home.recent")
             }
         }

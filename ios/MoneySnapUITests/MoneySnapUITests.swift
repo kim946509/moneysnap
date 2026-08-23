@@ -131,9 +131,15 @@ final class MoneySnapUITests: XCTestCase {
                 .waitForExistence(timeout: 5)
         )
 
-        let last = element("home.recent.b0000000-0000-4000-8000-000000000008", in: app)
+        let last = element(
+            "home.placeholder.recent.b0000000-0000-4000-8000-000000000008",
+            in: app
+        )
         XCTAssertTrue(last.waitForExistence(timeout: 5))
-        XCTAssertTrue(makeHittable(last, in: app))
+        for _ in 0..<8 where !last.isHittable {
+            swipeHomeListUp(in: app)
+        }
+        XCTAssertTrue(last.isHittable)
     }
 
     @MainActor
@@ -196,6 +202,14 @@ final class MoneySnapUITests: XCTestCase {
 
         XCTAssertTrue(element("screen.home", in: app).waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["home.total"].label, "₩62,100")
+    }
+
+    @MainActor
+    private func swipeHomeListUp(in app: XCUIApplication) {
+        let window = app.windows.firstMatch
+        let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
+        let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.42))
+        start.press(forDuration: 0.05, thenDragTo: end)
     }
 
     @MainActor
