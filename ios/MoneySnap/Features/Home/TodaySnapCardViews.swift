@@ -134,6 +134,7 @@ struct RecentSnapRow: View {
                     .scaledToFill()
                     .frame(width: 34, height: 34)
                     .clipShape(RoundedRectangle(cornerRadius: 7))
+                    .accessibilityIdentifier("home.recent.\(entry.id.uuidString.lowercased())")
             } else if let jpeg = entry.previewJPEG, let image = UIImage(data: jpeg) {
                 Image(uiImage: image)
                     .resizable()

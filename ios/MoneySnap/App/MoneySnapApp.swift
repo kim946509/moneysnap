@@ -35,6 +35,15 @@ struct MoneySnapApp: App {
             initialCaptureModel = nil
             invalidVisualScenario = nil
             return
+        case .todayMany:
+            _selectedTab = State(initialValue: .home)
+            _authentication = State(initialValue: VisualTestSupport.authenticatedModel())
+            snapJournalClient = VisualTestSupport.todayManyFeatureClient
+            groupClient = UnavailableGroupClient()
+            mediaClient = nil
+            initialCaptureModel = nil
+            invalidVisualScenario = nil
+            return
         case let .invalid(scenario):
             _selectedTab = State(initialValue: .home)
             _authentication = State(initialValue: VisualTestSupport.failClosedModel())

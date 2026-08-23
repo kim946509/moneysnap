@@ -97,6 +97,11 @@ struct AppShellTests {
         )
         #expect(
             VisualTestSupport.resolveFeature(
+                environment: ["MONEYSNAP_FEATURE_SCENARIO": "today-many"]
+            ) == .todayMany
+        )
+        #expect(
+            VisualTestSupport.resolveFeature(
                 environment: ["MONEYSNAP_FEATURE_SCENARIO": "unknown"]
             ) == .invalid("unknown")
         )

@@ -77,16 +77,16 @@ private struct TodaySnapContent: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .topLeading) {
-                header(availableWidth: proxy.size.width)
-                canvasPages(size: proxy.size)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                recordButton(availableWidth: proxy.size.width)
-                pageIndicator(availableWidth: proxy.size.width)
-                totalSection
-                recentSection
+            if isVisualHome {
+                chrome(canvasSize: proxy.size)
+            } else {
+                ScrollView(.vertical, showsIndicators: summary.recentEntries.count > 2) {
+                    chrome(canvasSize: proxy.size)
+                        .frame(minWidth: proxy.size.width, minHeight: proxy.size.height, alignment: .topLeading)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("home.recent.scroll")
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .task {
             await loadVisibleGroupIfNeeded()
@@ -97,6 +97,19 @@ private struct TodaySnapContent: View {
         .onChange(of: groups.map(\.id)) { _, _ in
             Task { await loadVisibleGroupIfNeeded() }
         }
+    }
+
+    private func chrome(canvasSize: CGSize) -> some View {
+        ZStack(alignment: .topLeading) {
+            header(availableWidth: canvasSize.width)
+            canvasPages(size: canvasSize)
+                .frame(width: canvasSize.width, height: canvasSize.height, alignment: .top)
+            recordButton(availableWidth: canvasSize.width)
+            pageIndicator(availableWidth: canvasSize.width)
+            totalSection
+            recentSection
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     @ViewBuilder
@@ -272,14 +285,36 @@ private struct TodaySnapContent: View {
                 .font(.moneySnap(size: 17, weight: .bold))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
                 .offset(x: 26, y: 612)
-            HStack(spacing: 28) {
-                ForEach(summary.recentEntries) { entry in
-                    RecentSnapRow(entry: entry)
-                        .onTapGesture { onOpen(entry.id) }
+            if isVisualHome {
+                HStack(spacing: 28) {
+                    ForEach(summary.recentEntries) { entry in
+                        recentCell(entry)
+                    }
                 }
+                .offset(x: 26, y: 650)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    Color.clear
+                        .frame(height: 650)
+                        .allowsHitTesting(false)
+                    ForEach(Array(stride(from: 0, to: summary.recentEntries.count, by: 2)), id: \.self) { start in
+                        HStack(spacing: 28) {
+                            recentCell(summary.recentEntries[start])
+                            if start + 1 < summary.recentEntries.count {
+                                recentCell(summary.recentEntries[start + 1])
+                            }
+                        }
+                    }
+                }
+                .padding(.leading, 26)
+                .padding(.bottom, 96)
             }
-            .offset(x: 26, y: 650)
         }
+    }
+
+    private func recentCell(_ entry: TodaySnapEntry) -> some View {
+        RecentSnapRow(entry: entry)
+            .onTapGesture { onOpen(entry.id) }
     }
 }
 
