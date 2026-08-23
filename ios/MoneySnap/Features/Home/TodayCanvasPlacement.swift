@@ -14,6 +14,10 @@ enum TodayCanvasPlacement {
     static let floorY: CGFloat = 400
     static let ceilingY: CGFloat = 92
     static let dropY: CGFloat = 108
+    static let recordButtonCenterY: CGFloat = 436
+    static let recordButtonHeight: CGFloat = 64
+    static let physicsCeilingY: CGFloat = 96
+    static let physicsFloorY: CGFloat = 392
 
     static func motion(reduceMotion: Bool, visualScenario: String?) -> TodayCanvasMotion {
         if reduceMotion { return .staticRest }
@@ -44,14 +48,81 @@ enum TodayCanvasPlacement {
         motion: TodayCanvasMotion,
         isNew: Bool
     ) -> TodayCanvasPose {
-        let rest = restCenter(index: index, canvasWidth: canvasWidth)
-        guard motion == .physics, isNew else {
-            return TodayCanvasPose(center: rest, rotation: 0)
+        pose(
+            id: id,
+            index: index,
+            count: max(index + 1, 1),
+            canvasWidth: canvasWidth,
+            size: cardSize(index: index),
+            motion: motion,
+            isNew: isNew
+        )
+    }
+
+    static func pose(
+        id: UUID,
+        index: Int,
+        count: Int,
+        canvasWidth: CGFloat,
+        size: CGSize,
+        motion: TodayCanvasMotion,
+        isNew: Bool
+    ) -> TodayCanvasPose {
+        if motion != .physics {
+            return TodayCanvasPose(center: restCenter(index: index, canvasWidth: canvasWidth), rotation: 0)
         }
-        let jitter = CGFloat(id.uuid.0 % 37) - 18
+        if isNew {
+            let jitter = CGFloat(id.uuid.0 % 37) - 18
+            return TodayCanvasPose(
+                center: CGPoint(
+                    x: min(max(40, packedCenter(index: index, count: count, canvasWidth: canvasWidth, size: size).x + jitter), canvasWidth - 40),
+                    y: dropCenterY(size: size)
+                ),
+                rotation: 0
+            )
+        }
         return TodayCanvasPose(
-            center: CGPoint(x: rest.x + jitter, y: dropY),
+            center: packedCenter(index: index, count: count, canvasWidth: canvasWidth, size: size),
             rotation: 0
         )
+    }
+
+    static func collisionRadius(size: CGSize) -> CGFloat {
+        max(24, min(size.width, size.height) / 2 * 0.92)
+    }
+
+    static func dropCenterY(size: CGSize) -> CGFloat {
+        physicsCeilingY + collisionRadius(size: size) + 10
+    }
+
+    static func physicsSize(
+        for entry: TodaySnapEntry,
+        maximumAmount: KrwAmount,
+        count: Int
+    ) -> CGSize {
+        let base = TodayCanvasLayout.imageSize(for: entry, maximumAmount: maximumAmount)
+        let crowding = min(1, 3.2 / CGFloat(max(count, 1)))
+        let scale = max(0.42, 0.52 + 0.48 * crowding)
+        let width = min(120, max(48, (base.width * scale).rounded()))
+        let height = min(120, max(48, (base.height * scale).rounded()))
+        return CGSize(width: width, height: height)
+    }
+
+    static func packedCenter(
+        index: Int,
+        count: Int,
+        canvasWidth: CGFloat,
+        size: CGSize
+    ) -> CGPoint {
+        let columns = min(3, max(count, 1))
+        let column = index % columns
+        let row = index / columns
+        let playHeight = physicsFloorY - physicsCeilingY
+        let xSpacing = canvasWidth / CGFloat(columns + 1)
+        let ySpacing = min(size.height + 18, playHeight / CGFloat(max((count + columns - 1) / columns, 1) + 1))
+        let x = xSpacing * CGFloat(column + 1)
+        let y = physicsCeilingY + 36 + size.height / 2 + CGFloat(row) * ySpacing
+        let maxCenterY = physicsFloorY - size.height / 2 - 4
+        return CGPoint(x: x, y: min(y, maxCenterY))
     }
 }

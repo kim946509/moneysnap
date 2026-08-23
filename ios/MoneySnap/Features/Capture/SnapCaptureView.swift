@@ -19,15 +19,9 @@ struct SnapCaptureView: View {
     var body: some View {
         Group {
             if model.layout == .combined {
-                VStack(spacing: 0) {
-                    dismissHandle
-                    steps
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Color.white)
-                .ignoresSafeArea()
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier(combinedScreenIdentifier)
+                steps
+                    .frame(maxWidth: .infinity, maxHeight: model.phase == .details ? .infinity : nil, alignment: .top)
+                    .accessibilityIdentifier(combinedScreenIdentifier)
             } else {
                 steps
             }
@@ -182,6 +176,9 @@ struct SnapCaptureView: View {
                 keypad
                     .frame(maxWidth: .infinity)
                     .padding(.top, model.failure == nil ? 20 : 8)
+
+                submitButton
+                    .padding(.top, 12)
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)
@@ -227,10 +224,10 @@ struct SnapCaptureView: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 72, height: 72)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .padding(.horizontal, 24)
-                        .padding(.top, 8)
+                        .frame(width: 168, height: 168)
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 12)
                         .accessibilityHidden(true)
                 }
 
@@ -239,6 +236,15 @@ struct SnapCaptureView: View {
                     .foregroundStyle(MoneySnapVisualSystem.secondaryText)
                     .padding(.horizontal, 24)
                     .padding(.top, 16)
+
+                if model.needsCategoryPrompt {
+                    Text("카테고리를 선택하세요")
+                        .font(.moneySnap(size: 13, weight: .medium))
+                        .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 6)
+                        .accessibilityIdentifier("record.category.prompt")
+                }
 
                 categoryGrid
                     .padding(.top, 12)
@@ -269,35 +275,16 @@ struct SnapCaptureView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 24)
                     .padding(.top, model.failure == nil ? 16 : 8)
+
+                submitButton
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
                     .padding(.bottom, 24)
                 }
             }
             .scrollIndicators(.hidden)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    private var dismissHandle: some View {
-        Capsule()
-            .fill(MoneySnapVisualSystem.secondaryText.opacity(0.45))
-            .frame(width: 36, height: 5)
-            .padding(.top, 10 + topSafeInset)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 12)
-                    .onEnded { value in
-                        if value.translation.height > 70 {
-                            requestDismiss()
-                        }
-                    }
-            )
-            .onTapGesture(perform: requestDismiss)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("닫기")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("record.dismiss")
     }
 
     private var categoryGrid: some View {
@@ -343,8 +330,10 @@ struct SnapCaptureView: View {
         switch model.phase {
         case .category:
             [.height(214)]
-        case .source, .amount:
+        case .amount:
             [.height(374)]
+        case .source:
+            [.fraction(0.32)]
         case .details:
             [.large]
         }
@@ -359,6 +348,16 @@ struct SnapCaptureView: View {
                 digitButton(digit)
             }
 
+            Button { model.clearAmount() } label: {
+                Text("C")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(CaptureKeyButtonStyle())
+            .accessibilityLabel("금액 지우기")
+            .accessibilityIdentifier("record.clear")
+
+            digitButton(0)
+
             Button { model.deleteDigit() } label: {
                 Text("지움")
                     .frame(maxWidth: .infinity, minHeight: 44)
@@ -366,22 +365,22 @@ struct SnapCaptureView: View {
             .buttonStyle(CaptureKeyButtonStyle())
             .accessibilityLabel("한 자리 지우기")
             .accessibilityIdentifier("record.delete")
-
-            digitButton(0)
-
-            Button {
-                Task { await submit() }
-            } label: {
-                Text(actionTitle)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(CaptureKeyButtonStyle(isPrimary: true))
-            .disabled(!model.canSubmit)
-            .accessibilityLabel(model.failure?.isRetryable == true ? "같은 기록 다시 확인" : "저장하기")
-            .accessibilityIdentifier(model.failure?.isRetryable == true ? "record.retry" : "record.submit")
-            .accessibilityFocused($voiceOverFocus, equals: .retryAction)
         }
+    }
+
+    private var submitButton: some View {
+        Button {
+            Task { await submit() }
+        } label: {
+            Text(model.submitTitle)
+                .font(.moneySnap(size: 18, weight: .bold))
+                .frame(maxWidth: .infinity, minHeight: 52)
+        }
+        .buttonStyle(CaptureKeyButtonStyle(isPrimary: true))
+        .disabled(!model.canSubmit)
+        .accessibilityLabel(model.failure?.isRetryable == true ? "같은 기록 다시 확인" : "저장하기")
+        .accessibilityIdentifier(model.failure?.isRetryable == true ? "record.retry" : "record.submit")
+        .accessibilityFocused($voiceOverFocus, equals: .retryAction)
     }
 
     private func digitButton(_ digit: Int) -> some View {
@@ -418,12 +417,6 @@ struct SnapCaptureView: View {
             .accessibilityLabel("\(text) 단계")
     }
 
-    private var actionTitle: String {
-        if model.isSubmitting { return "저장 중" }
-        if model.failure?.isRetryable == true { return "재시도" }
-        return "완료"
-    }
-
     private func handleBack() {
         if model.requiresAbandonConfirmation {
             confirmsAbandon = true
@@ -432,23 +425,6 @@ struct SnapCaptureView: View {
         } else {
             model.goBack()
         }
-    }
-
-    private func requestDismiss() {
-        guard !model.isSubmitting else { return }
-        if model.requiresAbandonConfirmation {
-            confirmsAbandon = true
-        } else {
-            dismiss()
-        }
-    }
-
-    private var topSafeInset: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }?
-            .safeAreaInsets.top ?? 59
     }
 
     private func submit() async {

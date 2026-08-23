@@ -70,19 +70,25 @@ final class MoneySnapUITests: XCTestCase {
         XCTAssertTrue(homeRecord.waitForExistence(timeout: 5))
         homeRecord.tap()
         XCTAssertTrue(element("screen.record.category", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element("record.category.prompt", in: app).waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["record.category.food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["tab.home"].isSelected)
         XCTAssertTrue(
-            fillsWindow(identifier: "screen.record.category", in: app),
-            "live category and amount capture should occupy the full window"
+            occupiesLargeSheet(identifier: "screen.record.category", in: app),
+            "category and amount capture should fill most of the screen"
         )
 
         app.buttons["record.category.food"].tap()
+        XCTAssertFalse(element("record.category.prompt", in: app).exists)
         XCTAssertTrue(app.buttons["record.digit.1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["record.clear"].waitForExistence(timeout: 5))
         for digit in ["1", "8", "9", "0", "0"] {
             app.buttons["record.digit.\(digit)"].tap()
         }
-        app.buttons["record.submit"].tap()
+        let submit = app.buttons["record.submit"]
+        XCTAssertEqual(submit.label, "저장하기")
+        XCTAssertNotEqual(submit.label, "저장 중")
+        submit.tap()
 
         XCTAssertTrue(element("screen.home", in: app).waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["home.total"].label, "₩62,100")
@@ -175,15 +181,14 @@ final class MoneySnapUITests: XCTestCase {
     }
 
     @MainActor
-    private func fillsWindow(identifier: String, in app: XCUIApplication) -> Bool {
+    private func occupiesLargeSheet(identifier: String, in app: XCUIApplication) -> Bool {
         let window = app.windows.firstMatch.frame
         let matches = app.descendants(matching: .any).matching(identifier: identifier)
         guard matches.firstMatch.waitForExistence(timeout: 5) else { return false }
         return (0..<matches.count).contains { index in
             let frame = matches.element(boundBy: index).frame
-            return frame.minY <= 1
-                && frame.height >= window.height * 0.98
-                && frame.width >= window.width * 0.98
+            return frame.height >= window.height * 0.72
+                && frame.width >= window.width * 0.9
         }
     }
 

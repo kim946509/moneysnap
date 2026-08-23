@@ -53,8 +53,8 @@ private struct TodaySnapContent: View {
             ZStack(alignment: .topLeading) {
                 header(availableWidth: proxy.size.width)
                 TodayCanvasView(
-                    entries: summary.featuredEntries,
-                    maximumAmount: summary.featuredEntries.map(\.amount).max(),
+                    entries: summary.entries,
+                    maximumAmount: summary.entries.map(\.amount).max(),
                     canvasSize: proxy.size,
                     onOpen: onOpen
                 )
@@ -110,7 +110,7 @@ private struct TodaySnapContent: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("home.record")
-        .position(x: availableWidth / 2, y: 436)
+        .position(x: availableWidth / 2, y: TodayCanvasPlacement.recordButtonCenterY)
     }
 
     private func pageIndicator(availableWidth: CGFloat) -> some View {

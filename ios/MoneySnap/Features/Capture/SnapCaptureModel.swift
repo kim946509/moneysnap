@@ -83,6 +83,18 @@ final class SnapCaptureModel {
             && Self.serverTimeZoneIdentifier(timeZone(), at: now()) != nil
     }
 
+    var needsCategoryPrompt: Bool {
+        phase == .details && selectedCategory == nil
+    }
+
+    var submitTitle: String {
+        if failure?.isRetryable == true { return "재시도" }
+        if !photoQueue.photos.isEmpty, photoQueue.index + 1 < photoQueue.photos.count {
+            return "다음"
+        }
+        return "완료"
+    }
+
     var requiresAbandonConfirmation: Bool {
         frozenCommand != nil && failure?.isRetryable == true && !succeeded
     }
@@ -94,7 +106,14 @@ final class SnapCaptureModel {
     var accessibilityAnnouncement: String {
         switch focusTarget {
         case .sourceHeader: "사진 선택 단계"
-        case .categoryHeader: layout == .combined ? "카테고리와 금액 입력" : "카테고리 선택 단계"
+        case .categoryHeader:
+            if layout == .combined && selectedCategory == nil {
+                "카테고리를 선택하세요"
+            } else if layout == .combined {
+                "카테고리와 금액 입력"
+            } else {
+                "카테고리 선택 단계"
+            }
         case .amountHeader: layout == .combined ? "카테고리와 금액 입력" : "금액 입력 단계"
         case .retryAction: "저장 결과를 확인하지 못했습니다"
         }
@@ -122,8 +141,15 @@ final class SnapCaptureModel {
         succeeded = false
         failure = nil
         publishTask = nil
+        digits = ""
+        selectedCategory = nil
         startPrefetch()
         enterDetails()
+    }
+
+    func clearAmount() {
+        guard !isSubmitting, frozenCommand == nil else { return }
+        digits = ""
     }
 
     func attach(_ photos: [NormalizedJpeg]) {

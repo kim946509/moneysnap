@@ -87,10 +87,7 @@ struct AppShellView: View {
                 .padding(.bottom, 21)
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .fullScreenCover(isPresented: fullScreenRecordPresented, onDismiss: presentPendingShare) {
-            recordCaptureView
-        }
-        .sheet(item: sheetItem, onDismiss: presentPendingShare) { sheet in
+        .sheet(item: $presentedSheet, onDismiss: presentPendingShare) { sheet in
             switch sheet {
             case .record:
                 recordCaptureView
@@ -153,40 +150,6 @@ struct AppShellView: View {
                 systemImage: tab.systemImage
             )
         }
-    }
-
-    private var usesStagedRecordSheet: Bool {
-        initialCaptureModel?.layout == .staged
-    }
-
-    private var fullScreenRecordPresented: Binding<Bool> {
-        Binding(
-            get: {
-                guard case .record = presentedSheet else { return false }
-                return !usesStagedRecordSheet
-            },
-            set: { isPresented in
-                if !isPresented, case .record = presentedSheet {
-                    presentedSheet = nil
-                }
-            }
-        )
-    }
-
-    private var sheetItem: Binding<AppSheet?> {
-        Binding(
-            get: {
-                switch presentedSheet {
-                case .record where usesStagedRecordSheet:
-                    .record
-                case .share(_):
-                    presentedSheet
-                default:
-                    nil
-                }
-            },
-            set: { presentedSheet = $0 }
-        )
     }
 
     @ViewBuilder
