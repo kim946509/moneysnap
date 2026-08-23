@@ -298,7 +298,8 @@ class GroupHttpIntegrationTests {
                         .queryParam("timeZone", "Asia/Seoul"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.members[0].totalAmountWon").value(5200))
-                .andExpect(jsonPath("$.members[0].representative.amountWon").value(5200));
+                .andExpect(jsonPath("$.members[0].representative.amountWon").value(5200))
+                .andExpect(jsonPath("$.members[0].representative.imageRef").doesNotExist());
         mockMvc.perform(post("/api/v1/invites/preview")
                         .header("Authorization", "Bearer " + owner)
                         .contentType("application/json")

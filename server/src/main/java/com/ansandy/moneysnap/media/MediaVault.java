@@ -67,9 +67,12 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
         return transactions.execute(status -> completeInTransaction(ownerId, mediaId));
     }
 
-    MediaReadGrant read(UUID ownerId, UUID mediaId) {
-        MediaRow row = findOwned(ownerId, mediaId).orElseThrow(MediaNotAccessibleException::new);
+    MediaReadGrant read(UUID actorId, UUID mediaId) {
+        MediaRow row = findReadable(actorId, mediaId).orElseThrow(MediaNotAccessibleException::new);
         if (!"ACTIVE_UNLINKED".equals(row.status()) && !"LINKED".equals(row.status())) {
+            throw new MediaNotAccessibleException();
+        }
+        if (!row.ownerId().equals(actorId) && !"LINKED".equals(row.status())) {
             throw new MediaNotAccessibleException();
         }
         byte[] bytes = objects.get(row.objectKey(), MAX_BYTES + 1);
@@ -242,15 +245,39 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
                 """)
                 .param("id", mediaId)
                 .param("ownerId", ownerId)
-                .query((row, rowNumber) -> new MediaRow(
-                        row.getObject("id", UUID.class),
-                        row.getObject("owner_id", UUID.class),
-                        row.getString("object_key"),
-                        row.getInt("declared_bytes"),
-                        row.getString("checksum_sha256"),
-                        row.getString("status"),
-                        row.getTimestamp("expires_at") == null ? Instant.MAX : row.getTimestamp("expires_at").toInstant()))
+                .query(this::mapRow)
                 .optional();
+    }
+
+    private Optional<MediaRow> findReadable(UUID actorId, UUID mediaId) {
+        Optional<MediaRow> owned = findOwned(actorId, mediaId);
+        if (owned.isPresent()) {
+            return owned;
+        }
+        return jdbc.sql("""
+                SELECT m.id, m.owner_id, m.object_key, m.declared_bytes, m.checksum_sha256, m.status, m.expires_at
+                FROM media_objects m
+                JOIN snaps s ON s.image_id = m.id
+                JOIN snap_shares sh ON sh.snap_id = s.id
+                JOIN group_memberships gm ON gm.group_id = sh.group_id AND gm.user_id = :actorId
+                WHERE m.id = :id AND m.status = 'LINKED'
+                LIMIT 1
+                """)
+                .param("id", mediaId)
+                .param("actorId", actorId)
+                .query(this::mapRow)
+                .optional();
+    }
+
+    private MediaRow mapRow(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
+        return new MediaRow(
+                row.getObject("id", UUID.class),
+                row.getObject("owner_id", UUID.class),
+                row.getString("object_key"),
+                row.getInt("declared_bytes"),
+                row.getString("checksum_sha256"),
+                row.getString("status"),
+                row.getTimestamp("expires_at") == null ? Instant.MAX : row.getTimestamp("expires_at").toInstant());
     }
 
     private void markFailed(UUID mediaId) {

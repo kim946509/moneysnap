@@ -54,6 +54,31 @@ struct GroupDetailModelTests {
     }
 
     @Test
+    func canvasOrderFollowsSavedIdsThenCreatedAt() {
+        UserDefaults.standard.removeObject(forKey: "moneysnap.group-canvas-order")
+        let older = MoneySnapGroup(
+            id: UUID(uuidString: "018f1e2d-aaaa-7abc-8def-0123456789ab")!,
+            name: "먼저",
+            amountVisible: true,
+            role: .owner,
+            createdAt: Date(timeIntervalSince1970: 1)
+        )
+        let newer = MoneySnapGroup(
+            id: UUID(uuidString: "018f1e2d-bbbb-7abc-8def-0123456789ab")!,
+            name: "나중",
+            amountVisible: false,
+            role: .member,
+            createdAt: Date(timeIntervalSince1970: 2)
+        )
+
+        #expect(GroupCanvasOrder.apply([newer, older]).map(\.id) == [older.id, newer.id])
+
+        GroupCanvasOrder.save([newer, older])
+        #expect(GroupCanvasOrder.apply([older, newer]).map(\.id) == [newer.id, older.id])
+        UserDefaults.standard.removeObject(forKey: "moneysnap.group-canvas-order")
+    }
+
+    @Test
     func ownerCanDeleteTheGroup() async {
         let client = RecordingGroupClient()
         let model = GroupDetailModel(

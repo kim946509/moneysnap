@@ -20,7 +20,7 @@ enum HelpTopic: String, CaseIterable, Identifiable, Sendable {
     var body: String {
         switch self {
         case .record:
-            "홈의 기록하기로 소비를 남깁니다. 카메라 1장, 앨범 최대 3장, 또는 사진 없이 카테고리와 금액을 한 번에 입력합니다. 여러 장을 고르면 사진마다 별도 Snap이 됩니다."
+            "홈의 기록하기나 가운데 추가로 소비를 남깁니다. 카메라 화면에서 1장 촬영, 앨범 최대 3장, 또는 사진 없이 카테고리와 금액을 한 번에 입력합니다. 여러 장을 고르면 사진마다 별도 Snap이 됩니다."
         case .privacy:
             "저장은 항상 나만 보기로 먼저 끝납니다. 속한 그룹이 있을 때만 저장 후 한 Snap을 한 그룹에 공유할 수 있습니다. 건너뛰거나 실패해도 개인 기록은 그대로입니다."
         case .groups:

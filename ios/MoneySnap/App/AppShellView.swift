@@ -108,12 +108,12 @@ struct AppShellView: View {
                 )
             }
         }
+        .task(id: selectedTab) {
+            shareGroups = GroupCanvasOrder.apply((try? await groupClient.list().groups) ?? [])
+        }
         .onAppear {
             if initialCaptureModel != nil {
                 presentedSheet = .record
-            }
-            Task {
-                shareGroups = (try? await groupClient.list().groups) ?? []
             }
         }
     }
@@ -127,7 +127,10 @@ struct AppShellView: View {
                 onRecord: { presentedSheet = .record },
                 onOpen: { id in
                     tabRouter.router(for: .home).navigate(to: .snapDetail(id: id))
-                }
+                },
+                groups: shareGroups,
+                groupClient: groupClient,
+                media: mediaClient
             )
         case .group:
             GroupListView(client: groupClient)

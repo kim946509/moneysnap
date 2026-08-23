@@ -77,6 +77,29 @@ struct MediaClientTests {
         #expect(requests.map(\.httpMethod) == ["GET"])
         #expect(requests.first?.url?.path == "/api/v1/media/\(imageRef.uuidString.lowercased())")
         #expect(requests.first?.value(forHTTPHeaderField: "Authorization") == "Bearer access-token")
+        #expect(requests.first?.value(forHTTPHeaderField: "Accept") == "image/jpeg")
+    }
+
+    @Test
+    func rejectsJsonMediaBodiesThatAreNotJpegBytes() async {
+        let imageRef = UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
+        MediaSequenceStub.configure(responses: [
+            MediaSequenceStub.Response(
+                status: 200,
+                body: Data(#"{"imageRef":"33333333-3333-4333-8333-333333333333"}"#.utf8)
+            )
+        ])
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MediaSequenceStub.self]
+        let client = URLSessionMediaClient(
+            baseURL: URL(string: "https://moneysnap.example")!,
+            session: URLSession(configuration: configuration),
+            accessToken: { "access-token" }
+        )
+
+        await #expect(throws: SnapRecordError.transportFailure) {
+            _ = try await client.fetchJPEG(imageRef)
+        }
     }
 }
 

@@ -66,7 +66,7 @@ docs/                       # 제품·기술 기준 문서
 | `SnapJournalClient` | `today`, `record`, `revise`, `delete` | URLSession, bearer session, OpenAPI DTO, 오류 정규화 |
 | `GroupSharingClient` | `groups`, `share`, `groupToday`, `memberToday` | membership API와 visible/hidden projection decoding |
 | `MoneySnapVisualSystem` | 반복되는 color, type, spacing, tab, sheet, Snap object | Figma token, SF Symbol, asset catalog와 accessibility variant |
-| `TodayCanvas` | 의미 데이터와 stable layout seed | SpriteKit scene, 낙하·충돌, reduce-motion fallback |
+| `TodayCanvas` | 의미 데이터와 stable layout seed | SpriteKit scene, 무중력 유영·충돌, reduce-motion fallback |
 
 SwiftUI View는 R2 URL 생성, HTTP endpoint, JSON key, group 권한 규칙을 알지 않는다. preview와 snapshot에서는 production HTTP Adapter를 `InMemoryBackendAdapter`로 교체한다.
 

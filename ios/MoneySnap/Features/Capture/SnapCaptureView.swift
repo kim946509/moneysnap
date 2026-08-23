@@ -20,14 +20,15 @@ struct SnapCaptureView: View {
         Group {
             if model.layout == .combined {
                 steps
-                    .frame(maxWidth: .infinity, maxHeight: model.phase == .details ? .infinity : nil, alignment: .top)
+                    .frame(maxWidth: .infinity, maxHeight: model.phase == .source || model.phase == .details ? .infinity : nil, alignment: .top)
                     .accessibilityIdentifier(combinedScreenIdentifier)
             } else {
                 steps
             }
         }
         .presentationDetents(detents)
-        .presentationDragIndicator(model.layout == .staged ? .hidden : .visible)
+        .presentationDragIndicator(model.phase == .source ? .visible : (model.layout == .staged ? .hidden : .visible))
+        .presentationBackground(model.phase == .source ? Color.black : Color.white)
         .presentationContentInteraction(model.layout == .combined ? .resizes : .automatic)
         .onAppear { voiceOverFocus = model.focusTarget }
         .onChange(of: model.focusTarget) { _, focusTarget in
@@ -69,36 +70,78 @@ struct SnapCaptureView: View {
     }
 
     private var sourceStep: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("사진")
-                .font(.moneySnap(size: 24, weight: .bold))
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .accessibilityAddTraits(.isHeader)
-            Button("사진 없이 기록") { model.skipPhotos() }
-                .frame(minWidth: 44, minHeight: 44)
-                .padding(.horizontal, 24)
-                .accessibilityIdentifier("record.source.none")
-            PhotosPicker(selection: $photoItems, maxSelectionCount: 3, matching: .images) {
-                Text("앨범에서 선택")
-                    .frame(minWidth: 44, minHeight: 44)
-            }
-            .padding(.horizontal, 24)
-            .onChange(of: photoItems) { _, items in
-                Task { await loadPhotos(items) }
-            }
-            Button("사진 촬영") { presentsCamera = true }
-                .frame(minWidth: 44, minHeight: 44)
-                .padding(.horizontal, 24)
-                .accessibilityIdentifier("record.source.camera")
-                .sheet(isPresented: $presentsCamera) {
-                    CameraPicker { image in
-                        if let normalized = try? JpegNormalizer.normalize(image) {
-                            model.attach([normalized])
-                        }
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 0) {
+                Spacer()
+                RoundedRectangle(cornerRadius: 32)
+                    .fill(Color.white.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 32)
+                            .stroke(.white.opacity(0.16), lineWidth: 1)
+                    )
+                    .overlay {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 44, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.28))
                     }
-                    .ignoresSafeArea()
+                    .aspectRatio(3 / 4, contentMode: .fit)
+                    .padding(.horizontal, 28)
+                    .accessibilityHidden(true)
+                Spacer()
+                HStack(alignment: .center) {
+                    PhotosPicker(selection: $photoItems, maxSelectionCount: 3, matching: .images) {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.18))
+                            .frame(width: 48, height: 48)
+                            .overlay {
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(.white)
+                            }
+                    }
+                    .accessibilityLabel("앨범에서 선택")
+                    .accessibilityIdentifier("record.source.album")
+                    .onChange(of: photoItems) { _, items in
+                        Task { await loadPhotos(items) }
+                    }
+
+                    Spacer()
+                    Button { presentsCamera = true } label: {
+                        Circle()
+                            .stroke(.white, lineWidth: 5)
+                            .frame(width: 78, height: 78)
+                            .overlay(Circle().fill(.white).padding(8))
+                    }
+                    .accessibilityLabel("사진 촬영")
+                    .accessibilityIdentifier("record.source.camera")
+                    Spacer()
+
+                    Button { model.skipPhotos() } label: {
+                        Text("없음")
+                            .font(.moneySnap(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 48, height: 48)
+                            .background(Color.white.opacity(0.18), in: Circle())
+                    }
+                    .accessibilityLabel("사진 없이 기록")
+                    .accessibilityIdentifier("record.source.none")
                 }
+                .padding(.horizontal, 36)
+                .padding(.bottom, 42)
+            }
+        }
+        .fullScreenCover(isPresented: $presentsCamera) {
+            CameraPicker(
+                onImage: { image in
+                    if let normalized = try? JpegNormalizer.normalize(image) {
+                        model.attach([normalized])
+                    }
+                    presentsCamera = false
+                },
+                onCancel: { presentsCamera = false }
+            )
+            .ignoresSafeArea()
         }
     }
 
@@ -333,7 +376,7 @@ struct SnapCaptureView: View {
         case .amount:
             [.height(374)]
         case .source:
-            [.fraction(0.32)]
+            [.large]
         case .details:
             [.large]
         }
@@ -472,9 +515,10 @@ struct SnapCaptureView: View {
 
 private struct CameraPicker: UIViewControllerRepresentable {
     let onImage: (UIImage) -> Void
+    var onCancel: () -> Void = {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onImage: onImage)
+        Coordinator(onImage: onImage, onCancel: onCancel)
     }
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -489,9 +533,11 @@ private struct CameraPicker: UIViewControllerRepresentable {
 
     final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
         let onImage: (UIImage) -> Void
+        let onCancel: () -> Void
 
-        init(onImage: @escaping (UIImage) -> Void) {
+        init(onImage: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
             self.onImage = onImage
+            self.onCancel = onCancel
         }
 
         func imagePickerController(
@@ -500,12 +546,13 @@ private struct CameraPicker: UIViewControllerRepresentable {
         ) {
             if let image = info[.originalImage] as? UIImage {
                 onImage(image)
+            } else {
+                onCancel()
             }
-            picker.dismiss(animated: true)
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
+            onCancel()
         }
     }
 }

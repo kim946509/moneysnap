@@ -59,10 +59,10 @@ struct TodayCanvasPlacementTests {
             count: 2
         )
 
-        #expect(few.width <= 120)
+        #expect(few.width <= 88)
         #expect(many.width < few.width)
         #expect(cheaper.width < few.width)
-        #expect(many.width >= 48)
+        #expect(many.width >= 40)
     }
 
     @Test
@@ -100,10 +100,47 @@ struct TodayCanvasPlacementTests {
             isNew: false
         )
 
-        #expect(drop.center.y < rest.center.y)
-        #expect(drop.center.y == TodayCanvasPlacement.dropCenterY(size: TodayCanvasPlacement.cardSize(index: 0)))
+        #expect(drop.center.y < TodayCanvasPlacement.physicsFloorY)
+        #expect(drop.center.y > TodayCanvasPlacement.physicsCeilingY)
         #expect(rest.center.y < TodayCanvasPlacement.physicsFloorY)
         #expect(rest.center.y > TodayCanvasPlacement.physicsCeilingY)
+    }
+
+    @Test
+    func recordButtonIsAboutTwentyPercentSmallerThanTheOriginalCapsule() {
+        #expect(TodayCanvasPlacement.recordButtonWidth == 132)
+        #expect(TodayCanvasPlacement.recordButtonHeight == 51)
+        #expect(TodayCanvasPlacement.physicsFloorY < TodayCanvasPlacement.recordButtonCenterY - TodayCanvasPlacement.recordButtonHeight / 2)
+    }
+
+    @Test
+    func hiddenAmountSnapsUseAFixedImageSize() throws {
+        let hidden = TodaySnapEntry(
+            id: UUID(),
+            category: .food,
+            amount: try KrwAmount(1),
+            revealsAmount: false
+        )
+        let visible = TodaySnapEntry(
+            id: UUID(),
+            category: .food,
+            amount: try KrwAmount(18_900)
+        )
+
+        #expect(
+            TodayCanvasPlacement.physicsSize(
+                for: hidden,
+                maximumAmount: visible.amount,
+                count: 2
+            ) == CGSize(width: 72, height: 72)
+        )
+        #expect(
+            TodayCanvasPlacement.physicsSize(
+                for: visible,
+                maximumAmount: visible.amount,
+                count: 2
+            ).width <= 88
+        )
     }
 
     @Test

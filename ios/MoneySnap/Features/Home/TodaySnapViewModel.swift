@@ -124,7 +124,8 @@ final class TodaySnapViewModel {
                     amount: amount,
                     artwork: entry.artwork,
                     imageRef: detail.imageRef ?? entry.imageRef,
-                    previewJPEG: entry.previewJPEG
+                    previewJPEG: entry.previewJPEG,
+                    revealsAmount: entry.revealsAmount
                 )
                 : entry
         }
@@ -152,18 +153,26 @@ final class TodaySnapViewModel {
     }
 
     private func hydrate(_ summary: TodaySnapSummary) async -> TodaySnapSummary {
-        guard let media else { return summary }
         var jpegs: [UUID: Data] = [:]
-        await withTaskGroup(of: (UUID, Data?).self) { group in
-            for entry in summary.entries {
-                guard let imageRef = entry.imageRef, entry.previewJPEG == nil else { continue }
-                group.addTask {
-                    (entry.id, try? await media.fetchJPEG(imageRef))
+        if case let .content(current) = state {
+            for entry in current.entries {
+                if let jpeg = entry.previewJPEG {
+                    jpegs[entry.id] = jpeg
                 }
             }
-            for await (id, jpeg) in group {
-                if let jpeg {
-                    jpegs[id] = jpeg
+        }
+        if let media {
+            await withTaskGroup(of: (UUID, Data?).self) { group in
+                for entry in summary.entries {
+                    guard let imageRef = entry.imageRef, jpegs[entry.id] == nil else { continue }
+                    group.addTask {
+                        (entry.id, try? await media.fetchJPEG(imageRef))
+                    }
+                }
+                for await (id, jpeg) in group {
+                    if let jpeg, jpeg.starts(with: [0xFF, 0xD8, 0xFF]) {
+                        jpegs[id] = jpeg
+                    }
                 }
             }
         }
@@ -176,7 +185,8 @@ final class TodaySnapViewModel {
                 amount: entry.amount,
                 artwork: entry.artwork,
                 imageRef: entry.imageRef,
-                previewJPEG: jpeg
+                previewJPEG: jpeg,
+                revealsAmount: entry.revealsAmount
             )
         }
         return (try? TodaySnapSummary(

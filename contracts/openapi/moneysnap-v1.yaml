@@ -1542,6 +1542,9 @@ components:
         sharedAt:
           type: string
           format: date-time
+        imageRef:
+          type: string
+          format: uuid
     HiddenSnap:
       type: object
       additionalProperties: false
@@ -1559,6 +1562,9 @@ components:
         sharedAt:
           type: string
           format: date-time
+        imageRef:
+          type: string
+          format: uuid
     MediaIntentRequest:
       type: object
       additionalProperties: false

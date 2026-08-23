@@ -171,6 +171,15 @@ struct VisibleMemberToday: Decodable, Equatable {
     let avatar: String
     let snapCount: Int
     let totalAmountWon: Int64
+    let representative: VisibleSnap?
+}
+
+struct VisibleSnap: Decodable, Equatable, Sendable {
+    let snapId: UUID
+    let category: SnapCategory
+    let amountWon: Int64
+    let sharedAt: Date
+    let imageRef: UUID?
 }
 
 struct HiddenGroupToday: Decodable {
@@ -183,4 +192,12 @@ struct HiddenMemberToday: Decodable, Equatable {
     let displayName: String
     let avatar: String
     let snapCount: Int
+    let representative: HiddenSnap?
+}
+
+struct HiddenSnap: Decodable, Equatable, Sendable {
+    let snapId: UUID
+    let category: SnapCategory
+    let sharedAt: Date
+    let imageRef: UUID?
 }

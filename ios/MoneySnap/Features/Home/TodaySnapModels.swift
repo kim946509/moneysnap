@@ -114,6 +114,7 @@ struct TodaySnapEntry: Identifiable, Equatable, Sendable {
     let artwork: SnapArtwork?
     let imageRef: UUID?
     let previewJPEG: Data?
+    let revealsAmount: Bool
 
     init(
         id: UUID,
@@ -121,7 +122,8 @@ struct TodaySnapEntry: Identifiable, Equatable, Sendable {
         amount: KrwAmount,
         artwork: SnapArtwork? = nil,
         imageRef: UUID? = nil,
-        previewJPEG: Data? = nil
+        previewJPEG: Data? = nil,
+        revealsAmount: Bool = true
     ) {
         self.id = id
         self.category = category
@@ -129,6 +131,7 @@ struct TodaySnapEntry: Identifiable, Equatable, Sendable {
         self.artwork = artwork
         self.imageRef = imageRef
         self.previewJPEG = previewJPEG
+        self.revealsAmount = revealsAmount
     }
 }
 

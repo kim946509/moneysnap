@@ -16,6 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -156,7 +158,8 @@ final class GroupSharing {
                             row.representative().snapId(),
                             row.representative().category(),
                             row.representative().amountWon(),
-                            row.representative().sharedAt()
+                            row.representative().sharedAt(),
+                            row.representative().imageRef()
                     )
             )).toList());
         }
@@ -168,7 +171,8 @@ final class GroupSharing {
                 row.representative() == null ? null : new HiddenSnap(
                         row.representative().snapId(),
                         row.representative().category(),
-                        row.representative().sharedAt()
+                        row.representative().sharedAt(),
+                        row.representative().imageRef()
                 )
         )).toList());
     }
@@ -534,7 +538,7 @@ final class GroupSharing {
                     .query(Long.class)
                     .single();
             RepresentativeSnap representative = jdbc.sql("""
-                    SELECT s.id, s.category, s.amount_won, sh.shared_at
+                    SELECT s.id, s.category, s.amount_won, sh.shared_at, s.image_id
                     FROM snap_shares sh
                     JOIN snaps s ON s.id = sh.snap_id
                     WHERE sh.group_id = :groupId AND s.owner_id = :ownerId AND s.local_day = :day
@@ -548,7 +552,8 @@ final class GroupSharing {
                             row.getObject("id", UUID.class),
                             row.getString("category"),
                             row.getLong("amount_won"),
-                            row.getTimestamp("shared_at").toInstant()))
+                            row.getTimestamp("shared_at").toInstant(),
+                            row.getObject("image_id", UUID.class)))
                     .optional()
                     .orElse(null);
             rows.add(new MemberTodayRow(
@@ -657,7 +662,8 @@ final class GroupSharing {
     private record JoinMutation(String fingerprint, UUID groupId) {
     }
 
-    private record RepresentativeSnap(UUID snapId, String category, long amountWon, Instant sharedAt) {
+    private record RepresentativeSnap(
+            UUID snapId, String category, long amountWon, Instant sharedAt, UUID imageRef) {
     }
 
     private record MemberTodayRow(
@@ -691,7 +697,8 @@ record VisibleMemberToday(
         VisibleSnap representative) {
 }
 
-record VisibleSnap(UUID snapId, String category, long amountWon, Instant sharedAt) {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record VisibleSnap(UUID snapId, String category, long amountWon, Instant sharedAt, UUID imageRef) {
 }
 
 record HiddenGroupToday(java.time.LocalDate localDay, List<HiddenMemberToday> members) {
@@ -705,7 +712,8 @@ record HiddenMemberToday(
         HiddenSnap representative) {
 }
 
-record HiddenSnap(UUID snapId, String category, Instant sharedAt) {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record HiddenSnap(UUID snapId, String category, Instant sharedAt, UUID imageRef) {
 }
 
 record ShareCommand(String clientMutationId, UUID snapId, UUID groupId) {

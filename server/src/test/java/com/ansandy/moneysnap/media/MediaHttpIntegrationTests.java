@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -29,6 +30,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -117,8 +119,11 @@ class MediaHttpIntegrationTests {
                 .getContentAsString();
         String snapId = JsonPath.read(recordBody, "$.id");
         mockMvc.perform(get("/api/v1/media/" + imageRef)
-                        .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isOk());
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.IMAGE_JPEG))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG))
+                .andExpect(content().bytes(jpeg));
         mockMvc.perform(get("/api/v1/snaps/today")
                         .header("Authorization", "Bearer " + accessToken)
                         .queryParam("timeZone", "Asia/Seoul"))
@@ -135,6 +140,91 @@ class MediaHttpIntegrationTests {
                         .queryParam("toLocalDay", "2026-08-14"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.snaps[0].imageRef").value(imageRef));
+    }
+
+    @Test
+    void groupMemberCanReadASharedLinkedJpegAndAStrangerCannot() throws Exception {
+        String owner = signIn("media-share-owner");
+        String member = signIn("media-share-member");
+        String stranger = signIn("media-share-stranger");
+        byte[] jpeg = jpegFixture(96);
+        String checksum = sha256(jpeg);
+        String intent = mockMvc.perform(post("/api/v1/media/intents")
+                        .header("Authorization", "Bearer " + owner)
+                        .contentType("application/json")
+                        .content("""
+                                {"byteSize":%d,"contentType":"image/jpeg","checksumSha256":"%s"}
+                                """.formatted(jpeg.length, checksum)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String imageRef = JsonPath.read(intent, "$.imageRef");
+        mockMvc.perform(put("/api/v1/media/" + imageRef + "/upload")
+                        .header("Authorization", "Bearer " + owner)
+                        .contentType("image/jpeg")
+                        .content(jpeg))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/media/" + imageRef + "/complete")
+                        .header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk());
+        String snapId = JsonPath.read(mockMvc.perform(post("/api/v1/snaps")
+                        .header("Authorization", "Bearer " + owner)
+                        .contentType("application/json")
+                        .content("""
+                                {"clientMutationId":"shared-photo","localDay":"2026-08-14","timeZone":"Asia/Seoul",\
+                                "category":"food","amountWon":100,"imageRef":"%s"}
+                                """.formatted(imageRef)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(), "$.id");
+        String groupId = JsonPath.read(mockMvc.perform(post("/api/v1/groups")
+                        .header("Authorization", "Bearer " + owner)
+                        .contentType("application/json")
+                        .content("""
+                                {"clientMutationId":"photo-group","name":"사진","amountVisible":false}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(), "$.id");
+        String code = JsonPath.read(mockMvc.perform(post("/api/v1/groups/" + groupId + "/invites")
+                        .header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(), "$.code");
+        mockMvc.perform(post("/api/v1/invites/join")
+                        .header("Authorization", "Bearer " + member)
+                        .contentType("application/json")
+                        .content("{\"code\":\"" + code + "\",\"clientMutationId\":\"join-photo\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/shares")
+                        .header("Authorization", "Bearer " + owner)
+                        .contentType("application/json")
+                        .content("""
+                                {"clientMutationId":"share-photo","snapId":"%s","groupId":"%s"}
+                                """.formatted(snapId, groupId)))
+                .andExpect(status().isCreated());
+        String today = mockMvc.perform(get("/api/v1/groups/" + groupId + "/today")
+                        .header("Authorization", "Bearer " + member)
+                        .queryParam("timeZone", "Asia/Seoul"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(today).contains("\"imageRef\":\"" + imageRef + "\"");
+        assertThat(today).doesNotContain("amountWon", "totalAmountWon");
+        mockMvc.perform(get("/api/v1/media/" + imageRef)
+                        .header("Authorization", "Bearer " + member)
+                        .accept(MediaType.IMAGE_JPEG))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG))
+                .andExpect(content().bytes(jpeg));
+        mockMvc.perform(get("/api/v1/media/" + imageRef)
+                        .header("Authorization", "Bearer " + stranger))
+                .andExpect(status().isNotFound());
     }
 
     @Test
