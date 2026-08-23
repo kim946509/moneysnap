@@ -174,7 +174,7 @@ enum GroupCanvasOrder {
     }
 
     static func save(_ groups: [MoneySnapGroup]) {
-        UserDefaults.standard.set(groups.map(\.id.uuidString.lowercased()), forKey: key)
+        UserDefaults.standard.set(groups.map { $0.id.uuidString.lowercased() }, forKey: key)
     }
 }
 
