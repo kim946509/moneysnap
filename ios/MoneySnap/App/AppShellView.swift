@@ -5,6 +5,7 @@ struct AppShellView: View {
     @Binding var selectedTab: AppTab
     @State private var tabRouter = TabRouter()
     @State private var presentedSheet: AppSheet?
+    @State private var presentsMenu = false
     @State private var pendingShare: SnapRecordReceipt?
     @State private var todayViewModel: TodaySnapViewModel
     @State private var shareGroups: [MoneySnapGroup] = []
@@ -85,12 +86,29 @@ struct AppShellView: View {
             }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 21)
+
+            if presentsMenu {
+                MoneySnapSidebar(
+                    selectedTab: selectedTab,
+                    onSelectTab: { tab in
+                        presentsMenu = false
+                        selectedTab = tab
+                    },
+                    onHelp: {
+                        presentsMenu = false
+                        presentedSheet = .help
+                    },
+                    onClose: { presentsMenu = false }
+                )
+            }
         }
         .ignoresSafeArea(.container, edges: .bottom)
         .sheet(item: $presentedSheet, onDismiss: presentPendingShare) { sheet in
             switch sheet {
             case .record:
                 recordCaptureView
+            case .help:
+                HelpGuideView()
             case let .share(receipt):
                 ShareAfterSaveView(
                     groups: shareGroups,
@@ -128,6 +146,7 @@ struct AppShellView: View {
                 onOpen: { id in
                     tabRouter.router(for: .home).navigate(to: .snapDetail(id: id))
                 },
+                onMenu: { presentsMenu = true },
                 groups: shareGroups,
                 groupClient: groupClient,
                 media: mediaClient
@@ -135,7 +154,10 @@ struct AppShellView: View {
         case .group:
             GroupListView(client: groupClient)
         case .archive:
-            ArchiveView(client: snapJournalClient) { id in
+            ArchiveView(
+                client: snapJournalClient,
+                onMenu: { presentsMenu = true }
+            ) { id in
                 tabRouter.router(for: .archive).navigate(to: .snapDetail(id: id))
             }
         case .profile:
@@ -145,7 +167,8 @@ struct AppShellView: View {
                     baseURL: URL(string: "https://moneysnap-server.ansandy.co.kr")!,
                     accessToken: { try await authentication.accessTokenForRequest() }
                 ),
-                groupClient: groupClient
+                groupClient: groupClient,
+                onMenu: { presentsMenu = true }
             )
         default:
             PlaceholderView(
@@ -205,12 +228,15 @@ struct AppShellView: View {
 
 private enum AppSheet: Identifiable {
     case record
+    case help
     case share(SnapRecordReceipt)
 
     var id: String {
         switch self {
         case .record:
             "record"
+        case .help:
+            "help"
         case let .share(receipt):
             "share-\(receipt.id.uuidString)"
         }

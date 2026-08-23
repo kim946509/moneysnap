@@ -4,6 +4,7 @@ struct TodaySnapView: View {
     let viewModel: TodaySnapViewModel
     let onRecord: () -> Void
     var onOpen: (UUID) -> Void = { _ in }
+    var onMenu: () -> Void = {}
     var groups: [MoneySnapGroup] = []
     var groupClient: (any GroupClient)?
     var media: (any MediaClient)?
@@ -21,6 +22,7 @@ struct TodaySnapView: View {
                     summary: summary,
                     onRecord: onRecord,
                     onOpen: onOpen,
+                    onMenu: onMenu,
                     groups: groups,
                     groupClient: groupClient,
                     media: media
@@ -57,6 +59,7 @@ private struct TodaySnapContent: View {
     let summary: TodaySnapSummary
     let onRecord: () -> Void
     var onOpen: (UUID) -> Void = { _ in }
+    var onMenu: () -> Void = {}
     var groups: [MoneySnapGroup] = []
     var groupClient: (any GroupClient)?
     var media: (any MediaClient)?
@@ -201,13 +204,7 @@ private struct TodaySnapContent: View {
             }
             .offset(x: 28, y: 7)
 
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 25, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(MoneySnapVisualSystem.navy, in: Circle())
-                .shadow(color: .black.opacity(0.15), radius: 12, y: 9)
-                .accessibilityHidden(true)
+            MoneySnapMenuButton(action: onMenu)
                 .position(x: availableWidth - 40, y: 34)
         }
     }

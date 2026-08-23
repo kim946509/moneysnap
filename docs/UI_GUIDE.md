@@ -113,6 +113,7 @@ Icon: iOS/SF Symbol 또는 02 Components의 아이콘 인스턴스 사용
 - Apple 이름을 사용할 수 없으면 `MoneySnap 사용자`를 표시한다. MVP에는 이름 편집과 profile 사진 업로드를 두지 않는다.
 - 기본 avatar는 display name의 첫 grapheme를 쓰고 사용할 수 없으면 MoneySnap mark를 쓴다. 임의의 user ID 접미사를 이름이나 avatar로 노출하지 않는다.
 - My의 `내 그룹 관리`는 그룹 목록·만들기·초대 가입을 연다. `도움말`은 기록·공유·그룹·보관함 사용 가이드를 연다. `앱 설정`은 로그아웃과 계정 탈퇴를 연다.
+- 홈·보관함·마이 오른쪽 원형 메뉴 버튼은 사이드바를 연다. 사이드바에서 홈·그룹·보관함·마이와 도움말로 이동한다.
 
 ### Home Canvas Physics
 - 홈의 소비 오브젝트는 정적인 카드가 아니라 캔버스 위 물체처럼 동작한다. 라이브 Home은 SpriteKit 무중력 유영을 쓰고, Figma `9:2` visual 시나리오와 모션 감소는 정적 rest 3장 좌표를 유지한다.
