@@ -120,6 +120,23 @@ final class MoneySnapUITests: XCTestCase {
     }
 
     @MainActor
+    func testHomeTodayListScrollsBeyondTheFirstTwoSnaps() {
+        let app = XCUIApplication()
+        app.launchEnvironment["MONEYSNAP_FEATURE_SCENARIO"] = "today-many"
+        app.launch()
+
+        XCTAssertTrue(element("screen.home", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            element("home.recent.feed0000-0000-4000-8000-000000000001", in: app)
+                .waitForExistence(timeout: 5)
+        )
+
+        let last = element("home.recent.b0000000-0000-4000-8000-000000000008", in: app)
+        XCTAssertTrue(last.waitForExistence(timeout: 5))
+        XCTAssertTrue(makeHittable(last, in: app))
+    }
+
+    @MainActor
     func testUnknownFeatureScenarioFailsClosed() {
         let app = XCUIApplication()
         app.launchEnvironment["MONEYSNAP_FEATURE_SCENARIO"] = "unknown"

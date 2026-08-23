@@ -156,6 +156,7 @@ struct RecentSnapRow: View {
             .frame(width: 104, alignment: .leading)
         }
         .frame(width: 150, height: 46)
+        .accessibilityIdentifier("home.recent.\(entry.id.uuidString.lowercased())")
     }
 }
 

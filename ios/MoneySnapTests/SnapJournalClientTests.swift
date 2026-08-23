@@ -35,6 +35,25 @@ struct SnapJournalClientTests {
     }
 
     @Test
+    func fetchTodayPutsEverySnapInTheRecentList() async throws {
+        let body = Data("""
+        {"localDay":"2026-08-14","totalAmountWon":400,"snaps":[
+          {"id":"018f1e2d-1234-7abc-8def-0123456789a1","category":"cafe","amountWon":100,"localDay":"2026-08-14","createdAt":"2026-08-13T15:30:03Z"},
+          {"id":"018f1e2d-1234-7abc-8def-0123456789a2","category":"food","amountWon":100,"localDay":"2026-08-14","createdAt":"2026-08-13T15:30:02Z"},
+          {"id":"018f1e2d-1234-7abc-8def-0123456789a3","category":"living","amountWon":100,"localDay":"2026-08-14","createdAt":"2026-08-13T15:30:01Z"},
+          {"id":"018f1e2d-1234-7abc-8def-0123456789a4","category":"other","amountWon":100,"localDay":"2026-08-14","createdAt":"2026-08-13T15:30:00Z"}
+        ]}
+        """.utf8)
+        let harness = Harness(responses: [.init(status: 200, body: body)])
+
+        let summary = try await harness.client.fetchToday()
+
+        #expect(summary.entries.count == 4)
+        #expect(summary.recentEntryIDs == summary.entries.map(\.id))
+        #expect(summary.recentEntries.map(\.category) == [.cafe, .food, .living, .other])
+    }
+
+    @Test
     func fetchTodayDecodesOptionalImageRefWithoutRejectingCanonicalKeys() async throws {
         let body = Data("""
         {"localDay":"2026-08-14","totalAmountWon":100,"snaps":[{

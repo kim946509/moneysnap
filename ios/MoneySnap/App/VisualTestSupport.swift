@@ -26,6 +26,7 @@ enum FeatureLaunchRequest: Equatable, Sendable {
     case absent
     case record
     case recordRetry
+    case todayMany
     case invalid(String)
 }
 
@@ -36,6 +37,7 @@ enum VisualTestSupport {
         return switch rawValue {
         case "record": .record
         case "record-retry": .recordRetry
+        case "today-many": .todayMany
         default: .invalid(rawValue)
         }
     }
@@ -76,6 +78,10 @@ enum VisualTestSupport {
 
     static var recordRetryFeatureClient: any SnapJournalClient {
         RecordRetrySnapJournalClient(summary: recordFeatureSummary)
+    }
+
+    static var todayManyFeatureClient: any SnapJournalClient {
+        InMemorySnapJournalClient(summary: todayManySummary)
     }
 
     static func initialCaptureModel(
@@ -131,6 +137,35 @@ enum VisualTestSupport {
             )
         } catch {
             preconditionFailure("Visual fixture must satisfy the Snap model: \(error)")
+        }
+    }()
+
+    static let todayManySummary: TodaySnapSummary = {
+        guard
+            let shoppingID = UUID(uuidString: "B0000000-0000-4000-8000-000000000005"),
+            let cultureID = UUID(uuidString: "B0000000-0000-4000-8000-000000000006"),
+            let healthID = UUID(uuidString: "B0000000-0000-4000-8000-000000000007"),
+            let otherID = UUID(uuidString: "B0000000-0000-4000-8000-000000000008")
+        else {
+            preconditionFailure("Today-many fixture UUIDs must remain valid.")
+        }
+
+        do {
+            let extra = [
+                TodaySnapEntry(id: shoppingID, category: .shopping, amount: try KrwAmount(3_400)),
+                TodaySnapEntry(id: cultureID, category: .culture, amount: try KrwAmount(12_000)),
+                TodaySnapEntry(id: healthID, category: .health, amount: try KrwAmount(7_700)),
+                TodaySnapEntry(id: otherID, category: .other, amount: try KrwAmount(1_100))
+            ]
+            let entries = homeSummary.entries + extra
+            return try TodaySnapSummary(
+                day: homeSummary.day,
+                entries: entries,
+                featuredEntryIDs: Array(entries.prefix(3).map(\.id)),
+                recentEntryIDs: entries.map(\.id)
+            )
+        } catch {
+            preconditionFailure("Today-many fixture must satisfy the Snap model: \(error)")
         }
     }()
 

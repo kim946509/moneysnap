@@ -77,16 +77,20 @@ private struct TodaySnapContent: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .topLeading) {
-                header(availableWidth: proxy.size.width)
-                canvasPages(size: proxy.size)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                recordButton(availableWidth: proxy.size.width)
-                pageIndicator(availableWidth: proxy.size.width)
-                totalSection
-                recentSection
+            if isVisualHome {
+                chrome(canvasSize: proxy.size)
+            } else {
+                ScrollView(.vertical, showsIndicators: summary.recentEntries.count > 2) {
+                    chrome(canvasSize: proxy.size)
+                        .frame(
+                            width: proxy.size.width,
+                            height: recentContentHeight(viewportHeight: proxy.size.height),
+                            alignment: .topLeading
+                        )
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("home.recent.scroll")
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .task {
             await loadVisibleGroupIfNeeded()
@@ -97,6 +101,30 @@ private struct TodaySnapContent: View {
         .onChange(of: groups.map(\.id)) { _, _ in
             Task { await loadVisibleGroupIfNeeded() }
         }
+    }
+
+    private func chrome(canvasSize: CGSize) -> some View {
+        ZStack(alignment: .topLeading) {
+            header(availableWidth: canvasSize.width)
+            canvasPages(size: canvasSize)
+                .frame(width: canvasSize.width, height: canvasSize.height, alignment: .top)
+            recordButton(availableWidth: canvasSize.width)
+            pageIndicator(availableWidth: canvasSize.width)
+            totalSection
+            recentSection
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func recentContentHeight(viewportHeight: CGFloat) -> CGFloat {
+        let count = summary.recentEntries.count
+        guard count > 0 else { return viewportHeight }
+        let rows = (count + 1) / 2
+        let listBottom = 650
+            + CGFloat(rows) * 46
+            + CGFloat(max(rows - 1, 0)) * 12
+            + 96
+        return max(viewportHeight, listBottom)
     }
 
     @ViewBuilder
@@ -272,14 +300,34 @@ private struct TodaySnapContent: View {
                 .font(.moneySnap(size: 17, weight: .bold))
                 .foregroundStyle(MoneySnapVisualSystem.ink)
                 .offset(x: 26, y: 612)
-            HStack(spacing: 28) {
-                ForEach(summary.recentEntries) { entry in
-                    RecentSnapRow(entry: entry)
-                        .onTapGesture { onOpen(entry.id) }
+            if isVisualHome {
+                HStack(spacing: 28) {
+                    ForEach(summary.recentEntries) { entry in
+                        recentCell(entry)
+                    }
                 }
+                .offset(x: 26, y: 650)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(stride(from: 0, to: summary.recentEntries.count, by: 2)), id: \.self) { start in
+                        HStack(spacing: 28) {
+                            recentCell(summary.recentEntries[start])
+                            if start + 1 < summary.recentEntries.count {
+                                recentCell(summary.recentEntries[start + 1])
+                            }
+                        }
+                    }
+                }
+                .padding(.leading, 26)
+                .padding(.top, 650)
+                .accessibilityIdentifier("home.recent")
             }
-            .offset(x: 26, y: 650)
         }
+    }
+
+    private func recentCell(_ entry: TodaySnapEntry) -> some View {
+        RecentSnapRow(entry: entry)
+            .onTapGesture { onOpen(entry.id) }
     }
 }
 

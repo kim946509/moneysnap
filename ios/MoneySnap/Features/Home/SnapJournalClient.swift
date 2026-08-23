@@ -621,7 +621,7 @@ actor URLSessionSnapJournalClient: SnapJournalClient {
                 day: day,
                 entries: entries,
                 featuredEntryIDs: entries.prefix(3).map(\.id),
-                recentEntryIDs: entries.prefix(2).map(\.id)
+                recentEntryIDs: entries.map(\.id)
             )
         } catch let error as SnapRecordError {
             throw error
