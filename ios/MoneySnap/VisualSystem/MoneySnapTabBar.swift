@@ -118,7 +118,8 @@ struct MoneySnapSidebar: View {
                 Spacer()
             }
             .padding(.horizontal, 24)
-            .frame(width: 280, maxHeight: .infinity, alignment: .topLeading)
+            .frame(width: 280)
+            .frame(maxHeight: .infinity, alignment: .topLeading)
             .background(Color.white)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("screen.menu")
