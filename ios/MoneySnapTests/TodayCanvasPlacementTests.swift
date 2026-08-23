@@ -19,7 +19,16 @@ struct TodayCanvasPlacementTests {
         #expect(TodayCanvasPlacement.physicsFloorY < buttonTop)
         #expect(TodayCanvasPlacement.physicsFloorY > 300)
         #expect(TodayCanvasPlacement.dropY > TodayCanvasPlacement.physicsCeilingY)
-        #expect(TodayCanvasPlacement.dropY < 140)
+    }
+
+    @Test
+    func droppedBodiesStartFullyBelowTheCeiling() {
+        for size in [CGSize(width: 48, height: 48), CGSize(width: 120, height: 120)] {
+            let radius = TodayCanvasPlacement.collisionRadius(size: size)
+            let y = TodayCanvasPlacement.dropCenterY(size: size)
+            #expect(y - radius > TodayCanvasPlacement.physicsCeilingY)
+            #expect(y + radius < TodayCanvasPlacement.physicsFloorY)
+        }
     }
 
     @Test
@@ -92,7 +101,7 @@ struct TodayCanvasPlacementTests {
         )
 
         #expect(drop.center.y < rest.center.y)
-        #expect(drop.center.y == TodayCanvasPlacement.dropY)
+        #expect(drop.center.y == TodayCanvasPlacement.dropCenterY(size: TodayCanvasPlacement.cardSize(index: 0)))
         #expect(rest.center.y < TodayCanvasPlacement.physicsFloorY)
         #expect(rest.center.y > TodayCanvasPlacement.physicsCeilingY)
     }

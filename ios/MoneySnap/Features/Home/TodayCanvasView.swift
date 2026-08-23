@@ -38,12 +38,17 @@ struct TodayCanvasView: View {
             }
         }
         .onAppear { controller.sync(entries: entries, maximumAmount: maximumAmount, canvasSize: canvasSize, motion: motion) }
-        .onChange(of: entries.map(\.id)) { _, _ in
+        .onChange(of: canvasSignature) { _, _ in
             controller.sync(entries: entries, maximumAmount: maximumAmount, canvasSize: canvasSize, motion: motion)
         }
         .onChange(of: canvasSize) { _, _ in
             controller.sync(entries: entries, maximumAmount: maximumAmount, canvasSize: canvasSize, motion: motion)
         }
+    }
+
+    private var canvasSignature: String {
+        entries.map { "\($0.id.uuidString.lowercased()):\($0.amount.value)" }.joined(separator: ",")
+            + ":\(maximumAmount?.value ?? 0)"
     }
 
     private func visibleEntries(_ motion: TodayCanvasMotion) -> [TodaySnapEntry] {

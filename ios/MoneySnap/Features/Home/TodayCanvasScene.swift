@@ -116,7 +116,8 @@ final class TodayCanvasScene: SKScene {
         }
 
         for spec in specs {
-            if childNode(withName: spec.id.uuidString.lowercased()) != nil {
+            if let existing = childNode(withName: spec.id.uuidString.lowercased()) {
+                applyCollisionBody(spec.size, to: existing)
                 continue
             }
             addBody(spec)
@@ -165,9 +166,19 @@ final class TodayCanvasScene: SKScene {
         node.name = spec.id.uuidString.lowercased()
         node.position = CGPoint(x: spec.start.center.x, y: size.height - spec.start.center.y)
         node.zRotation = spec.start.rotation
-        let radius = min(spec.size.width, spec.size.height) / 2
-        let body = SKPhysicsBody(circleOfRadius: max(24, radius * 0.92))
-        body.mass = max(0.16, (spec.size.width * spec.size.height) / 22_000)
+        applyCollisionBody(spec.size, to: node)
+        addChild(node)
+        insertedAt[spec.id] = nil
+        if spec.isNew {
+            node.physicsBody?.velocity = CGVector(dx: CGFloat(Int(spec.id.uuid.1) % 9) - 4, dy: -18)
+            node.physicsBody?.angularVelocity = CGFloat(Int(spec.id.uuid.2) % 5) / 14 - 0.16
+        }
+    }
+
+    private func applyCollisionBody(_ size: CGSize, to node: SKNode) {
+        let radius = TodayCanvasPlacement.collisionRadius(size: size)
+        let body = SKPhysicsBody(circleOfRadius: radius)
+        body.mass = max(0.16, (size.width * size.height) / 22_000)
         body.restitution = 0.22
         body.friction = 0.42
         body.linearDamping = 0.68
@@ -176,13 +187,11 @@ final class TodayCanvasScene: SKScene {
         body.isDynamic = true
         body.categoryBitMask = 2
         body.collisionBitMask = 1 | 2
-        node.physicsBody = body
-        addChild(node)
-        insertedAt[spec.id] = nil
-        if spec.isNew {
-            body.velocity = CGVector(dx: CGFloat(Int(spec.id.uuid.1) % 9) - 4, dy: -18)
-            body.angularVelocity = CGFloat(Int(spec.id.uuid.2) % 5) / 14 - 0.16
+        if let current = node.physicsBody {
+            body.velocity = current.velocity
+            body.angularVelocity = current.angularVelocity
         }
+        node.physicsBody = body
     }
 
     private func rebuildEnclosure() {

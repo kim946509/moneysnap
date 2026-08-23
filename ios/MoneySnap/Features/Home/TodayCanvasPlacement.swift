@@ -76,7 +76,7 @@ enum TodayCanvasPlacement {
             return TodayCanvasPose(
                 center: CGPoint(
                     x: min(max(40, packedCenter(index: index, count: count, canvasWidth: canvasWidth, size: size).x + jitter), canvasWidth - 40),
-                    y: dropY
+                    y: dropCenterY(size: size)
                 ),
                 rotation: 0
             )
@@ -85,6 +85,14 @@ enum TodayCanvasPlacement {
             center: packedCenter(index: index, count: count, canvasWidth: canvasWidth, size: size),
             rotation: 0
         )
+    }
+
+    static func collisionRadius(size: CGSize) -> CGFloat {
+        max(24, min(size.width, size.height) / 2 * 0.92)
+    }
+
+    static func dropCenterY(size: CGSize) -> CGFloat {
+        physicsCeilingY + collisionRadius(size: size) + 10
     }
 
     static func physicsSize(

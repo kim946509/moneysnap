@@ -31,15 +31,15 @@ owner: unassigned
 
 ## Acceptance criteria
 
-- [ ] 라이브 사진 선택 시트는 화면의 약 30%만 차지한다
-- [ ] 카테고리+금액 단계는 large detent이고 카테고리 미선택 시 안내 문구가 있다
-- [ ] 키패드 하단은 `C`·`0`·지움이며 완료/다음은 키패드 밖 버튼이다
-- [ ] 완료/다음 라벨은 `저장 중`이 되지 않는다
-- [ ] 여러 장 기록에서 다음 사진으로 넘어가면 금액과 카테고리가 비어 있다
-- [ ] 미리보기 사진은 중앙 큰 정사각이다
-- [ ] 물리 바닥은 기록하기 버튼 위이고, 새 항목은 천장 근처에서 떨어진다
-- [ ] visual Home은 기존 3장 rest 좌표를 유지한다
-- [ ] Windows iOS 프로젝트 정적 검증을 통과한다
+- [x] 라이브 사진 선택 시트는 화면의 약 30%만 차지한다
+- [x] 카테고리+금액 단계는 large detent이고 카테고리 미선택 시 안내 문구가 있다
+- [x] 키패드 하단은 `C`·`0`·지움이며 완료/다음은 키패드 밖 버튼이다
+- [x] 완료/다음 라벨은 `저장 중`이 되지 않는다
+- [x] 여러 장 기록에서 다음 사진으로 넘어가면 금액과 카테고리가 비어 있다
+- [x] 미리보기 사진은 중앙 큰 정사각이다
+- [x] 물리 바닥은 기록하기 버튼 위이고, 새 항목은 천장 근처에서 떨어진다
+- [x] visual Home은 기존 3장 rest 좌표를 유지한다
+- [x] GitHub-hosted iOS CI native test와 393x852 visual capture를 통과한다
 
 ## Test seam
 
@@ -58,9 +58,9 @@ git diff --check
 
 - 실행 명령:
   - `git diff --check` → 통과
-  - Windows native iOS test는 실행하지 못함. GitHub-hosted iOS CI가 검증한다.
+  - GitHub-hosted `macos-15` iOS CI `32619148510` → Swift native tests + `capture-visual-baseline.sh` 성공, artifact `ios-visual-evidence`
 - 결과: 소스 시트 30%, 카테고리 안내, C/완료 분리, 다음 사진 draft 초기화, 물리 바닥을 기록하기 위로 두고 다수 오브젝트 원형 바디로 안정화.
-- 리뷰: code-review-graph MCP 없음, skipped.
+- 리뷰: code-review-graph MCP가 이 세션 도구 목록에 없어 skipped. iOS CI가 검증을 소유한다.
 
 ## Agent rules impact
 
