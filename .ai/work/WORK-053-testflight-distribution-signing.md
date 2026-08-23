@@ -25,9 +25,9 @@ GitHub-hosted TestFlight archive가 iOS Development 인증서를 새로 만들�
 
 ## Acceptance criteria
 
-- [ ] archive 명령이 `Apple Distribution` identity를 명시한다
-- [ ] export options가 Distribution 인증서를 명시한다
-- [ ] `validate-cicd.ps1`이 위 계약을 검사한다
+- [x] archive는 로컬 Development 인증서 없이 만든다
+- [x] export options가 Distribution 인증서를 명시한다
+- [x] `validate-cicd.ps1`이 위 계약을 검사한다
 
 ## Test seam
 
@@ -63,4 +63,6 @@ git diff --check
 
 ## Decisions and risks
 
-- 실패 로그는 iOS App Development profile/인증서 한도다. Distribution identity를 명시하면 기존 cloud-managed Distribution을 재사용한다.
+- 실패 1: Automatic archive가 GitHub runner마다 iOS Development 인증서를 만들려다 한도에 걸린다.
+- 실패 2: Automatic + `CODE_SIGN_IDENTITY=Apple Distribution`은 Xcode가 충돌로 거절한다.
+- archive는 서명하지 않고, export만 Apple Distribution cloud signing을 쓴다.

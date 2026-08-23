@@ -83,12 +83,8 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             MARKETING_VERSION=0.1.0 \
-            CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_AUTH_KEY_PATH" \
-            -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             archive
 
       - name: Export and upload to App Store Connect
