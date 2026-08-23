@@ -25,6 +25,8 @@ cat > "$output" <<EOF
 	<string>upload</string>
 	<key>signingStyle</key>
 	<string>automatic</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
 	<key>teamID</key>
 	<string>$team_id</string>
 	<key>uploadSymbols</key>

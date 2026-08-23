@@ -166,6 +166,7 @@ Require-Match -Content $iosTestflight -Pattern 'workflow_run\.event\s*==\s*''pus
 Require-Match -Content $iosTestflight -Pattern 'workflow_run\.head_branch\s*==\s*''main''' -Description 'workflow_run TestFlight is main-only'
 Require-Match -Content $iosTestflight -Pattern 'missing required ios-testflight secret' -Description 'TestFlight required secret presence check'
 Require-Match -Content $iosTestflight -Pattern 'write-testflight-export-options\.sh' -Description 'TestFlight export options script'
+Require-Match -Content $iosTestflight -Pattern 'CODE_SIGN_IDENTITY="Apple Distribution"' -Description 'TestFlight archive uses Apple Distribution'
 Require-Match -Content $iosTestflight -Pattern '-exportArchive' -Description 'xcodebuild exportArchive upload'
 Require-Match -Content $iosTestflight -Pattern '-authenticationKeyPath' -Description 'App Store Connect API key authentication'
 Require-FullActionShaPins -Content $iosTestflight -Description 'iOS TestFlight workflow'
@@ -175,6 +176,7 @@ if ($iosTestflight -match 'secrets\.NEON_|secrets\.SERVER_|secrets\.R2_') {
 
 $iosTestflightExport = Get-Content -LiteralPath $iosTestflightExportScriptPath -Raw
 Require-Match -Content $iosTestflightExport -Pattern 'app-store-connect' -Description 'export options App Store Connect method'
+Require-Match -Content $iosTestflightExport -Pattern 'Apple Distribution' -Description 'export options Distribution certificate'
 Require-Match -Content $iosTestflightExport -Pattern 'teamID' -Description 'export options team id'
 Require-Match -Content $iosTestflightExport -Pattern '\[A-Z0-9\]\{10\}' -Description 'export options 10-character team id guard'
 
