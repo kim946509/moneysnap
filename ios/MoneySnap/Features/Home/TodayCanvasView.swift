@@ -17,7 +17,11 @@ struct TodayCanvasView: View {
 
         ZStack {
             if motion == .physics {
-                SpriteView(scene: controller.scene, options: [.allowsTransparency])
+                SpriteView(
+                    scene: controller.scene,
+                    isPaused: false,
+                    options: [.allowsTransparency]
+                )
                     .allowsHitTesting(false)
             }
             ForEach(Array(visibleEntries(motion).enumerated()), id: \.element.id) { index, entry in
