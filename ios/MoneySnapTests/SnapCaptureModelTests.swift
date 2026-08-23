@@ -176,6 +176,55 @@ struct SnapCaptureModelTests {
     }
 
     @Test
+    func nextPhotoClearsCategoryAndAmount() {
+        let model = makeModel(allowsPhotos: true)
+        model.attach([
+            jpegFixture(),
+            jpegFixture()
+        ])
+        enterValidAmount(in: model)
+
+        model.prepareNextPhoto()
+
+        #expect(model.phase == .details)
+        #expect(model.selectedCategory == nil)
+        #expect(model.amountText == "₩0")
+        #expect(!model.canSubmit)
+        #expect(model.needsCategoryPrompt)
+        #expect(model.accessibilityAnnouncement == "카테고리를 선택하세요")
+    }
+
+    @Test
+    func clearAmountEmptiesTheDigitBuffer() {
+        let model = makeModel()
+        enterValidAmount(in: model)
+
+        model.clearAmount()
+
+        #expect(model.amountText == "₩0")
+        #expect(!model.canSubmit)
+        #expect(model.selectedCategory == .food)
+    }
+
+    @Test
+    func submitTitleNeverShowsSavingAndUsesNextWhenPhotosRemain() {
+        let model = makeModel(allowsPhotos: true)
+        model.attach([
+            jpegFixture(),
+            jpegFixture()
+        ])
+        enterValidAmount(in: model)
+
+        #expect(model.submitTitle == "다음")
+        #expect(model.needsCategoryPrompt == false)
+
+        model.photoQueue.markCurrentSaved(.fixture)
+        model.prepareNextPhoto()
+        #expect(model.submitTitle == "완료")
+        #expect(model.needsCategoryPrompt)
+    }
+
+    @Test
     func photoLessRecordOmitsImageRef() async {
         let journal = RecordingSnapJournalClient(result: .success(.fixture))
         let model = makeModel(journal: journal)
@@ -204,6 +253,7 @@ struct SnapCaptureModelTests {
     private func makeModel(
         journal: RecordingSnapJournalClient = RecordingSnapJournalClient(result: .success(.fixture)),
         layout: SnapCaptureModel.Layout = .combined,
+        allowsPhotos: Bool = false,
         publishPhoto: (@Sendable (NormalizedJpeg) async throws -> UUID)? = nil
     ) -> SnapCaptureModel {
         SnapCaptureModel(
@@ -211,9 +261,14 @@ struct SnapCaptureModelTests {
             now: { Date(timeIntervalSince1970: 1_786_582_800) },
             timeZone: { TimeZone(identifier: "Asia/Seoul")! },
             mutationID: { UUID(uuidString: "11111111-1111-4111-8111-111111111111")! },
+            allowsPhotos: allowsPhotos,
             layout: layout,
             publishPhoto: publishPhoto
         )
+    }
+
+    private func jpegFixture() -> NormalizedJpeg {
+        NormalizedJpeg(bytes: Data([0xFF, 0xD8, 0xFF]), checksumSha256: "ab", width: 8, height: 8)
     }
 
     private func enterValidAmount(in model: SnapCaptureModel) {

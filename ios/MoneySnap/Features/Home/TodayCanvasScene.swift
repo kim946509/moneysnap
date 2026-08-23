@@ -25,21 +25,35 @@ final class TodayCanvasController {
 
     func sync(
         entries: [TodaySnapEntry],
+        maximumAmount: KrwAmount?,
         canvasSize: CGSize,
         motion: TodayCanvasMotion
     ) {
-        let featured = Array(entries.prefix(3))
+        let visible = motion == .staticRest ? Array(entries.prefix(3)) : entries
         let firstPresentation = !didPresent
         didPresent = true
         var nextKnown: Set<UUID> = []
         var specs: [TodayCanvasScene.BodySpec] = []
+        let largest = maximumAmount ?? visible.map(\.amount).max()
 
-        for (index, entry) in featured.enumerated() {
+        for (index, entry) in visible.enumerated() {
             let isNew = !firstPresentation && !knownIDs.contains(entry.id)
+            let size: CGSize
+            if motion == .physics, let largest {
+                size = TodayCanvasPlacement.physicsSize(
+                    for: entry,
+                    maximumAmount: largest,
+                    count: visible.count
+                )
+            } else {
+                size = TodayCanvasPlacement.cardSize(index: index)
+            }
             let pose = TodayCanvasPlacement.pose(
                 id: entry.id,
                 index: index,
+                count: visible.count,
                 canvasWidth: canvasSize.width,
+                size: size,
                 motion: motion,
                 isNew: isNew
             )
@@ -49,7 +63,7 @@ final class TodayCanvasController {
             specs.append(
                 TodayCanvasScene.BodySpec(
                     id: entry.id,
-                    size: TodayCanvasPlacement.cardSize(index: index),
+                    size: size,
                     index: index,
                     isNew: isNew,
                     start: pose
@@ -83,7 +97,7 @@ final class TodayCanvasScene: SKScene {
     private var lastTime: TimeInterval = 0
 
     override func didMove(to view: SKView) {
-        physicsWorld.gravity = CGVector(dx: 0, dy: -7.2)
+        physicsWorld.gravity = CGVector(dx: 0, dy: -5.4)
         physicsWorld.speed = 1
         view.allowsTransparency = true
         backgroundColor = .clear
@@ -101,15 +115,8 @@ final class TodayCanvasScene: SKScene {
             }
         }
 
-        let addedNew = specs.contains(where: \.isNew)
         for spec in specs {
-            if let existing = childNode(withName: spec.id.uuidString.lowercased()) {
-                if addedNew {
-                    existing.physicsBody?.isDynamic = true
-                    existing.physicsBody?.applyImpulse(CGVector(dx: 10, dy: 28))
-                    existing.physicsBody?.angularVelocity = 0.8
-                    insertedAt[spec.id] = nil
-                }
+            if childNode(withName: spec.id.uuidString.lowercased()) != nil {
                 continue
             }
             addBody(spec)
@@ -146,10 +153,9 @@ final class TodayCanvasScene: SKScene {
             let started = insertedAt[id] ?? currentTime
             let elapsed = currentTime - started
             let speed = hypot(body.velocity.dx, body.velocity.dy) + abs(body.angularVelocity) * 20
-            if elapsed > 0.6 && speed < 18 {
-                freeze(body)
-            } else if elapsed > 1.2 {
-                freeze(body)
+            if elapsed > 0.8 && speed < 12 {
+                body.velocity = .zero
+                body.angularVelocity = 0
             }
         }
     }
@@ -159,35 +165,30 @@ final class TodayCanvasScene: SKScene {
         node.name = spec.id.uuidString.lowercased()
         node.position = CGPoint(x: spec.start.center.x, y: size.height - spec.start.center.y)
         node.zRotation = spec.start.rotation
-        let body = SKPhysicsBody(rectangleOf: spec.size)
-        body.mass = max(0.2, (spec.size.width * spec.size.height) / 18_000)
-        body.restitution = 0.46
-        body.friction = 0.28
-        body.linearDamping = 0.32
-        body.angularDamping = 0.38
+        let radius = min(spec.size.width, spec.size.height) / 2
+        let body = SKPhysicsBody(circleOfRadius: max(24, radius * 0.92))
+        body.mass = max(0.16, (spec.size.width * spec.size.height) / 22_000)
+        body.restitution = 0.22
+        body.friction = 0.42
+        body.linearDamping = 0.68
+        body.angularDamping = 0.86
         body.allowsRotation = true
-        body.isDynamic = spec.isNew
+        body.isDynamic = true
         body.categoryBitMask = 2
         body.collisionBitMask = 1 | 2
         node.physicsBody = body
         addChild(node)
         insertedAt[spec.id] = nil
         if spec.isNew {
-            body.applyImpulse(CGVector(dx: CGFloat(Int(spec.id.uuid.1) % 11) - 5, dy: -12))
-            body.angularVelocity = CGFloat(Int(spec.id.uuid.2) % 7) / 10 - 0.3
+            body.velocity = CGVector(dx: CGFloat(Int(spec.id.uuid.1) % 9) - 4, dy: -18)
+            body.angularVelocity = CGFloat(Int(spec.id.uuid.2) % 5) / 14 - 0.16
         }
-    }
-
-    private func freeze(_ body: SKPhysicsBody) {
-        body.velocity = .zero
-        body.angularVelocity = 0
-        body.isDynamic = false
     }
 
     private func rebuildEnclosure() {
         childNode(withName: "enclosure")?.removeFromParent()
-        let floor = size.height - TodayCanvasPlacement.floorY
-        let ceiling = size.height - TodayCanvasPlacement.ceilingY
+        let floor = size.height - TodayCanvasPlacement.physicsFloorY
+        let ceiling = size.height - TodayCanvasPlacement.physicsCeilingY
         let inset: CGFloat = 18
         let rect = CGRect(x: inset, y: floor, width: max(0, size.width - inset * 2), height: max(0, ceiling - floor))
         let enclosure = SKNode()

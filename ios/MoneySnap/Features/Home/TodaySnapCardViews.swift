@@ -1,6 +1,42 @@
 import SwiftUI
 import UIKit
 
+struct CanvasSnapToken: View {
+    let entry: TodaySnapEntry
+    let imageSize: CGSize
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            snapImage
+            PriceTicket(entry: entry)
+                .scaleEffect(min(1, imageSize.width / 112), anchor: .bottom)
+                .offset(y: 10)
+        }
+        .frame(width: imageSize.width, height: imageSize.height)
+    }
+
+    @ViewBuilder
+    private var snapImage: some View {
+        if let artwork = entry.artwork {
+            Image(artwork.rawValue)
+                .resizable()
+                .scaledToFill()
+                .frame(width: imageSize.width, height: imageSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        } else if let jpeg = entry.previewJPEG, let image = UIImage(data: jpeg) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: imageSize.width, height: imageSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .accessibilityIdentifier("home.photo.featured.\(entry.id.uuidString.lowercased())")
+        } else {
+            SnapCategoryPlaceholder(entry: entry, surface: .featured)
+                .frame(width: imageSize.width, height: imageSize.height)
+        }
+    }
+}
+
 struct FeaturedSnapCard: View {
     enum Layout: Equatable {
         case landscape

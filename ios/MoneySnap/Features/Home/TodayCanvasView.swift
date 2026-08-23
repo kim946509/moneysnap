@@ -19,35 +19,60 @@ struct TodayCanvasView: View {
             if motion == .physics {
                 SpriteView(scene: controller.scene, options: [.allowsTransparency])
                     .allowsHitTesting(false)
-                    .ignoresSafeArea()
             }
-            ForEach(Array(entries.prefix(3).enumerated()), id: \.element.id) { index, entry in
+            ForEach(Array(visibleEntries(motion).enumerated()), id: \.element.id) { index, entry in
                 let pose = controller.poses[entry.id]
                     ?? TodayCanvasPlacement.pose(
                         id: entry.id,
                         index: index,
+                        count: visibleEntries(motion).count,
                         canvasWidth: canvasSize.width,
-                        motion: .staticRest,
+                        size: tokenSize(for: entry, count: visibleEntries(motion).count, motion: motion),
+                        motion: motion == .physics ? .staticRest : motion,
                         isNew: false
                     )
-                canvasCard(entry, index: index)
+                canvasCard(entry, index: index, motion: motion)
                     .position(pose.center)
                     .rotationEffect(.radians(pose.rotation))
                     .onTapGesture { onOpen(entry.id) }
             }
         }
-        .onAppear { controller.sync(entries: entries, canvasSize: canvasSize, motion: motion) }
+        .onAppear { controller.sync(entries: entries, maximumAmount: maximumAmount, canvasSize: canvasSize, motion: motion) }
         .onChange(of: entries.map(\.id)) { _, _ in
-            controller.sync(entries: entries, canvasSize: canvasSize, motion: motion)
+            controller.sync(entries: entries, maximumAmount: maximumAmount, canvasSize: canvasSize, motion: motion)
         }
         .onChange(of: canvasSize) { _, _ in
-            controller.sync(entries: entries, canvasSize: canvasSize, motion: motion)
+            controller.sync(entries: entries, maximumAmount: maximumAmount, canvasSize: canvasSize, motion: motion)
         }
     }
 
+    private func visibleEntries(_ motion: TodayCanvasMotion) -> [TodaySnapEntry] {
+        motion == .staticRest ? Array(entries.prefix(3)) : entries
+    }
+
+    private func tokenSize(
+        for entry: TodaySnapEntry,
+        count: Int,
+        motion: TodayCanvasMotion
+    ) -> CGSize {
+        guard motion == .physics, let maximumAmount else {
+            return TodayCanvasPlacement.cardSize(index: 0)
+        }
+        return TodayCanvasPlacement.physicsSize(for: entry, maximumAmount: maximumAmount, count: count)
+    }
+
     @ViewBuilder
-    private func canvasCard(_ entry: TodaySnapEntry, index: Int) -> some View {
-        if index == 2 {
+    private func canvasCard(_ entry: TodaySnapEntry, index: Int, motion: TodayCanvasMotion) -> some View {
+        if motion == .physics, let maximumAmount {
+            CanvasSnapToken(
+                entry: entry,
+                imageSize: TodayCanvasPlacement.physicsSize(
+                    for: entry,
+                    maximumAmount: maximumAmount,
+                    count: visibleEntries(motion).count
+                )
+            )
+        } else if index == 2 {
             PriceTicket(entry: entry)
                 .rotationEffect(.degrees(-4))
         } else if let maximumAmount {
