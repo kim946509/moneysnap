@@ -153,12 +153,17 @@ struct TodayCanvasPlacementTests {
 
     @Test
     func liveFloatUsesCruiseSpeedInsteadOfFreezingInPlace() {
-        #expect(TodayCanvasPlacement.floatLinearDamping <= 0.3)
-        #expect(TodayCanvasPlacement.floatAngularDamping <= 0.8)
         #expect(TodayCanvasPlacement.floatCruiseSpeed >= 18)
         #expect(TodayCanvasPlacement.floatCruiseSpeed < TodayCanvasPlacement.floatSpeedLimit)
         #expect(TodayCanvasPlacement.floatSpeedLimit >= 50)
-        #expect(TodayCanvasPlacement.floatRestitution >= 0.55)
+        #expect(TodayCanvasDrift.spring == 0.05)
+        #expect(TodayCanvasDrift.wallBounce == -0.9)
+    }
+
+    @Test
+    func collisionRadiusMatchesTheVisibleToken() {
+        let size = CGSize(width: 80, height: 60)
+        #expect(TodayCanvasPlacement.collisionRadius(size: size) == 40)
     }
 
     @Test

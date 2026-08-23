@@ -67,6 +67,8 @@
 		B00000000000000000000058 /* TodayCanvasPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000063 /* TodayCanvasPlacementTests.swift */; };
 		B00000000000000000000059 /* HelpGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000064 /* HelpGuideView.swift */; };
 		B00000000000000000000060 /* HelpTopicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000065 /* HelpTopicTests.swift */; };
+		B00000000000000000000061 /* TodayCanvasDrift.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000066 /* TodayCanvasDrift.swift */; };
+		B00000000000000000000062 /* TodayCanvasDriftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000067 /* TodayCanvasDriftTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -152,6 +154,8 @@
 		F00000000000000000000063 /* TodayCanvasPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasPlacementTests.swift; sourceTree = "<group>"; };
 		F00000000000000000000064 /* HelpGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpGuideView.swift; sourceTree = "<group>"; };
 		F00000000000000000000065 /* HelpTopicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpTopicTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000066 /* TodayCanvasDrift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasDrift.swift; sourceTree = "<group>"; };
+		F00000000000000000000067 /* TodayCanvasDriftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasDriftTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -264,6 +268,7 @@
 				F00000000000000000000059 /* ArchiveViewModelTests.swift */,
 				F00000000000000000000063 /* TodayCanvasPlacementTests.swift */,
 				F00000000000000000000065 /* HelpTopicTests.swift */,
+				F00000000000000000000067 /* TodayCanvasDriftTests.swift */,
 				F00000000000000000000032 /* identity */,
 				F00000000000000000000041 /* snaps */,
 			);
@@ -279,6 +284,7 @@
 				F00000000000000000000014 /* TodaySnapView.swift */,
 				F00000000000000000000017 /* TodayCanvasLayout.swift */,
 				F00000000000000000000060 /* TodayCanvasPlacement.swift */,
+				F00000000000000000000066 /* TodayCanvasDrift.swift */,
 				F00000000000000000000061 /* TodayCanvasScene.swift */,
 				F00000000000000000000062 /* TodayCanvasView.swift */,
 				F00000000000000000000018 /* TodaySnapCardViews.swift */,
@@ -522,6 +528,7 @@
 				B00000000000000000000012 /* TodaySnapView.swift in Sources */,
 				B00000000000000000000014 /* TodayCanvasLayout.swift in Sources */,
 				B00000000000000000000055 /* TodayCanvasPlacement.swift in Sources */,
+				B00000000000000000000061 /* TodayCanvasDrift.swift in Sources */,
 				B00000000000000000000056 /* TodayCanvasScene.swift in Sources */,
 				B00000000000000000000057 /* TodayCanvasView.swift in Sources */,
 				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
@@ -571,6 +578,7 @@
 				B00000000000000000000051 /* GroupDetailModelTests.swift in Sources */,
 				B00000000000000000000054 /* ArchiveViewModelTests.swift in Sources */,
 				B00000000000000000000058 /* TodayCanvasPlacementTests.swift in Sources */,
+				B00000000000000000000062 /* TodayCanvasDriftTests.swift in Sources */,
 				B00000000000000000000060 /* HelpTopicTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

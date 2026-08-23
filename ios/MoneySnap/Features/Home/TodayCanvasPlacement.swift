@@ -21,9 +21,6 @@ enum TodayCanvasPlacement {
     static let physicsFloorY: CGFloat = 416
     static let floatSpeedLimit: CGFloat = 58
     static let floatCruiseSpeed: CGFloat = 24
-    static let floatLinearDamping: CGFloat = 0.22
-    static let floatAngularDamping: CGFloat = 0.55
-    static let floatRestitution: CGFloat = 0.68
 
     static func motion(reduceMotion: Bool, visualScenario: String?) -> TodayCanvasMotion {
         if reduceMotion { return .staticRest }
@@ -92,7 +89,7 @@ enum TodayCanvasPlacement {
     }
 
     static func collisionRadius(size: CGSize) -> CGFloat {
-        max(24, min(size.width, size.height) / 2 * 0.92)
+        max(size.width, size.height) / 2
     }
 
     static func dropCenterY(size: CGSize) -> CGFloat {
