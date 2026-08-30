@@ -244,18 +244,6 @@ private enum AppSheet: Identifiable {
             "share-\(receipt.id.uuidString)"
         }
     }
-
-    @ViewBuilder
-    private func destination(for route: AppRoute) -> some View {
-        switch route {
-        case let .snapDetail(id):
-            if let presentation = todayViewModel.detailPresentation(for: id) {
-                SnapDetailView(presentation: presentation)
-            } else {
-                SnapDetailUnavailableView()
-            }
-        }
-    }
 }
 
 private struct ShareAfterSaveView: View {
