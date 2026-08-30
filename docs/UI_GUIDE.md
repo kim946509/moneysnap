@@ -9,6 +9,13 @@
 - Figma가 내보내는 React/Tailwind 코드는 수치·자산·계층을 확인하는 참고 자료다. production 구현은 SwiftUI 컴포넌트와 프로젝트의 디자인 토큰으로 작성한다.
 - Figma asset URL은 만료될 수 있으므로 화면 구현 시작 시 원본을 내려받아 `Assets.xcassets`에 보존하고 source node ID를 manifest에 기록한다.
 
+### 2026-08-30 Home physics·Snap 상세 보완 기준
+
+- 사용자의 최신 명시적 결정에 따라 Home physics는 [Kit iOS Wallet & Balance](https://mobbin.com/screens/054cbfab-40ee-4029-bd1e-6a971f6298d2)의 440x956 동작 영상을 보완 기준으로 사용한다.
+- Snap 상세의 surface·stacked card 계층은 21st.dev의 [Spotlight Card](https://21st.dev/@easemize/components/spotlight-card)와 [Display Cards](https://21st.dev/@Codehagen/components/display-cards)를 참고하되, web hover·cursor·glow·grayscale 효과와 React/Tailwind 구현은 가져오지 않는다.
+- 위 보완 기준은 제품 범위와 정보 구조를 바꾸지 않는다. Home은 개인 Snap canvas이고, Snap 상세의 mutable field는 category·amount뿐이며 실제 수정·삭제 연결은 Stage 5가 소유한다.
+- 기존 Figma frame은 화면 구조와 393x852 검증 provenance를 계속 소유한다. 보완 기준과 충돌하는 Home 물리 동작·상세 surface 표현은 이 사용자 결정을 우선하고, 후속 Figma 동기화에서 같은 결정을 반영한다.
+
 ## 시각 정합성 완료 조건
 
 - 공통 색상, 글꼴, 간격, 모서리, 그림자와 tab/sheet 표현을 `MoneySnapVisualSystem`에 모으고 실제 반복이 확인된 항목만 토큰으로 승격한다.
@@ -125,6 +132,11 @@ Icon: iOS/SF Symbol 또는 02 Components의 아이콘 인스턴스 사용
 - `오늘 소비` 목록은 오늘의 모든 개인 Snap이다. 2열 150×46 행을 아래로 이어 붙이고, 첫 화면 아래 건은 세로 스크롤로 본다. Figma `9:2` visual은 2건 고정을 유지한다.
 - 연결된 사진은 Home featured/recent와 Snap 상세에 JPEG로 표시한다. 번들 fixture artwork는 visual 시나리오 전용이다.
 - 소비 오브젝트는 약간의 회전, 튕김, 충돌감을 가질 수 있지만 기록 흐름을 방해하지 않아야 한다.
+- 각 Snap card는 독립된 직사각형 rigid body다. 서로 겹쳐 그린 정적 composition이나 원형 bubble repulsion으로 대체하지 않는다.
+- 기기의 portrait 방향 기울기를 canvas gravity에 반영해 카드 묶음 전체가 같은 방향으로 무너지고 다시 쌓이게 한다. motion sensor를 사용할 수 없거나 기기가 평평하면 화면 아래 방향의 안정된 기본 중력을 사용한다.
+- 사용자는 card를 직접 집어 옮기고 짧게 던질 수 있다. tap과 drag를 이동 거리로 구분해 tap은 상세 진입, drag는 물리 상호작용으로 처리한다.
+- restitution은 가볍게, friction·damping은 충분히 적용해 장난감처럼 계속 튀지 않고 약 0.6~1.2초 안에 읽을 수 있는 pile로 안정화한다.
+- scene boundary는 header, 고정 `기록하기` action, 총액, tab bar와 분리한다. card가 화면 밖으로 영구 이탈하거나 주요 action을 가리지 않게 한다.
 
 ### Swipe / Page Control
 - 홈 캔버스가 여러 상태를 가질 때는 작은 페이지 인디케이터로 스와이프 가능성을 표현한다.
@@ -173,6 +185,10 @@ Icon: iOS/SF Symbol 또는 02 Components의 아이콘 인스턴스 사용
 - 사진 교체, 공유 그룹 변경, 금액 공개 설정 변경은 Snap 상세에 넣지 않는다.
 - 수정 액션은 별도 복잡한 폼보다 작은 바텀시트나 인라인 선택으로 처리한다.
 - 삭제는 명확한 위험 액션으로 두되, 화면의 중심 액션처럼 보이게 만들지 않는다.
+- 상세의 첫 시선은 큰 Snap artwork/category placeholder와 금액에 둔다. 페이지 전체를 하나의 큰 card로 감싸지 않는다.
+- category와 기록일은 21st.dev stacked/display card처럼 짧은 label-value surface로 분리하되, 흰 배경 위 얇은 border와 낮은 shadow만 사용한다.
+- web의 hover·spotlight glow를 iOS에 억지로 복제하지 않는다. native scroll, navigation, Dynamic Type, VoiceOver reading order와 44pt target을 우선한다.
+- Stage 5 API가 연결되기 전의 read-only 상세에는 동작하지 않는 수정·삭제 control을 노출하지 않는다. Stage 5에서 실제 command·오류 복구와 함께 action을 추가한다.
 
 ### Group Snap Canvas
 - 그룹 상세의 중심은 그룹 전체 금액이나 개별 Snap 리스트가 아니라 사람별 대표 Snap 오브젝트다.

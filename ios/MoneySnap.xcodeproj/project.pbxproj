@@ -69,6 +69,7 @@
 		B00000000000000000000060 /* HelpTopicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000065 /* HelpTopicTests.swift */; };
 		B00000000000000000000061 /* TodayCanvasDrift.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000066 /* TodayCanvasDrift.swift */; };
 		B00000000000000000000062 /* TodayCanvasDriftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000067 /* TodayCanvasDriftTests.swift */; };
+		B00000000000000000000068 /* TodaySnapPhysics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000068 /* TodaySnapPhysics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -156,6 +157,7 @@
 		F00000000000000000000065 /* HelpTopicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpTopicTests.swift; sourceTree = "<group>"; };
 		F00000000000000000000066 /* TodayCanvasDrift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasDrift.swift; sourceTree = "<group>"; };
 		F00000000000000000000067 /* TodayCanvasDriftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasDriftTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000068 /* TodaySnapPhysics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapPhysics.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -290,6 +292,7 @@
 				F00000000000000000000018 /* TodaySnapCardViews.swift */,
 				F00000000000000000000042 /* SnapDetailModel.swift */,
 				F00000000000000000000043 /* SnapDetailView.swift */,
+				F00000000000000000000068 /* TodaySnapPhysics.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -534,6 +537,7 @@
 				B00000000000000000000015 /* TodaySnapCardViews.swift in Sources */,
 				B00000000000000000000038 /* SnapDetailModel.swift in Sources */,
 				B00000000000000000000039 /* SnapDetailView.swift in Sources */,
+				B00000000000000000000068 /* TodaySnapPhysics.swift in Sources */,
 				B00000000000000000000016 /* MoneySnapVisualSystem.swift in Sources */,
 				B00000000000000000000017 /* MoneySnapTabBar.swift in Sources */,
 				B00000000000000000000018 /* AuthenticationModels.swift in Sources */,

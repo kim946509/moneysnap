@@ -160,10 +160,11 @@ struct RecentSnapRow: View {
     }
 }
 
-private struct SnapCategoryPlaceholder: View {
+struct SnapCategoryPlaceholder: View {
     enum Surface: String {
         case featured
         case recent
+        case detail
     }
 
     let entry: TodaySnapEntry
@@ -171,18 +172,34 @@ private struct SnapCategoryPlaceholder: View {
 
     var body: some View {
         Image(systemName: entry.category.placeholderSymbol)
-            .font(.system(size: surface == .featured ? 34 : 15, weight: .semibold))
+            .font(.system(size: symbolSize, weight: .semibold))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // Exact category palette remains design-gated; use an approved neutral token meanwhile.
-            .background(MoneySnapVisualSystem.profileNeutralFill, in: RoundedRectangle(cornerRadius: surface == .featured ? 20 : 7))
+            .background(MoneySnapVisualSystem.profileNeutralFill, in: RoundedRectangle(cornerRadius: cornerRadius))
             .foregroundStyle(MoneySnapVisualSystem.charcoal)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(entry.category.title) 사진 없음")
             .accessibilityIdentifier("home.placeholder.\(surface.rawValue).\(entry.id.uuidString.lowercased())")
     }
+
+    private var symbolSize: CGFloat {
+        switch surface {
+        case .featured: 34
+        case .recent: 15
+        case .detail: 72
+        }
+    }
+
+    private var cornerRadius: CGFloat {
+        switch surface {
+        case .featured: 20
+        case .recent: 7
+        case .detail: 22
+        }
+    }
 }
 
-private extension SnapCategory {
+extension SnapCategory {
     var placeholderSymbol: String {
         switch self {
         case .food: "fork.knife"

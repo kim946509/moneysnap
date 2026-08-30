@@ -77,15 +77,18 @@ struct AppShellView: View {
             }
             .toolbar(.hidden, for: .tabBar)
 
-            MoneySnapTabBar(selectedTab: $selectedTab) { tab in
-                if tab == .add {
-                    presentedSheet = .record
-                } else {
-                    selectedTab = tab
+            if tabRouter.router(for: selectedTab).path.isEmpty {
+                MoneySnapTabBar(selectedTab: $selectedTab) { tab in
+                    if tab == .add {
+                        presentedSheet = .record
+                    } else {
+                        selectedTab = tab
+                    }
                 }
-            }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 21)
+                .transition(.opacity)
+            }
 
             if presentsMenu {
                 MoneySnapSidebar(
