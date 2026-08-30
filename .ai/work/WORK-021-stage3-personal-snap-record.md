@@ -21,13 +21,15 @@ owner: codex
 - iOS authenticated HTTP transport와 Snap record URLSession adapter
 - Home `기록하기`와 중앙 `추가` action, no-photo category→amount bottom-sheet flow
 - 금액 keypad, retry, duplicate-submit gate, 저장 성공의 즉시 Home 반영
+- Mobbin Kit reference를 따른 rectangular-card SpriteKit pile, bounded device-tilt gravity와 drag/tap interaction
+- Today projection에 이미 있는 Snap을 여는 read-only 상세 presentation과 Home card/list 진입
 - unit·HTTP/PostgreSQL integration·Swift model/API·XCUITest·393x852 visual 검증
 
 ## Out of scope
 
 - camera, PhotosUI, image normalization, R2와 `ImageRef`; Stage 6에서 추가
 - 실제 Today 재조회와 relaunch 동기화; Stage 4에서 추가
-- Snap 상세·수정·삭제, group·share·archive
+- Snap 상세의 server fetch·수정·삭제 command, group·share·archive; read-only Today projection 상세 presentation만 이번 범위에 포함
 - 서버 배포와 live Neon·R2 호출
 - Figma에 없는 no-photo 전체 화면을 임의 baseline으로 만드는 일
 
@@ -57,6 +59,10 @@ owner: codex
 - [ ] 성공 receipt는 sheet를 닫고 같은 session의 Home에 즉시 한 번만 반영되며, 실패·취소는 저장된 것처럼 표시하지 않는다.
 - [ ] 단계 전환은 VoiceOver focus·announcement와 Dynamic Type에서도 category, amount, retry action을 잃지 않는다.
 - [ ] category·amount sheet와 Home 복귀는 승인된 Figma node/reference 및 기존 bounded threshold를 통과한다.
+- [ ] Home featured Snap은 독립 rectangular rigid body로 낙하·회전·충돌하며 device tilt와 drag에 반응하고, sensor unavailable/flat 상태에서는 아래 방향 기본 gravity로 안정화한다.
+- [ ] Home physics는 header, 고정 기록 action, 총액과 tab bar를 침범하지 않고 reduce-motion에서는 같은 Snap 순서의 정적 pile을 제공한다.
+- [ ] featured card tap과 오늘 소비 row는 Today projection의 같은 Snap read-only 상세로 이동하며, 상세는 artwork/placeholder, amount, category, immutable local day만 명확한 reading order로 보여준다.
+- [ ] Stage 5 command가 없는 상태에서 상세는 가짜 수정·삭제 action을 노출하지 않고, unknown/stale ID는 crash나 다른 Snap 대신 명확한 unavailable state를 보여준다.
 
 ## Test seam
 
@@ -65,6 +71,7 @@ owner: codex
 - rollback seam: Testcontainers DB에 테스트 동안만 failing trigger를 설치해 reservation 이후 insert 실패를 만들고, transaction rollback과 같은 request retry를 HTTP로 검증한 뒤 trigger를 제거한다.
 - persistence shape는 HTTP 결과로 검증하고 raw table count는 동시 단일 생성·account cascade 같은 DB contract에 필요한 테스트로만 제한한다.
 - iOS model seam: recording spy와 injected clock/timezone/UUID로 phase, digit buffer, immutable retry command, duplicate gate와 receipt를 검증한다.
+- iOS presentation seam: pure gravity mapping과 amount-based physics card sizing, Today entry→detail presentation lookup을 Swift Testing으로 먼저 실패시킨다.
 - iOS transport seam: serialized URLProtocol로 bearer, JSON body, `201/400/401/409/5xx`, fractional-independent date decoding과 stale-401 처리를 검증한다.
 - UI seam: WORK-020의 DEBUG fixture와 XCUITest로 Home/add→category→amount→save→Home 흐름을 검증한다.
 - visual seam: exact Figma category·amount component/reference가 확보된 scenario만 393x852 evidence로 완료 처리한다.
@@ -87,23 +94,35 @@ git diff --check
 
 - 실행 명령:
   - dependency status와 `git status --short` 확인
+  - `agent-reach doctor --json`
+  - Jina Reader로 Mobbin screen과 21st.dev component 원본 확인
+  - Mobbin plugin `search_screens` 직접 호출
+  - `ffprobe`와 `ffmpeg`로 Mobbin 원본 8.066667초 영상을 2fps contact sheet로 검사
+  - `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-project.ps1`
+  - `powershell -ExecutionPolicy Bypass -File ios\scripts\validate-visual-baseline.ps1`
+  - `git diff --check`
 - 결과:
   - WORK-017·019·020·022가 모두 완료됐고 working tree가 clean인 `3fa01c9`를 Stage 3 시작 기준점으로 고정했다.
-- 리뷰: 2026-08-13 사용자가 전체 MVP와 하네스 변경을 명시 승인했으며 Red부터 구현을 시작한다.
+  - 2026-08-30 사용자 결정으로 Mobbin Kit physics와 21st.dev card surface 참고를 추가했다. 실제 기기·iPhone UI test는 사용자가 수행하고 Windows 정적 검증은 Codex가 수행한다.
+  - Mobbin 공개 원본은 720x1564, 60fps, 484 frame이며 rectangular widget pile이 기울기 방향으로 이동·회전·충돌하는 것을 확인했다.
+  - Mobbin plugin은 세션에 연결되어 있었으나 직접 호출 결과 paid plan gate로 metadata를 반환하지 않았다. 동일 public source video 분석으로 작업을 계속했다.
+  - iOS project static validation, visual baseline contract와 `git diff --check`가 모두 exit 0이다.
+  - Windows host에는 Swift/Xcode가 없어 새 Swift Testing test를 실행하지 않았다. 사용자 요청에 따라 iPhone UI test와 실제 기기 검증은 실행하지 않았다.
+- 리뷰: 2026-08-13 사용자가 전체 MVP와 하네스 변경을 명시 승인했으며 Red부터 구현을 시작한다. 2026-08-30 사용자가 Home physics·상세 redesign 구현과 본인 iPhone 검증을 명시했다.
 
 ## Agent rules impact
 
 - 영향 여부: yes
-- 근거: 첫 authenticated product API, 개인 Snap persistence와 실제 iOS record flow가 현재 단계·검증 설명을 바꾼다.
-- 처리 결과: 기준 문서를 먼저 갱신한 뒤 완료 시 `AGENTS.md` 현재 단계와 검증 근거를 동기화한다.
+- 근거: 첫 authenticated product API, 개인 Snap persistence와 실제 iOS record flow가 현재 단계·검증 설명을 바꾼다. 이번 시각 보완은 기존 iOS 17+/SwiftUI/SpriteKit stack, 제품 범위, 승인 경계와 검증 명령을 바꾸지 않는다.
+- 처리 결과: Stage 3 전체 완료 시 기준 문서와 `AGENTS.md` 현재 단계·검증 근거를 동기화한다. 이번 보완만으로는 `AGENTS.md` 고정 앵커를 변경하지 않는다.
 
 ## Code Review Graph
 
 - 코드 변경 여부: yes
-- graph action: valid graph 확인 후 stage-start SHA `3fa01c9` 기준 incremental update 예정
-- base: `3fa01c9`
-- risk: high (owner authorization, money, idempotency, transaction, session boundary)
-- findings와 처리 결과: 각 의미 있는 서버/iOS 변경 묶음 뒤 standard detail로 검사하고 actionable finding은 TDD 수정·재update한다.
+- graph action: 기존 graph를 `HEAD` 기준 incremental update한 뒤 새 untracked Swift source 포함을 위해 full rebuild; 이후 minimal context와 `detect_changes(detail_level="standard")`
+- base: `HEAD` (`811c67b9355612231fff916af33e97b5cee5c8b9`), Stage 3 전체 기준은 `3fa01c9`
+- risk: 전체 Stage 3은 high; 이번 presentation slice는 medium `0.65`
+- findings와 처리 결과: graph는 135 files, 1001 nodes, 9292 edges로 full rebuild됐고 parser error 0이었다. changed detection은 layout·route test gap을 보고했으며 gravity, amount-size, Today entry→detail lookup Swift Testing을 추가했다. git diff 기반 graph가 untracked 신규 Swift file의 function node를 surface하지 못한 한계는 Windows static project validator와 수동 source review로 보완했으며 native 실행은 사용자 iPhone 검증에 남겼다. 기존 사용자 소유 `MoneySnapUITests.swift` 변경은 수정하지 않았다.
 
 ## Decisions and risks
 
@@ -116,3 +135,5 @@ git diff --check
 - Stage 3의 session-local Home 반영은 durable server save 성공 receipt만 사용하며 Stage 4가 canonical Today GET과 relaunch 동기화를 대체한다.
 - production AppShell은 Figma Home fixture를 기록 API의 성공 데이터로 가장하지 않으며 `TodaySnapViewModel.apply(_:)`가 201 receipt를 한 번만 반영한다.
 - exact no-photo full-screen Figma frame이 없으면 component-level evidence와 기능 XCUITest까지만 기록하고 pixel parity를 허위로 완료 처리하지 않는다.
+- Home physics는 reference의 rigid-body pile 감각을 native SpriteKit/Core Motion으로 번역하되, 제품 불변 규칙인 고정 record action과 reduce-motion을 reference보다 우선한다.
+- read-only Snap 상세는 Stage 5 server contract를 선행하지 않는다. 21st.dev pattern은 surface hierarchy만 참고하고 dependency나 web runtime을 추가하지 않는다.

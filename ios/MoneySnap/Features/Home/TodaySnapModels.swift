@@ -135,6 +135,11 @@ struct TodaySnapEntry: Identifiable, Equatable, Sendable {
     }
 }
 
+struct SnapDetailPresentation: Equatable, Sendable {
+    let entry: TodaySnapEntry
+    let day: SnapDay
+}
+
 struct TodaySnapSummary: Equatable, Sendable {
     let day: SnapDay
     let entries: [TodaySnapEntry]

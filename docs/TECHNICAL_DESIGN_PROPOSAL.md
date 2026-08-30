@@ -46,7 +46,7 @@
 5. 고정 Simulator/OS에서 safe area, keyboard, sheet, tab과 motion을 확인한다.
 6. 차이가 남으면 baseline을 자동 갱신하지 않고 원인을 리뷰한다.
 
-첫 구현 순서는 홈 `9:2` → 금액 입력 완료 `153:4156` → 그룹 목록 `75:86` → 그룹 상세 `77:163` → Snap 상세 `77:582` → 보관함 `77:681` → 마이 `77:798`이다. 홈의 소비 오브젝트는 SwiftUI 위에 SpriteKit scene을 포함해 무중력 유영·충돌을 구현하고 reduce-motion에서는 정적 layout과 짧은 fade/scale로 대체한다.
+첫 구현 순서는 홈 `9:2` → 금액 입력 완료 `153:4156` → 그룹 목록 `75:86` → 그룹 상세 `77:163` → Snap 상세 `77:582` → 보관함 `77:681` → 마이 `77:798`이다. 홈의 소비 오브젝트는 SwiftUI 위에 SpriteKit scene을 포함해 독립된 직사각형 rigid body의 낙하·회전·충돌·drag를 구현하고, Core Motion 기울기를 bounded gravity로 반영한다. reduce-motion에서는 정적 layout과 짧은 fade/scale로 대체한다.
 
 ### Spring Boot modular monolith
 

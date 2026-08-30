@@ -12,30 +12,18 @@ struct TodaySnapView: View {
     var body: some View {
         ZStack {
             Color.white
-
             switch viewModel.state {
             case .loading:
-                ProgressView()
-                    .accessibilityIdentifier("home.loading")
+                ProgressView().accessibilityIdentifier("home.loading")
             case let .content(summary):
-                TodaySnapContent(
-                    summary: summary,
-                    onRecord: onRecord,
-                    onOpen: onOpen,
-                    onMenu: onMenu,
-                    groups: groups,
-                    groupClient: groupClient,
-                    media: media
-                )
+                TodaySnapContent(summary: summary, onRecord: onRecord, onOpen: onOpen, onMenu: onMenu, groups: groups, groupClient: groupClient, media: media)
                     .refreshable { await viewModel.refresh() }
                     .overlay(alignment: .top) {
                         if viewModel.refreshFailure {
-                            Button("다시 불러오기") {
-                                Task { await viewModel.retry() }
-                            }
-                            .frame(minWidth: 44, minHeight: 44)
-                            .accessibilityIdentifier("home.refresh-retry")
-                            .padding(.top, 72)
+                            Button("다시 불러오기") { Task { await viewModel.retry() } }
+                                .frame(minWidth: 44, minHeight: 44)
+                                .accessibilityIdentifier("home.refresh-retry")
+                                .padding(.top, 72)
                         }
                     }
             case .failure:
@@ -43,11 +31,9 @@ struct TodaySnapView: View {
                     Label("오늘 기록을 불러오지 못했어요", systemImage: "exclamationmark.arrow.triangle.2.circlepath")
                         .accessibilityIdentifier("screen.home")
                 } actions: {
-                    Button("다시 시도") {
-                        Task { await viewModel.retry() }
-                    }
-                    .frame(minWidth: 44, minHeight: 44)
-                    .accessibilityIdentifier("home.retry")
+                    Button("다시 시도") { Task { await viewModel.retry() } }
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityIdentifier("home.retry")
                 }
             }
         }
@@ -66,14 +52,9 @@ private struct TodaySnapContent: View {
     @State private var page = 0
     @State private var groupEntries: [UUID: [TodaySnapEntry]] = [:]
 
-    private var orderedGroups: [MoneySnapGroup] {
-        GroupCanvasOrder.apply(groups)
-    }
-
+    private var orderedGroups: [MoneySnapGroup] { GroupCanvasOrder.apply(groups) }
     private var pageCount: Int { 1 + orderedGroups.count }
-    private var isVisualHome: Bool {
-        ProcessInfo.processInfo.environment["MONEYSNAP_VISUAL_SCENARIO"] != nil
-    }
+    private var isVisualHome: Bool { ProcessInfo.processInfo.environment["MONEYSNAP_VISUAL_SCENARIO"] != nil }
 
     var body: some View {
         GeometryReader { proxy in
@@ -88,22 +69,15 @@ private struct TodaySnapContent: View {
                 .accessibilityIdentifier("home.recent.scroll")
             }
         }
-        .task {
-            await loadVisibleGroupIfNeeded()
-        }
-        .onChange(of: page) { _, _ in
-            Task { await loadVisibleGroupIfNeeded() }
-        }
-        .onChange(of: groups.map(\.id)) { _, _ in
-            Task { await loadVisibleGroupIfNeeded() }
-        }
+        .task { await loadVisibleGroupIfNeeded() }
+        .onChange(of: page) { _, _ in Task { await loadVisibleGroupIfNeeded() } }
+        .onChange(of: groups.map(\.id)) { _, _ in Task { await loadVisibleGroupIfNeeded() } }
     }
 
     private func chrome(canvasSize: CGSize) -> some View {
         ZStack(alignment: .topLeading) {
             header(availableWidth: canvasSize.width)
-            canvasPages(size: canvasSize)
-                .frame(width: canvasSize.width, height: canvasSize.height, alignment: .top)
+            canvasPages(size: canvasSize).frame(width: canvasSize.width, height: canvasSize.height, alignment: .top)
             recordButton(availableWidth: canvasSize.width)
             pageIndicator(availableWidth: canvasSize.width)
             totalSection
@@ -122,9 +96,7 @@ private struct TodaySnapContent: View {
                 ForEach(Array(orderedGroups.enumerated()), id: \.element.id) { index, group in
                     TodayCanvasView(
                         entries: groupEntries[group.id] ?? [],
-                        maximumAmount: group.amountVisible
-                            ? (groupEntries[group.id] ?? []).map(\.amount).max()
-                            : nil,
+                        maximumAmount: group.amountVisible ? (groupEntries[group.id] ?? []).map(\.amount).max() : nil,
                         canvasSize: size,
                         onOpen: { _ in }
                     )
@@ -136,13 +108,20 @@ private struct TodaySnapContent: View {
         }
     }
 
+    @ViewBuilder
     private func personalCanvas(size: CGSize) -> some View {
-        TodayCanvasView(
-            entries: summary.entries,
-            maximumAmount: summary.entries.map(\.amount).max(),
-            canvasSize: size,
-            onOpen: onOpen
-        )
+        if isVisualHome {
+            TodayCanvasView(
+                entries: summary.entries,
+                maximumAmount: summary.entries.map(\.amount).max(),
+                canvasSize: size,
+                onOpen: onOpen
+            )
+        } else {
+            TodaySnapPhysicsCanvas(entries: summary.entries, onSelect: onOpen)
+                .frame(width: size.width, height: 310)
+                .offset(y: 86)
+        }
     }
 
     private func loadVisibleGroupIfNeeded() async {
@@ -153,52 +132,31 @@ private struct TodaySnapContent: View {
         if group.amountVisible {
             let today = (try? await groupClient.visibleToday(groupID: group.id)) ?? VisibleGroupToday(localDay: "", members: [])
             entries = today.members.compactMap { member in
-                guard let snap = member.representative,
-                      let amount = try? KrwAmount(snap.amountWon) else { return nil }
-                return TodaySnapEntry(
-                    id: snap.snapId,
-                    category: snap.category,
-                    amount: amount,
-                    imageRef: snap.imageRef
-                )
+                guard let snap = member.representative, let amount = try? KrwAmount(snap.amountWon) else { return nil }
+                return TodaySnapEntry(id: snap.snapId, category: snap.category, amount: amount, imageRef: snap.imageRef)
             }
         } else {
             let today = (try? await groupClient.hiddenToday(groupID: group.id)) ?? HiddenGroupToday(localDay: "", members: [])
             entries = today.members.compactMap { member in
                 guard let snap = member.representative, let amount = try? KrwAmount(1) else { return nil }
-                return TodaySnapEntry(
-                    id: snap.snapId,
-                    category: snap.category,
-                    amount: amount,
-                    imageRef: snap.imageRef,
-                    revealsAmount: false
-                )
+                return TodaySnapEntry(id: snap.snapId, category: snap.category, amount: amount, imageRef: snap.imageRef, revealsAmount: false)
             }
         }
         var hydrated = entries
         if let media {
             var jpegs: [UUID: Data] = [:]
             await withTaskGroup(of: (UUID, Data?).self) { taskGroup in
-                for entry in entries {
-                    guard let imageRef = entry.imageRef else { continue }
+                for entry in entries where entry.imageRef != nil {
+                    let imageRef = entry.imageRef!
                     taskGroup.addTask { (entry.id, try? await media.fetchJPEG(imageRef)) }
                 }
-                for await (id, jpeg) in taskGroup {
-                    if let jpeg, jpeg.starts(with: [0xFF, 0xD8, 0xFF]) {
-                        jpegs[id] = jpeg
-                    }
+                for await (id, jpeg) in taskGroup where jpeg?.starts(with: [0xFF, 0xD8, 0xFF]) == true {
+                    jpegs[id] = jpeg
                 }
             }
             hydrated = entries.map { entry in
                 guard let jpeg = jpegs[entry.id] else { return entry }
-                return TodaySnapEntry(
-                    id: entry.id,
-                    category: entry.category,
-                    amount: entry.amount,
-                    imageRef: entry.imageRef,
-                    previewJPEG: jpeg,
-                    revealsAmount: entry.revealsAmount
-                )
+                return TodaySnapEntry(id: entry.id, category: entry.category, amount: entry.amount, imageRef: entry.imageRef, previewJPEG: jpeg, revealsAmount: entry.revealsAmount)
             }
         }
         groupEntries[group.id] = hydrated
@@ -207,37 +165,22 @@ private struct TodaySnapContent: View {
     private func header(availableWidth: CGFloat) -> some View {
         Group {
             VStack(alignment: .leading, spacing: -2) {
-                Text("Today Snap")
-                    .font(.moneySnap(size: 22, weight: .bold))
-                    .foregroundStyle(MoneySnapVisualSystem.ink)
-                    .accessibilityIdentifier("screen.home")
-                Text(summary.day.displayLabel)
-                    .font(.moneySnap(size: 13, weight: .medium))
-                    .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                Text("Today Snap").font(.moneySnap(size: 22, weight: .bold)).foregroundStyle(MoneySnapVisualSystem.ink).accessibilityIdentifier("screen.home")
+                Text(summary.day.displayLabel).font(.moneySnap(size: 13, weight: .medium)).foregroundStyle(MoneySnapVisualSystem.secondaryText)
             }
             .offset(x: 28, y: 7)
-
-            MoneySnapMenuButton(action: onMenu)
-                .position(x: availableWidth - 40, y: 34)
+            MoneySnapMenuButton(action: onMenu).position(x: availableWidth - 40, y: 34)
         }
     }
 
     private func recordButton(availableWidth: CGFloat) -> some View {
         Button(action: onRecord) {
             HStack(spacing: 10) {
-                Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .bold))
-                    .frame(width: 22, height: 22)
-                    .foregroundStyle(.white)
-                    .background(.white.opacity(0.18), in: Circle())
-                Text("기록하기")
-                    .font(.moneySnap(size: 16, weight: .bold))
+                Image(systemName: "plus").font(.system(size: 12, weight: .bold)).frame(width: 22, height: 22).foregroundStyle(.white).background(.white.opacity(0.18), in: Circle())
+                Text("기록하기").font(.moneySnap(size: 16, weight: .bold))
             }
             .foregroundStyle(.white)
-            .frame(
-                width: TodayCanvasPlacement.recordButtonWidth,
-                height: TodayCanvasPlacement.recordButtonHeight
-            )
+            .frame(width: TodayCanvasPlacement.recordButtonWidth, height: TodayCanvasPlacement.recordButtonHeight)
             .background(MoneySnapVisualSystem.charcoal, in: Capsule())
             .shadow(color: .black.opacity(0.18), radius: 14, y: 10)
         }
@@ -250,80 +193,47 @@ private struct TodaySnapContent: View {
         let count = isVisualHome ? 2 : pageCount
         return HStack(spacing: 4) {
             ForEach(0..<count, id: \.self) { index in
-                Circle()
-                    .fill(index == page ? MoneySnapVisualSystem.ink : MoneySnapVisualSystem.lightGray)
-                    .frame(width: 5, height: 5)
+                Circle().fill(index == page ? MoneySnapVisualSystem.ink : MoneySnapVisualSystem.lightGray).frame(width: 5, height: 5)
             }
         }
-        .frame(minWidth: 45, minHeight: 20)
-        .padding(.horizontal, 10)
-        .background(.white, in: Capsule())
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
-        .position(x: availableWidth / 2, y: 503)
-        .accessibilityIdentifier("home.pager")
-        .opacity(isVisualHome || count > 1 ? 1 : 0)
+        .frame(minWidth: 45, minHeight: 20).padding(.horizontal, 10).background(.white, in: Capsule()).shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+        .position(x: availableWidth / 2, y: 503).accessibilityIdentifier("home.pager").opacity(isVisualHome || count > 1 ? 1 : 0)
     }
 
     private var totalSection: some View {
         Group {
-            Text("오늘 총 소비")
-                .font(.moneySnap(size: 16, weight: .medium))
-                .foregroundStyle(MoneySnapVisualSystem.secondaryText)
-                .offset(x: 28, y: 521)
-            Text(summary.totalAmount.wonText)
-                .accessibilityIdentifier("home.total")
-                .font(.moneySnap(size: 64, weight: .black))
-                .foregroundStyle(.black)
-                .frame(height: 78, alignment: .topLeading)
-                .offset(x: 24, y: 533)
+            Text("오늘 총 소비").font(.moneySnap(size: 16, weight: .medium)).foregroundStyle(MoneySnapVisualSystem.secondaryText).offset(x: 28, y: 521)
+            Text(summary.totalAmount.wonText).accessibilityIdentifier("home.total").font(.moneySnap(size: 64, weight: .black)).foregroundStyle(.black).frame(height: 78, alignment: .topLeading).offset(x: 24, y: 533)
         }
     }
 
     private var recentSection: some View {
         Group {
-            Text("오늘 소비")
-                .font(.moneySnap(size: 17, weight: .bold))
-                .foregroundStyle(MoneySnapVisualSystem.ink)
-                .offset(x: 26, y: 612)
+            Text("오늘 소비").font(.moneySnap(size: 17, weight: .bold)).foregroundStyle(MoneySnapVisualSystem.ink).offset(x: 26, y: 612)
             if isVisualHome {
-                HStack(spacing: 28) {
-                    ForEach(summary.recentEntries) { entry in
-                        recentCell(entry)
-                    }
-                }
-                .offset(x: 26, y: 650)
+                HStack(spacing: 28) { ForEach(summary.recentEntries) { recentCell($0) } }.offset(x: 26, y: 650)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
-                    Color.clear
-                        .frame(height: 650)
-                        .allowsHitTesting(false)
+                    Color.clear.frame(height: 650).allowsHitTesting(false)
                     ForEach(Array(stride(from: 0, to: summary.recentEntries.count, by: 2)), id: \.self) { start in
                         HStack(spacing: 28) {
                             recentCell(summary.recentEntries[start])
-                            if start + 1 < summary.recentEntries.count {
-                                recentCell(summary.recentEntries[start + 1])
-                            }
+                            if start + 1 < summary.recentEntries.count { recentCell(summary.recentEntries[start + 1]) }
                         }
                     }
                 }
-                .padding(.leading, 26)
-                .padding(.bottom, 96)
+                .padding(.leading, 26).padding(.bottom, 96)
             }
         }
     }
 
     private func recentCell(_ entry: TodaySnapEntry) -> some View {
-        RecentSnapRow(entry: entry)
-            .onTapGesture { onOpen(entry.id) }
+        RecentSnapRow(entry: entry).onTapGesture { onOpen(entry.id) }
     }
 }
 
 #if DEBUG
 #Preview {
-    TodaySnapView(
-        viewModel: TodaySnapViewModel(client: VisualTestSupport.snapJournalClient),
-        onRecord: {},
-        onOpen: { _ in }
-    )
+    TodaySnapView(viewModel: TodaySnapViewModel(client: VisualTestSupport.snapJournalClient), onRecord: {}, onOpen: { _ in })
 }
 #endif
