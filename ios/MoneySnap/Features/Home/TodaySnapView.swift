@@ -150,8 +150,10 @@ private struct TodaySnapContent: View {
                     let imageRef = entry.imageRef!
                     taskGroup.addTask { (entry.id, try? await media.fetchJPEG(imageRef)) }
                 }
-                for await (id, jpeg) in taskGroup where jpeg?.starts(with: [0xFF, 0xD8, 0xFF]) == true {
-                    jpegs[id] = jpeg
+                for await (id, jpeg) in taskGroup {
+                    if let jpeg, jpeg.starts(with: [0xFF, 0xD8, 0xFF]) {
+                        jpegs[id] = jpeg
+                    }
                 }
             }
             hydrated = entries.map { entry in
