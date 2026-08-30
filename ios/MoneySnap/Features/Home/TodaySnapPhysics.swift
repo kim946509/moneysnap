@@ -28,13 +28,29 @@ struct TodaySnapPhysicsCanvas: View {
                 StaticSnapPile(entries: entries, onSelect: onSelect)
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             } else {
-                SpriteView(scene: scene, options: [.allowsTransparency])
-                    .accessibilityIdentifier("home.physics-canvas")
+                ZStack {
+                    SpriteView(scene: scene, options: [.allowsTransparency])
+                        .accessibilityIdentifier("home.physics-canvas")
+                    accessibilityBridge
+                }
             }
         }
         .onChange(of: entries) { _, updatedEntries in
             scene.replaceEntries(updatedEntries)
         }
+    }
+
+    private var accessibilityBridge: some View {
+        HStack(spacing: 0) {
+            ForEach(entries) { entry in
+                Color.clear
+                    .frame(width: 1, height: 1)
+                    .accessibilityElement()
+                    .accessibilityLabel("\(entry.category.title), \(entry.amount.value.wonText)")
+                    .accessibilityIdentifier("home.placeholder.featured.\(entry.id.uuidString.lowercased())")
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
