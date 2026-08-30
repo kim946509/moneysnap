@@ -199,6 +199,10 @@ final class TodaySnapPhysicsScene: SKScene {
             let crop = artworkNode(named: artwork.rawValue, size: mediaSize)
             crop.position.y = 13
             card.addChild(crop)
+        } else if let jpeg = entry.previewJPEG, let image = UIImage(data: jpeg) {
+            let crop = artworkNode(image: image, size: mediaSize)
+            crop.position.y = 13
+            card.addChild(crop)
         } else if let symbol = UIImage(systemName: entry.category.placeholderSymbol) {
             let tile = SKShapeNode(rectOf: mediaSize, cornerRadius: 11)
             tile.fillColor = UIColor(MoneySnapVisualSystem.profileNeutralFill)
@@ -248,20 +252,24 @@ final class TodaySnapPhysicsScene: SKScene {
     }
 
     private func artworkNode(named name: String, size: CGSize) -> SKCropNode {
+        artworkNode(image: UIImage(named: name) ?? UIImage(), size: size)
+    }
+
+    private func artworkNode(image: UIImage, size: CGSize) -> SKCropNode {
         let crop = SKCropNode()
         let mask = SKShapeNode(rectOf: size, cornerRadius: 11)
         mask.fillColor = .white
         mask.strokeColor = .clear
         crop.maskNode = mask
 
-        let image = SKSpriteNode(imageNamed: name)
-        if let textureSize = image.texture?.size(), textureSize.width > 0, textureSize.height > 0 {
+        let sprite = SKSpriteNode(texture: SKTexture(image: image))
+        if let textureSize = sprite.texture?.size(), textureSize.width > 0, textureSize.height > 0 {
             let scale = max(size.width / textureSize.width, size.height / textureSize.height)
-            image.size = CGSize(width: textureSize.width * scale, height: textureSize.height * scale)
+            sprite.size = CGSize(width: textureSize.width * scale, height: textureSize.height * scale)
         } else {
-            image.size = size
+            sprite.size = size
         }
-        crop.addChild(image)
+        crop.addChild(sprite)
         return crop
     }
 
