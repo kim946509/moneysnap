@@ -247,7 +247,6 @@ final class TodaySnapPhysicsScene: SKScene {
         card.isAccessibilityElement = true
         card.accessibilityLabel = "\(entry.category.title), \(entry.amount.value.wonText)"
         card.accessibilityHint = "두 번 탭하여 Snap 상세 보기"
-        card.accessibilityIdentifier = "home.snap.\(entry.id.uuidString.lowercased())"
         return card
     }
 
