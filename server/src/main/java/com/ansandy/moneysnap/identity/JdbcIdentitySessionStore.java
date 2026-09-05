@@ -1,15 +1,18 @@
 package com.ansandy.moneysnap.identity;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.ansandy.moneysnap.shared.AccountMediaCleanup;
+import com.ansandy.moneysnap.shared.SqliteColumns;
 
 final class JdbcIdentitySessionStore implements IdentitySessionStore {
 
@@ -42,7 +45,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			UUID candidate = UUID.randomUUID();
 			jdbc.sql("INSERT INTO users (id, created_at) VALUES (:id, :createdAt)")
 					.param("id", candidate)
-					.param("createdAt", Timestamp.from(now))
+					.param("createdAt", SqliteColumns.instant(now))
 					.update();
 			int inserted = jdbc.sql("""
 					INSERT INTO apple_identities (
@@ -54,7 +57,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					.param("userId", candidate)
 					.param("subject", appleSubject)
 					.param("encryptedRefreshToken", encryptedAppleRefreshToken)
-					.param("now", Timestamp.from(now))
+					.param("now", SqliteColumns.instant(now))
 					.update();
 			if (inserted == 1) {
 				return candidate;
@@ -84,9 +87,9 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					.param("id", session.sessionId())
 					.param("userId", session.userId())
 					.param("accessHash", session.accessTokenHash())
-					.param("accessExpiresAt", Timestamp.from(session.accessExpiresAt()))
-					.param("refreshExpiresAt", Timestamp.from(session.refreshExpiresAt()))
-					.param("createdAt", Timestamp.from(session.createdAt()))
+					.param("accessExpiresAt", SqliteColumns.instant(session.accessExpiresAt()))
+					.param("refreshExpiresAt", SqliteColumns.instant(session.refreshExpiresAt()))
+					.param("createdAt", SqliteColumns.instant(session.createdAt()))
 					.update();
 			insertRefreshToken(
 					session.sessionId(),
@@ -106,10 +109,10 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				  AND revoked_at IS NULL
 				""")
 				.param("accessHash", accessTokenHash)
-				.param("now", Timestamp.from(now))
+				.param("now", SqliteColumns.instant(now))
 				.query((row, rowNumber) -> new SessionActor(
-						row.getObject("user_id", UUID.class),
-						row.getObject("id", UUID.class)))
+						SqliteColumns.uuid(row, "user_id"),
+						SqliteColumns.uuid(row, "id")))
 				.optional();
 	}
 
@@ -121,24 +124,55 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			String nextRefreshTokenHash,
 			Instant nextRefreshExpiresAt,
 			Instant now) {
-		return transactions.execute(status -> {
+		DataAccessException lastContention = null;
+		for (int attempt = 0; attempt < 16; attempt++) {
+			try {
+				return transactions.execute(status -> rotateRefreshOnce(
+						currentRefreshTokenHash,
+						nextAccessTokenHash,
+						nextAccessExpiresAt,
+						nextRefreshTokenHash,
+						nextRefreshExpiresAt,
+						now));
+			}
+			catch (DataAccessException exception) {
+				if (!isRetryableSqliteLock(exception)) {
+					throw exception;
+				}
+				lastContention = exception;
+				try {
+					Thread.sleep(25L * (attempt + 1));
+				}
+				catch (InterruptedException interrupted) {
+					Thread.currentThread().interrupt();
+					throw exception;
+				}
+			}
+		}
+		throw lastContention;
+	}
+
+	private RefreshRotation rotateRefreshOnce(
+			String currentRefreshTokenHash,
+			String nextAccessTokenHash,
+			Instant nextAccessExpiresAt,
+			String nextRefreshTokenHash,
+			Instant nextRefreshExpiresAt,
+			Instant now) {
 			Optional<RefreshRow> current = jdbc.sql("""
 					SELECT r.id AS refresh_id, r.session_id, r.status, r.expires_at,
 					       s.revoked_at
 					FROM identity_refresh_tokens r
 					JOIN identity_sessions s ON s.id = r.session_id
 					WHERE r.token_hash = :tokenHash
-					FOR UPDATE OF r, s
 					""")
 					.param("tokenHash", currentRefreshTokenHash)
 					.query((row, rowNumber) -> new RefreshRow(
-							row.getObject("refresh_id", UUID.class),
-							row.getObject("session_id", UUID.class),
+							SqliteColumns.uuid(row, "refresh_id"),
+							SqliteColumns.uuid(row, "session_id"),
 							row.getString("status"),
-							row.getTimestamp("expires_at").toInstant(),
-							row.getTimestamp("revoked_at") == null
-									? null
-									: row.getTimestamp("revoked_at").toInstant()))
+							SqliteColumns.instant(row, "expires_at"),
+							SqliteColumns.instant(row, "revoked_at")))
 					.optional();
 
 			if (current.isEmpty() || current.get().revokedAt() != null) {
@@ -153,14 +187,18 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				return RefreshRotation.INVALID;
 			}
 
-			jdbc.sql("""
+			int claimed = jdbc.sql("""
 					UPDATE identity_refresh_tokens
 					SET status = 'USED', used_at = :now
-					WHERE id = :id
+					WHERE id = :id AND status = 'ACTIVE'
 					""")
 					.param("id", token.refreshId())
-					.param("now", Timestamp.from(now))
+					.param("now", SqliteColumns.instant(now))
 					.update();
+			if (claimed != 1) {
+				revokeSession(token.sessionId(), now);
+				return RefreshRotation.REUSED;
+			}
 			jdbc.sql("""
 					UPDATE identity_sessions
 					SET access_token_hash = :accessHash,
@@ -171,13 +209,21 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					""")
 					.param("sessionId", token.sessionId())
 					.param("accessHash", nextAccessTokenHash)
-					.param("accessExpiresAt", Timestamp.from(nextAccessExpiresAt))
-					.param("refreshExpiresAt", Timestamp.from(nextRefreshExpiresAt))
-					.param("now", Timestamp.from(now))
+					.param("accessExpiresAt", SqliteColumns.instant(nextAccessExpiresAt))
+					.param("refreshExpiresAt", SqliteColumns.instant(nextRefreshExpiresAt))
+					.param("now", SqliteColumns.instant(now))
 					.update();
 			insertRefreshToken(token.sessionId(), nextRefreshTokenHash, nextRefreshExpiresAt, now);
 			return RefreshRotation.SUCCESS;
-		});
+	}
+
+	private static boolean isRetryableSqliteLock(DataAccessException exception) {
+		Throwable cause = exception.getMostSpecificCause();
+		if (cause instanceof SQLException sql) {
+			int code = sql.getErrorCode();
+			return code == 5 || code == 6;
+		}
+		return false;
 	}
 
 	@Override
@@ -188,7 +234,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				WHERE id = :sessionId
 				""")
 				.param("sessionId", sessionId)
-				.param("now", Timestamp.from(now))
+				.param("now", SqliteColumns.instant(now))
 				.update();
 	}
 
@@ -224,7 +270,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					ON CONFLICT (event_id) DO NOTHING
 					""")
 					.param("eventId", event.eventId())
-					.param("receivedAt", Timestamp.from(receivedAt))
+					.param("receivedAt", SqliteColumns.instant(receivedAt))
 					.update();
 			if (inserted == 0) {
 				return;
@@ -248,7 +294,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				)
 				""")
 				.param("appleSubject", appleSubject)
-				.param("now", Timestamp.from(now))
+				.param("now", SqliteColumns.instant(now))
 				.update();
 	}
 
@@ -266,7 +312,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 	private Optional<UUID> findUser(String appleSubject) {
 		return jdbc.sql("SELECT user_id FROM apple_identities WHERE apple_subject = :subject")
 				.param("subject", appleSubject)
-				.query(UUID.class)
+				.query(SqliteColumns::firstUuid)
 				.optional();
 	}
 
@@ -282,7 +328,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				""")
 				.param("userId", userId)
 				.param("encryptedRefreshToken", encryptedAppleRefreshToken)
-				.param("now", Timestamp.from(now))
+				.param("now", SqliteColumns.instant(now))
 				.update();
 	}
 
@@ -295,8 +341,8 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				.param("id", UUID.randomUUID())
 				.param("sessionId", sessionId)
 				.param("tokenHash", tokenHash)
-				.param("expiresAt", Timestamp.from(expiresAt))
-				.param("createdAt", Timestamp.from(now))
+				.param("expiresAt", SqliteColumns.instant(expiresAt))
+				.param("createdAt", SqliteColumns.instant(now))
 				.update();
 	}
 

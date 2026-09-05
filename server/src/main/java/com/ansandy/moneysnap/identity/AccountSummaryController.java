@@ -57,7 +57,7 @@ class AccountSummaryController {
                 WHERE owner_id = :ownerId AND local_day = :day
                 """)
                 .param("ownerId", userId)
-                .param("day", Date.valueOf(today))
+                .param("day", today.toString())
                 .query(Integer.class)
                 .single();
         int monthCount = jdbc.sql("""
@@ -65,8 +65,8 @@ class AccountSummaryController {
                 WHERE owner_id = :ownerId AND local_day BETWEEN :fromDay AND :toDay
                 """)
                 .param("ownerId", userId)
-                .param("fromDay", Date.valueOf(monthStart))
-                .param("toDay", Date.valueOf(monthEnd))
+                .param("fromDay", monthStart.toString())
+                .param("toDay", monthEnd.toString())
                 .query(Integer.class)
                 .single();
         int groupCount = jdbc.sql("""

@@ -12,9 +12,9 @@
 
 - iOS: SwiftUI native, Swift Concurrency, Observation, PhotosUI, URLSession, SpriteKit
 - API: Java 21 LTS, Spring Boot 4.1 계열, Gradle, REST/JSON, OpenAPI 3.1
-- 데이터: Neon PostgreSQL 18 dev/prod 분리, Flyway, Spring Data JPA
+- 데이터: origin SQLite 파일, Flyway, Spring JDBC
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, exact-bound presigned PUT 또는 bounded backend upload fallback, short-lived presigned GET
-- 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
+- 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 Spring Boot origin과 SQLite 볼륨
 - iOS CI/CD: GitHub-hosted `macos-15` Simulator test와 별도 `macos-26` / Xcode 26 runner에서 수행되는 `ios-testflight` archive. 화면 조정에만 Mac/Xcode 필요
 - 디자인 검증: Figma frame node별 393x852 reference와 SwiftUI snapshot overlay/diff
 
@@ -61,13 +61,11 @@ controller와 repository를 Interface로 삼지 않는다. 사용 사례 수준�
 
 amount-hidden group DTO에는 금액을 nullable로 넣지 않는다. 금액, 총액과 금액에서 계산한 크기·정렬 필드 자체가 없는 별도 schema로 만들어 client 실수로 유출할 수 없게 한다.
 
-### PostgreSQL
+### Origin SQLite
 
-PostgreSQL은 Snap 원본, group membership, share 관계, media 상태와 멱등 ledger를 소유한다. Flyway migration만 schema 변경 경로로 사용한다. 테스트에서는 Testcontainers PostgreSQL로 실제 constraint와 transaction을 검증한다.
+origin SQLite 파일은 Snap 원본, group membership, share 관계, media 상태와 멱등 ledger를 소유한다. Flyway migration만 schema 변경 경로로 사용하고 runtime과 같은 `MONEYSNAP_SQLITE_URL`을 쓴다. Hikari pool은 1이며 writer 프로세스도 하나다. 테스트는 임시 SQLite 파일이다.
 
-D1은 Workers binding/HTTP API 중심이고 Spring Data JPA가 사용할 JDBC endpoint가 없으므로 사용하지 않는다. 개발은 Neon Free `moneysnap-dev`, 폐쇄형 TestFlight는 별도 `moneysnap-prod`를 사용한다. runtime은 pooled endpoint와 `moneysnap_app`, Flyway·dump/restore는 direct endpoint와 owner로 분리한다. 상시 Docker Compose DB는 사용하지 않고 테스트에서만 PostgreSQL 18 Testcontainers를 일회성으로 기동한다.
-
-Neon Free 한도는 project당 storage 0.5GB, 월 100 CU-hour와 5GB public network transfer다. 초과 과금 대신 compute 중단이 발생할 수 있으므로 60/70% 사용량을 관찰하고 공개 출시 전 region, backup, SLA와 이전 계획을 재평가한다.
+D1은 Workers binding/HTTP API 중심이고 Spring JDBC가 사용할 외부 JDBC endpoint가 없으므로 사용하지 않는다. Neon PostgreSQL과 상시 Docker Compose PostgreSQL, Testcontainers PostgreSQL도 사용하지 않는다. Ubuntu 볼륨 `/opt/moneysnap/data/moneysnap.db`가 개발·폐쇄형 TestFlight origin이다.
 
 ### R2 사진 보관
 
@@ -103,7 +101,7 @@ Windows에서도 repository, Swift source, asset, `.xcodeproj` 관련 파일을 
 
 모든 기능은 `.ai/templates/work-item.md`로 AC를 고정하고 실패 테스트부터 시작한다.
 
-- backend: JUnit, Spring test, Testcontainers PostgreSQL, authorization negative tests, OpenAPI contract
+- backend: JUnit, Spring test, 임시 SQLite, authorization negative tests, OpenAPI contract
 - iOS: Swift Testing, in-memory Adapter, snapshot test, XCUITest
 - visual: Figma overlay/diff와 사람이 승인한 baseline
 - security: owner/non-member/left-member/hidden-group, expired signed URL, duplicate mutation
@@ -116,14 +114,14 @@ Windows에서도 repository, Swift source, asset, `.xcodeproj` 관련 파일을 
 ### Phase 0 — 실행 기반
 
 1. **완료**: GitHub-hosted iOS Simulator CI. TestFlight는 같은 레포의 `ios-testflight` environment
-2. **완료**: monorepo directory, OpenAPI skeleton, Spring Boot, PostgreSQL Testcontainers, iOS project scaffold
+2. **완료**: monorepo directory, OpenAPI skeleton, Spring Boot, origin SQLite, iOS project scaffold
 3. **부분 완료**: backend build/test와 Windows iOS 정적 검증을 `AGENTS.md`에 기록; macOS native build/test는 GitHub-hosted
 4. **완료**: 최초 `code-review-graph` full build와 change detection
 5. **repository 준비 완료**: server GitHub Actions CI/CD, iOS GitHub Simulator CI. TestFlight secret 등록과 첫 `workflow_dispatch`는 외부 gate
 
 ### Phase 1 — 개인 Snap vertical slice
 
-1. 사진 없는 category+amount `SnapJournal.record` 실패 테스트와 PostgreSQL migration
+1. 사진 없는 category+amount `SnapJournal.record` 실패 테스트와 SQLite migration
 2. Figma 홈 `9:2` static fixture snapshot
 3. 금액 입력 `153:4156`과 no-photo 단계형 입력
 4. record 성공 후 오늘 캔버스 반영
@@ -146,7 +144,7 @@ Windows에서도 repository, Swift source, asset, `.xcodeproj` 관련 파일을 
 
 ### Phase 4 — 폐쇄형 무료 TestFlight
 
-1. Ubuntu Docker Spring Boot와 기존 private R2, Neon backup·restore 절차를 검증
+1. Ubuntu Docker Spring Boot와 기존 private R2, origin SQLite 볼륨 backup 절차를 검증
 2. Docker restart policy·Nginx Proxy Manager·Prometheus/Grafana recovery와 external health 확인
 3. GitHub-hosted `ios-testflight` archive와 TestFlight closed cohort
 4. 성능, 장애, R2/DB 사용량을 4~8주 관찰

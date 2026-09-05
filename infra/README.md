@@ -4,22 +4,20 @@
 
 ## 환경 분리
 
-| 환경 | PostgreSQL | 목적 |
+| 환경 | 데이터 | 목적 |
 |---|---|---|
-| 자동 테스트 | Testcontainers PostgreSQL 18 | 테스트 실행 중에만 일회성으로 기동해 실제 constraint/transaction 검증 |
-| 기본 개발 | Neon `moneysnap-dev` | PC 간 동일한 개발 DB와 scale-to-zero |
-| 운영 | Neon `moneysnap-prod` | 폐쇄형 TestFlight 운영 DB |
+| 자동 테스트 | 임시 SQLite 파일 | 테스트마다 Flyway와 constraint/transaction 검증 |
+| 기본 개발 | 로컬 `server/data/moneysnap.db` | Windows/로컬 bootRun |
+| development origin | Ubuntu 볼륨 `/opt/moneysnap/data/moneysnap.db` | 폐쇄형 TestFlight origin |
 
-- `neon/`: Neon project, role, connection 계약
+- `ubuntu/`: Docker development origin, SQLite 볼륨, rollback과 Prometheus scrape 계약
 - `cloudflare/`: private R2 dev/prod resource inventory와 DNS 역할
-- `ubuntu/`: Docker development origin, rollback과 Prometheus scrape 계약
 - `apple/`: Bundle ID, Sign in with Apple 서버 secret, GitHub `ios-testflight` archive 계약
+- `neon/`: 폐기된 Neon PostgreSQL 인벤토리. Spring runtime은 연결하지 않는다
 
 ## 비밀값 규칙
 
 - `.env.*.local`은 Git에서 제외한다.
 - 예제 파일에는 key와 설명만 두고 실제 password, connection string, API token을 넣지 않는다.
-- Spring runtime은 pooled endpoint의 `moneysnap_app` 역할을 사용한다.
-- Flyway, dump/restore와 admin 작업만 direct endpoint의 owner 역할을 사용한다.
-- development Neon과 Apple runtime 비밀값은 GitHub `server-development` environment에서 `deploy-development`에만 주입하고 Ubuntu origin의 mode `600` secret file로 옮긴다. pull request CI, 로그와 artifact에는 출력하지 않는다.
+- SQLite 파일은 secret이 아니라 볼륨 데이터다. Apple·R2·SSH secret만 GitHub `server-development` environment에서 `deploy-development`에 주입하고 Ubuntu origin의 mode `600` `runtime.env`로 옮긴다. pull request CI, 로그와 artifact에는 출력하지 않는다.
 - iOS TestFlight App Store Connect API key는 GitHub `ios-testflight` environment에만 두고 PR·iOS test job·`server-development`에 넣지 않는다.

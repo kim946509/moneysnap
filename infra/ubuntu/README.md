@@ -11,6 +11,7 @@ Money Snap development API는 기존 Ubuntu host의 Docker와 `main` monitoring 
 - network: existing external bridge `main`
 - restart: `unless-stopped`
 - secret file: `/opt/moneysnap/runtime.env`, owner root, mode `600`
+- SQLite volume: host `/opt/moneysnap/data` → container `/var/lib/moneysnap/moneysnap.db`
 - compose interpolation stub: `/opt/moneysnap/.env`
 - public route: `https://moneysnap-server.ansandy.co.kr/`
 
@@ -20,7 +21,7 @@ Money Snap development API는 기존 Ubuntu host의 Docker와 `main` monitoring 
 
 GitHub Actions가 test와 `bootJar`를 통과한 image를 archive하고 SHA-256 manifest와 함께 전송한다. `deploy.sh`은 checksum과 `main` network를 확인하고 Compose health gate를 통과한 뒤 release를 확정한다. 실패 시 이전 image, Compose와 runtime env를 함께 복원한다.
 
-필요한 GitHub environment secret 이름은 `docs/CI_CD.md`가 소유한다. 실제 SSH key, known_hosts와 Neon connection은 이 디렉터리에 저장하지 않는다.
+필요한 GitHub environment secret 이름은 `docs/CI_CD.md`가 소유한다. 실제 SSH key, known_hosts와 SQLite 파일은 이 디렉터리에 저장하지 않는다.
 
 ## Monitoring
 

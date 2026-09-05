@@ -10,7 +10,7 @@
 - 소비 기록은 항상 개인 기록으로 먼저 저장하고 공유는 별도 명령으로만 수행한다.
 - 금액 비공개 그룹은 서버 응답 타입에서 금액과 금액 기반 크기 신호를 제거한다.
 - Spring Boot 배포 위치와 object storage를 Adapter로 격리해 무료 폐쇄형 MVP에서 공개 origin으로 이동할 수 있게 한다.
-- 작은 team과 낮은 사용량에 맞춰 하나의 iOS app, 하나의 Spring Boot deployable, 하나의 PostgreSQL로 시작한다.
+- 작은 team과 낮은 사용량에 맞춰 하나의 iOS app, 하나의 Spring Boot deployable, 하나의 origin SQLite 파일로 시작한다.
 
 ## 전체 구조
 
@@ -21,7 +21,7 @@ flowchart LR
     NPM["Nginx Proxy Manager"]
     API["Ubuntu Docker / Spring Boot"]
     MON["Prometheus + Grafana"]
-    DB[("Neon PostgreSQL")]
+    DB[("Origin SQLite")]
     R2[("Private R2 Standard")]
     MAC["macOS / Xcode Cloud"]
     FIGMA["Figma frame + screenshot"]
@@ -47,10 +47,10 @@ server/                     # Java 21 + Spring Boot + Gradle
 contracts/
 └── openapi/                # iOS와 API가 공유하는 versioned HTTP Interface
 infra/
-├── neon/                   # dev/prod project, 역할과 secret 계약
+├── neon/                   # 폐기된 Neon 인벤토리. runtime은 사용하지 않는다
 ├── apple/                  # Apple Developer/App Store Connect 준비 계약
 ├── cloudflare/             # DNS/R2/향후 Containers 준비와 배포 설정
-└── ubuntu/                 # Docker origin, rollback과 monitoring scrape 계약
+└── ubuntu/                 # Docker origin, SQLite 볼륨, rollback과 monitoring scrape 계약
 docs/                       # 제품·기술 기준 문서
 .ai/                        # AI 작업·검증 루프
 ```
@@ -159,6 +159,7 @@ mutation_ledger(actor_id, mutation_id, result_ref, unique(actor_id, mutation_id)
 cleanup_jobs(kind, target_id, attempts, next_attempt_at)
 ```
 
+- origin SQLite는 UUID·timestamptz를 TEXT, boolean을 INTEGER로 저장한다. Flyway와 runtime은 같은 `MONEYSNAP_SQLITE_URL`을 쓰고 Hikari pool은 1이다.
 - `snaps`가 원본이고 `snap_shares`는 관계다. 공유용 Snap 복제본을 만들지 않는다.
 - `image_id`는 불투명 식별자이며 permanent URL을 저장하지 않는다.
 - `local_day`는 client의 tzdb region ID 또는 `UTC`와 local date를 받아 server `Clock` 기준 current day·직전 day인지 검증한 뒤 고정한다. numeric offset과 short alias는 허용하지 않는다.
@@ -216,7 +217,7 @@ Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한
 ### Backend
 
 - domain Interface에서 실패 테스트를 먼저 작성한다.
-- PostgreSQL 18은 테스트 실행 중에만 Testcontainers로 기동해 실제 constraint, Flyway migration, transaction과 projection을 검증한다.
+- 통합 테스트는 테스트마다 임시 SQLite 파일에 Flyway migration을 적용해 constraint, transaction과 projection을 검증한다. Testcontainers PostgreSQL과 Neon은 사용하지 않는다.
 - 소유자·비회원·탈퇴 회원·hidden group에 대한 부정 권한 테스트를 필수로 둔다.
 - R2는 `InMemoryObjectStoreAdapter`로 domain test를 실행하고, 실제 R2-compatible contract test는 승인된 integration 환경에서 분리한다.
 - 실제 R2-compatible test는 exact PUT length·type·checksum, `2,097,153 bytes` overflow, complete content verification과 invalid object cleanup을 검증한다. exact boundary를 강제할 수 없으면 backend bounded fallback이 같은 실패 테스트를 통과해야 한다.
@@ -239,8 +240,8 @@ Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한
 ## iOS build와 배포 lane
 
 - Windows: Spring Boot build/test, Swift source와 project file 작성, Figma asset 준비, CI/CD 정적 검증.
-- GitHub-hosted Ubuntu CI: Java 21 test·bootJar와 digest-pinned Docker image archive를 만들며 Neon/SSH/Apple secret을 주입하지 않는다.
-- GitHub-hosted Ubuntu CD: 성공한 `main` image만 pinned SSH Ubuntu origin에 전송하고, `server-development`의 Neon·Apple runtime secret으로 `/opt/moneysnap/runtime.env`를 다시 쓴 뒤 container health 실패 시 이전 image와 같은 release secret으로 rollback한다.
+- GitHub-hosted Ubuntu CI: Java 21 test·bootJar와 digest-pinned Docker image archive를 만들며 SSH/Apple/R2 secret을 주입하지 않는다.
+- GitHub-hosted Ubuntu CD: 성공한 `main` image만 pinned SSH Ubuntu origin에 전송하고, `server-development`의 Apple runtime secret으로 `/opt/moneysnap/runtime.env`를 다시 쓴 뒤 SQLite 볼륨 `/opt/moneysnap/data`를 유지한다. container health 실패 시 이전 image와 같은 release secret으로 rollback한다.
 - GitHub-hosted `macos-15`: iOS·contract 변경에만 Apple 개발 credential·provisioning 없이 Simulator unit+non-parallel UI test를 Xcode 기본 ad-hoc 서명으로 실행하고, Keychain을 쓰지 않는 visual evidence app은 한 번만 unsigned build/install해 manifest의 모든 화면을 순차 검증한다.
 - GitHub-hosted `macos-26` TestFlight CD: 성공한 `main` iOS CI 또는 `main` manual dispatch만 `ios-testflight` App Store Connect API key와 Xcode 26 / iOS 26 SDK로 archive/upload한다. PR과 iOS test job에는 이 secret을 넣지 않는다.
 - macOS/Xcode: SwiftUI preview, screenshot diff, interactive debugging. 첫 TestFlight 업로드에 Mac이 필요하지는 않다.
@@ -256,8 +257,8 @@ Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한
 - 기록과 group 공유를 하나의 command로 결합
 - Worker와 Spring Boot에 인증·권한·도메인 규칙을 중복
 - D1 proxy Worker를 JPA database처럼 사용
-- ephemeral container/local disk에 DB·사진·session 영구 저장
-- 개발 편의를 위한 상시 Docker Compose PostgreSQL과 dev/prod DB 공유
+- ephemeral container filesystem에 SQLite·사진·session을 영구 저장한다. SQLite는 host 볼륨 `/opt/moneysnap/data`만 사용한다
+- 개발 편의를 위한 상시 Docker Compose PostgreSQL, Neon datasource, 원격 SQLite 서비스
 - 기능별 microservice, Kafka, Redis, realtime socket을 근거 없이 선도입
 - macOS build·snapshot evidence 없이 iOS 작업을 완료 처리
 - MVP 범위 밖 알림을 위해 APNs provider, device token table 또는 background job을 추가
@@ -274,4 +275,4 @@ Snap 저장은 사진 없는 경로 또는 활성 `ImageRef` 하나만 허용한
 - Ubuntu host 운영에 주 1시간 이상 소비
 - 예상 R2/DB 사용량이 무료 범위의 70% 도달
 
-Cloudflare Containers 채택 시 월 최소 5 USD, 예상 memory/CPU/disk, `sleepAfter`, max instance 1, 외부 PostgreSQL latency를 실제 부하로 검증하고 별도 승인한다.
+Cloudflare Containers 채택 시 월 최소 5 USD, 예상 memory/CPU/disk, `sleepAfter`, max instance 1을 실제 부하로 검증하고 별도 승인한다. origin SQLite는 컨테이너를 복제하지 않는다.

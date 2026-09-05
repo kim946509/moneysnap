@@ -23,7 +23,7 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 - workflow 전체 권한은 `contents: read`뿐이다.
 - 모든 외부 action은 전체 commit SHA로 고정하고 Dependabot으로 갱신한다.
 - pull request CI와 server test/package job은 Neon, SSH, R2, Cloudflare 또는 Apple secret을 받지 않는다.
-- `deploy-development`는 `server-development`의 Neon·SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 `/opt/moneysnap/runtime.env`에만 쓴다. `/opt/moneysnap/.env`는 Compose interpolation stub다.
+- `deploy-development`는 `server-development`의 SSH·Apple runtime secret이 비어 있으면 실패하고, `.p8` 개행은 env 한 줄의 literal `\n`으로 정규화한 뒤 `/opt/moneysnap/runtime.env`에만 쓴다. `/opt/moneysnap/.env`는 Compose interpolation stub다. SQLite URL은 Compose가 `/var/lib/moneysnap/moneysnap.db`로 고정한다.
 - `contracts/**` 변경도 server와 iOS lane을 함께 실행한다.
 - server 기본 `test`는 `contracts/openapi/moneysnap-v1.yaml`과 `contracts/examples/v1/**`의 semantic OpenAPI 3.1/Draft 2020-12 gate를 실행하고, iOS native test는 같은 canonical fixture resource를 decode한다.
 - test와 `bootJar`가 통과한 뒤 digest-pinned Java runtime으로 Docker image를 만든다.
@@ -44,7 +44,7 @@ Application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus 설정을 만�
 5. container healthcheck가 `127.0.0.1:9091/actuator/health`의 성공을 확인한 뒤에만 release state를 기록한다.
 6. 실패하면 이전 container image로 Compose를 다시 올린다. DB down migration은 자동화하지 않는다.
 
-Spring runtime과 Flyway는 development Neon의 서로 다른 pooled/direct credential을 사용한다. schema 변경은 이전 image와 호환되는 expand-first 순서를 feature AC로 가져야 한다.
+Spring runtime과 Flyway는 같은 origin SQLite 파일을 사용한다. 파일은 host `/opt/moneysnap/data`를 container `/var/lib/moneysnap`에 마운트한다. schema 변경은 이전 image와 호환되는 expand-first 순서를 feature AC로 가져야 한다.
 
 ## Public route와 monitoring
 
@@ -60,12 +60,6 @@ Spring runtime과 Flyway는 development Neon의 서로 다른 pooled/direct cred
 
 Environment `server-development`는 `main` 전용 branch policy를 유지하고 다음 secret만 보유한다.
 
-- `NEON_RUNTIME_DATABASE_URL`
-- `NEON_RUNTIME_DATABASE_USERNAME`
-- `NEON_RUNTIME_DATABASE_PASSWORD`
-- `NEON_MIGRATION_DATABASE_URL`
-- `NEON_MIGRATION_DATABASE_USERNAME`
-- `NEON_MIGRATION_DATABASE_PASSWORD`
 - `SERVER_HOST`
 - `SERVER_SSH_PORT`
 - `SERVER_SSH_USER`
@@ -127,7 +121,7 @@ TestFlight CD는 `.github/workflows/ios-testflight.yml`이 소유한다. 성공�
 | Money Snap public HTTPS route | `/` 200, public actuator 403 |
 | Prometheus Money Snap target | `up=1` |
 | Grafana public health | HTTP 200 |
-| GitHub `server-development` environment | `main` policy, Neon/SSH 11개, Apple runtime secret 6개, R2 secret 5개 |
+| GitHub `server-development` environment | `main` policy, SSH 5개, Apple runtime secret 6개, R2 secret 5개 |
 | Secret Scanning / Push Protection | enabled / enabled |
 | GitHub remote workflow | 변경 push 후 `main` deployment 검증 필요 |
 | iOS GitHub native/visual CI | 활성화 |

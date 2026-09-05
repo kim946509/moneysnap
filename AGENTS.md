@@ -15,11 +15,11 @@
 ## 현재 프로젝트 단계
 - 현재 단계는 **개인 Snap, 그룹·초대·공유, visible/hidden Today, archive, My summary, 사진 grant/upload/complete/abort/cleanup/tombstone, iOS JPEG 정규화와 앨범 최대 3장 순차 기록이 Windows에서 구현된 상태**다. R2 Adapter는 `R2_ENABLED=true`와 bucket-scoped secret이 있을 때만 켜진다. development CD SSH, 실제 Apple device 설치와 macOS 393x852 visual은 아직 수행하지 않는다.
 - 제품 방향, iOS 전용 MVP 범위, 서비스 정책, 핵심 사용자 흐름, Figma 화면 기준과 UI 원칙은 기준 문서에 정리되어 있다.
-- SwiftUI + Spring Boot + PostgreSQL + Cloudflare DNS/R2 + Ubuntu Docker/Nginx Proxy Manager 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
+- SwiftUI + Spring Boot + origin SQLite + Cloudflare DNS/R2 + Ubuntu Docker/Nginx Proxy Manager 기준 아키텍처는 `docs/ADR.md`와 `docs/ARCHITECTURE.md`에 확정되어 있다.
 - `server/` Spring Boot scaffold와 `ios/` SwiftUI Xcode project가 있다. 서버는 local과 GitHub-hosted CI에서 test·bootJar를 통과했고 iOS는 Windows 정적 검증과 GitHub macOS native test·393x852 visual artifact 생성을 통과했다.
 - 첫 기능 슬라이스 `WORK-010`의 Today Snap 읽기 도메인과 Figma Home `9:2` 화면이 완료됐다. 서버·iOS 테스트와 393x852 시각 회귀 임계값(MAE 0.05, 불일치 픽셀 비율 0.43)을 통과했다.
-- repository는 public이고 draft PR #1이 remote CI 기준점이다. `server-development` environment는 `main` 전용 branch policy와 Ubuntu SSH·Neon secret 11개, Apple runtime secret 6개 계약을 보유하며 Secret Scanning과 Push Protection이 활성화되어 있다.
-- Neon Free에 `moneysnap-dev`와 `moneysnap-prod`가 생성되어 있다. 개발·운영 DB를 공유하지 않는다.
+- repository는 public이고 draft PR #1이 remote CI 기준점이다. `server-development` environment는 `main` 전용 branch policy와 Ubuntu SSH secret 5개, Apple runtime secret 6개, R2 secret 5개 계약을 보유하며 Secret Scanning과 Push Protection이 활성화되어 있다.
+- origin DB는 Ubuntu 볼륨 `/opt/moneysnap/data/moneysnap.db` SQLite 파일 하나다. Neon datasource는 사용하지 않는다.
 - Cloudflare R2 Standard private bucket `moneysnap-media-dev`, `moneysnap-media-prod`가 APAC에 생성되어 있고 원격 PUT/GET/DELETE 검증을 통과했다. public access, CORS, Data Catalog는 비활성 상태다.
 - development Spring Boot는 개발자 소유 Ubuntu Docker에서 `moneysnap-server`로 실행되며 private host `192.168.1.102:9090`, external network `main`, container management `9091` 계약을 사용한다. `moneysnap-server.ansandy.co.kr`은 Cloudflare DNS와 기존 Nginx Proxy Manager를 거쳐 `/` 200, public actuator 403을 반환한다.
 - 기존 Prometheus는 host publish `127.0.0.1:9092`와 container `9090`을 사용하며 `moneysnap-server:9091` target을 `up=1`로 수집한다. Grafana `monitor.ansandy.co.kr/api/health`는 200이다.
@@ -38,7 +38,7 @@
 - Spring Boot·Cloudflare·Windows/Xcode 공식 조사: `docs/SPRING_CLOUDFLARE_RESEARCH.md`
 - 현재 단계별 기술 계획: `docs/TECHNICAL_DESIGN_PROPOSAL.md`
 - CI/CD 공식 조사와 실제 운영 계약: `docs/CI_CD_RESEARCH.md`, `docs/CI_CD.md`
-- 실제 인프라 상태와 비밀값 계약: `infra/README.md`, `infra/neon/README.md`, `infra/cloudflare/README.md`, `infra/apple/README.md`
+- 실제 인프라 상태와 비밀값 계약: `infra/README.md`, `infra/ubuntu/README.md`, `infra/cloudflare/README.md`, `infra/apple/README.md`. `infra/neon/README.md`는 폐기된 Neon 인벤토리다.
 
 ## 범위 관리
 - CRITICAL: 설계나 구현 전에 `docs/PRD.md`의 MVP 포함/제외 범위를 확인할 것
@@ -50,18 +50,18 @@
 - MVP 플랫폼: native iOS 전용, iOS 17+, Swift 6, SwiftUI, Swift Concurrency, Observation, AuthenticationServices, Keychain, PhotosUI, URLSession, SpriteKit
 - API: Java 21 LTS, Spring Boot 4.1.0, Gradle 9.5.1, REST/JSON, OpenAPI 3.1
 - API contract gate: test-only Swagger Parser `2.1.45`, NetworkNT JSON Schema Validator `3.0.6`, canonical `contracts/examples/v1/**`; 기본 server `test`와 iOS native test가 동일 fixture를 검증
-- 데이터: Neon PostgreSQL 18, dev/prod project 분리, Flyway, Spring Data JPA
-- DB 테스트: 테스트 실행 중에만 PostgreSQL 18 Testcontainers 사용
+- 데이터: origin SQLite 파일, Flyway, Spring JDBC
+- DB 테스트: 테스트마다 임시 SQLite 파일. Testcontainers PostgreSQL과 Neon은 사용하지 않는다
 - 사진: private Cloudflare R2 Standard, AWS SDK for Java v2, short-lived presigned URL
-- 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 stateless Spring Boot origin
+- 무료 폐쇄형 배포: Cloudflare DNS → Nginx Proxy Manager → 개발자 소유 Ubuntu Docker의 Spring Boot origin과 SQLite 볼륨
 - 서버 CI/CD: GitHub-hosted Ubuntu test/package → pinned SSH Ubuntu Docker development deploy
 - iOS 검증·배포: path-scoped GitHub-hosted `macos-15`의 Xcode 16.4·iPhone 16·iOS 18.5 unit+UI test/393x852 visual evidence → 성공한 `main` iOS CI 이후 별도 `macos-26` Xcode 26 runner의 `ios-testflight` workflow가 archive/TestFlight 업로드
 - CRITICAL: 표준 Workers는 Spring Boot runtime이 아니며 D1은 JPA datasource로 사용하지 않는다.
 - CRITICAL: Cloudflare Containers는 무료가 아니므로 월 최소 5 USD와 초과 과금 승인 전에는 활성화하거나 배포하지 않는다.
-- CRITICAL: 상시 Docker Compose PostgreSQL을 추가하지 않는다. 개발은 Neon dev, 운영은 Neon prod를 사용하며 테스트만 일회성 Testcontainers로 격리한다.
+- CRITICAL: 상시 Docker Compose PostgreSQL과 Neon datasource를 추가하지 않는다. runtime SQLite 파일은 Ubuntu origin 볼륨 `/var/lib/moneysnap`에 두고 테스트는 임시 SQLite 파일만 사용한다.
 
 ## 아키텍처 규칙
-- 하나의 iOS app, 하나의 Spring Boot modular monolith, 하나의 PostgreSQL로 시작한다.
+- 하나의 iOS app, 하나의 Spring Boot modular monolith, 하나의 origin SQLite 파일로 시작한다.
 - backend는 package-by-feature `identity`, `snap`, `group`, `media` 경계를 따른다. microservice, Kafka, Redis, GraphQL은 MVP에서 도입하지 않는다.
 - MVP identity provider는 Sign in with Apple 하나다. access token은 15분, rotating refresh session은 180일 inactivity window를 사용하고 iOS Keychain에 저장한다.
 - 로그아웃은 현재 device session만 폐기한다. 계정 탈퇴는 재인증 후 모든 session·사용자 데이터를 삭제하고 Apple token을 revoke한다.
@@ -82,14 +82,14 @@
 - Figma frame node와 393x852 screenshot을 화면 구현의 source of truth로 사용하며 macOS snapshot diff 없이 UI 작업을 완료 처리하지 않는다.
 - Windows에서는 source/project 파일을 작성할 수 있지만 Xcode, Simulator, signing, archive와 pixel verification은 macOS lane에서 수행한다.
 - 무료 Tunnel topology는 폐쇄형 TestFlight만 허용한다. 공개 출시와 exit 기준은 `docs/ARCHITECTURE.md`를 따른다.
-- Spring runtime은 Neon pooled endpoint와 `moneysnap_app`을 사용하고, Flyway·dump/restore만 direct endpoint와 owner credential을 사용한다.
-- 서버 설정의 `NEON_RUNTIME_DATABASE_*`와 `NEON_MIGRATION_DATABASE_*`는 서로 독립된 필수 변수다. 테스트는 두 auto-configuration을 끄거나 Testcontainers를 사용하며 실제 Neon에 접속하지 않는다.
+- Spring runtime과 Flyway는 같은 SQLite 파일을 사용한다. 경로는 `MONEYSNAP_SQLITE_URL`이며 기본값은 `./data/moneysnap.db`다.
+- Hikari pool 크기는 1이다. SQLite writer는 프로세스 하나여야 하며 컨테이너를 복제하지 않는다.
 - 인증 기능 전까지 `/actuator/health`만 익명 접근을 허용하고 나머지 route는 기본 거부한다. public API hostname에서는 actuator path 자체를 노출하지 않는다.
 - 최종 Bundle ID는 `com.ansandy.moneysnap`이다. Apple explicit App ID와 App Store Connect app record 생성은 별도 Apple activation 작업에서 수행하며 private key·certificate·2FA code를 저장소에 넣지 않는다.
 - GitHub workflow action은 full commit SHA로 고정하고 Dependabot PR로 갱신한다. workflow 기본 권한은 `contents: read`다.
 - `main` branch는 PR, linear history와 conversation resolution을 요구하고 force-push·delete를 금지한다. path-scoped CI를 required check로 지정하면 관련 없는 PR이 pending될 수 있으므로 항상 실행되는 gate를 설계하기 전에는 required status check를 추가하지 않는다.
 - public repository의 pull request CI와 server/iOS test job에는 Neon, SSH, R2, Tunnel, Apple runtime, App Store Connect 배포 secret을 주입하지 않는다. development CD는 성공한 `main` push의 checksum 검증 Docker image와 `server-development` environment만 사용한다. iOS TestFlight CD는 `ios-testflight` environment만 사용한다.
-- `deploy-development` job만 `server-development`의 Neon·SSH·Apple runtime secret과, `R2_ENABLED=true`일 때 R2 bucket-scoped secret을 Ubuntu `/opt/moneysnap/runtime.env`에 mode `600`으로 쓴다. `/opt/moneysnap/.env`는 Compose interpolation stub만 둔다. Tunnel secret은 이 CD에 넣지 않는다.
+- `deploy-development` job만 `server-development`의 SSH·Apple runtime secret과, `R2_ENABLED=true`일 때 R2 bucket-scoped secret을 Ubuntu `/opt/moneysnap/runtime.env`에 mode `600`으로 쓴다. SQLite 파일은 `/opt/moneysnap/data` 볼륨이다. `/opt/moneysnap/.env`는 Compose interpolation stub만 둔다. Tunnel secret은 이 CD에 넣지 않는다.
 - application CD는 Cloudflare DNS, Nginx Proxy Manager, Prometheus/Grafana 설정을 생성·변경·재시작하지 않는다. infrastructure lifecycle은 별도 승인 작업이 소유한다.
 - public API는 application `/` smoke만 허용하고 management `9091`과 actuator는 Docker `main` network 안에만 둔다.
 - SSH host identity는 pinned known_hosts로 검증하고 runtime secret file은 Ubuntu `/opt/moneysnap/runtime.env` mode `600`으로 유지한다. 대화·로그에 노출된 key는 회전하며 장기적으로 최소 권한 deploy account를 사용한다.

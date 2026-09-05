@@ -11,12 +11,12 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 | ADR | 상태 | 결정 |
 |---|---|---|
 | ADR-001 | accepted | MVP는 native iOS 전용 |
-| ADR-002 | accepted | Spring Boot modular monolith와 PostgreSQL |
+| ADR-002 | accepted | Spring Boot modular monolith와 origin SQLite |
 | ADR-003 | accepted | Cloudflare DNS·R2와 개발자 소유 Ubuntu Docker origin으로 무료 폐쇄형 MVP부터 시작 |
 | ADR-004 | accepted | Figma node와 screenshot diff를 시각적 기준으로 사용 |
 | ADR-005 | accepted | Windows 개발과 macOS iOS 검증 lane 분리 |
 | ADR-006 | rejected | D1을 Spring Boot 주 데이터베이스로 사용하지 않음 |
-| ADR-007 | accepted | 개발·운영 PostgreSQL은 분리된 Neon Free 프로젝트 사용 |
+| ADR-007 | accepted | Neon PostgreSQL 대신 origin SQLite 파일을 사용한다 |
 | ADR-008 | accepted | 서버는 GitHub Actions CI/CD, iOS는 GitHub Simulator CI와 GitHub-hosted TestFlight CD 사용 |
 | ADR-009 | accepted | Bundle ID와 iOS visual verification toolchain 고정 |
 | ADR-010 | accepted | Sign in with Apple 단독 인증과 서버 소유 장기 session |
@@ -31,9 +31,9 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 **트레이드오프**: Android·웹 코드 재사용을 포기한다. iOS build·Simulator·서명에는 macOS가 필요하다.
 
-## ADR-002: Spring Boot modular monolith와 PostgreSQL
+## ADR-002: Spring Boot modular monolith와 origin SQLite
 
-**결정**: backend는 Java 21 LTS와 현재 확정 시점의 Spring Boot 4.1 계열로 시작한다. Gradle, Spring Web, Spring Security, Validation, Spring Data JPA, Flyway, PostgreSQL을 사용한다. 배포 단위는 하나이며 package-by-feature로 `identity`, `snap`, `group`, `media` 경계를 둔다. API 경계는 versioned REST/JSON과 OpenAPI 3.1이다.
+**결정**: backend는 Java 21 LTS와 현재 확정 시점의 Spring Boot 4.1 계열로 시작한다. Gradle, Spring Web, Spring Security, Validation, Spring JDBC, Flyway, origin SQLite를 사용한다. 배포 단위는 하나이며 package-by-feature로 `identity`, `snap`, `group`, `media` 경계를 둔다. API 경계는 versioned REST/JSON과 OpenAPI 3.1이다.
 
 **이유**: 사용자가 Spring Boot를 확정했다. 개인 우선 기록, 수정·삭제 전파, 그룹 membership, 금액 공개 projection은 관계형 무결성과 서버 트랜잭션이 중요하다. Java 21은 무료·저사양 JVM host와 컨테이너에서 호환성이 넓은 LTS 기준이다.
 
@@ -67,19 +67,21 @@ Money Snap은 iPhone의 기록 경험과 개인정보 보호를 우선하는 작
 
 ## ADR-006: D1을 Spring Boot 주 DB에서 제외
 
-**결정**: D1과 Hyperdrive를 MVP Spring Boot의 persistence 경로에서 사용하지 않는다. PostgreSQL을 사용한다.
+**결정**: D1과 Hyperdrive를 MVP Spring Boot의 persistence 경로에서 사용하지 않는다. 주 저장소는 ADR-007의 origin SQLite다.
 
-**이유**: D1은 SQLite 기반 Workers binding/SQL API이며 외부 애플리케이션용 JDBC wire endpoint를 제공하지 않는다. 외부 접근에는 proxy Worker가 필요해 Spring Data JPA의 connection·transaction 의미와 맞지 않는다. Hyperdrive도 Workers가 외부 Postgres에 접근할 때 사용하는 binding이지 Spring Boot용 JDBC endpoint가 아니다.
+**이유**: D1은 SQLite 기반 Workers binding/SQL API이며 외부 애플리케이션용 JDBC wire endpoint를 제공하지 않는다. 외부 접근에는 proxy Worker가 필요해 Spring JDBC의 connection·transaction 의미와 맞지 않는다. Hyperdrive도 Workers가 외부 Postgres에 접근할 때 사용하는 binding이지 Spring Boot용 JDBC endpoint가 아니다.
 
-**트레이드오프**: D1의 무료 5GB와 hard quota를 활용하지 못하고 PostgreSQL origin을 별도로 운영해야 한다. 대신 Flyway, JPA, Testcontainers와 관계형 트랜잭션을 직접 사용할 수 있다.
+**트레이드오프**: D1의 무료 5GB와 hard quota를 활용하지 못한다. origin SQLite는 같은 프로세스의 JDBC 트랜잭션을 직접 사용한다.
 
-## ADR-007: Neon 개발·운영 PostgreSQL
+## ADR-007: Origin SQLite (Neon PostgreSQL 대체)
 
-**결정**: 기본 개발 DB는 Neon Free의 `moneysnap-dev`, 폐쇄형 TestFlight 운영 DB는 별도 `moneysnap-prod` 프로젝트를 사용한다. Spring runtime은 pooled endpoint와 최소 권한 `moneysnap_app` 역할을 사용하고, Flyway·dump·restore만 direct endpoint와 owner 역할을 사용한다. 상시 Docker Compose PostgreSQL은 두지 않으며 자동 테스트에서만 PostgreSQL 18 Testcontainers를 일회성으로 사용한다.
+**상태**: accepted (2026-09-05 사용자 결정. Neon Free PostgreSQL을 대체한다)
 
-**이유**: 사용자가 PC마다 무거운 PostgreSQL container를 계속 실행하는 대신 로컬 개발부터 Neon을 쓰기로 확정했다. dev/prod project 분리는 개발 migration과 데이터가 운영에 섞이는 것을 막고, Neon Free의 scale-to-zero는 낮은 사용량에 맞는다. pooled/runtime과 direct/migration 자격 증명을 분리하면 owner credential의 노출 면적도 줄어든다.
+**결정**: 개발과 폐쇄형 TestFlight origin은 Ubuntu Docker 볼륨의 SQLite 파일 하나를 사용한다. Spring runtime과 Flyway는 같은 `MONEYSNAP_SQLITE_URL`을 쓰고 Hikari pool은 1이다. 테스트는 임시 SQLite 파일이며 Testcontainers PostgreSQL과 Neon datasource는 제거한다. Neon 기존 데이터는 compute 중단으로 dump하지 않고 빈 SQLite로 시작한다.
 
-**트레이드오프**: 인터넷이 없으면 통합 개발 DB를 사용할 수 없고, Free는 project당 storage 0.5GB와 월 100 CU-hour·5GB public transfer 한도 및 SLA 부재가 있다. 한도 도달 시 compute가 월말까지 중단될 수 있다. 생성 도구가 region 선택을 지원하지 않아 dev는 AWS us-east-1, prod는 AWS us-west-2에 생성됐으며 공개 출시 전 한국 사용자·origin 기준 latency와 data migration을 재평가한다.
+**이유**: 상시 Spring Boot가 Neon 연결을 붙잡고 Free CU-hour를 소진했다. Money Snap 데이터량은 SQLite로 충분하고 origin은 이미 단일 컨테이너다. PostgreSQL wire와 Neon 이중 credential은 이 규모에서 운영 비용만 만든다.
+
+**트레이드오프**: SQLite는 writer가 하나라 origin 컨테이너를 수평 확장할 수 없다. 파일 백업·권한·WAL은 Ubuntu 볼륨이 담당한다. PostgreSQL 전용 SQL과 Testcontainers 검증은 사라진다.
 
 ## ADR-008: GitHub Actions 서버 CD와 iOS TestFlight CD 분리
 

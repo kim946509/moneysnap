@@ -21,10 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import com.ansandy.moneysnap.shared.AuthenticatedUser;
 
@@ -39,15 +36,11 @@ import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.json;
 import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.jsonWithStringProperty;
 import static com.ansandy.moneysnap.contract.CanonicalIdentityExamples.assertExactResponse;
 
-@Testcontainers
 @AutoConfigureMockMvc
 @SpringBootTest
 @Import(AuthenticationHttpIntegrationTests.ActorProbeConfiguration.class)
 class AuthenticationHttpIntegrationTests {
 
-	@Container
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-			DockerImageName.parse("postgres:18-alpine"));
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -60,18 +53,12 @@ class AuthenticationHttpIntegrationTests {
 
 	@DynamicPropertySource
 	static void databaseProperties(DynamicPropertyRegistry registry) {
-		registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-		registry.add("spring.datasource.username", POSTGRES::getUsername);
-		registry.add("spring.datasource.password", POSTGRES::getPassword);
-		registry.add("spring.flyway.url", POSTGRES::getJdbcUrl);
-		registry.add("spring.flyway.user", POSTGRES::getUsername);
-		registry.add("spring.flyway.password", POSTGRES::getPassword);
+		SqliteTestDatabase.register(registry);
 	}
 
 	@BeforeEach
 	void resetDatabase() {
-		jdbc.sql("TRUNCATE TABLE identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE")
-				.update();
+		SqliteTestDatabase.clear(jdbc);
 	}
 
 	@Test

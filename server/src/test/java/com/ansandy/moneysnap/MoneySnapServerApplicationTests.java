@@ -9,23 +9,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
 @SpringBootTest(properties = {
 		"spring.autoconfigure.exclude="
 				+ "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
-				+ "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration",
-		"NEON_RUNTIME_DATABASE_URL=jdbc:postgresql://runtime.invalid/moneysnap",
-		"NEON_RUNTIME_DATABASE_USERNAME=runtime-test",
-		"NEON_RUNTIME_DATABASE_PASSWORD=runtime-test-password",
-		"NEON_MIGRATION_DATABASE_URL=jdbc:postgresql://migration.invalid/moneysnap",
-		"NEON_MIGRATION_DATABASE_USERNAME=migration-test",
-		"NEON_MIGRATION_DATABASE_PASSWORD=migration-test-password"
+				+ "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
 class MoneySnapServerApplicationTests {
 
@@ -40,7 +35,10 @@ class MoneySnapServerApplicationTests {
 		mockMvc.perform(get("/actuator/health"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("UP"))
-				.andExpect(jsonPath("$.components").doesNotExist());
+				.andExpect(jsonPath("$.components").doesNotExist())
+				.andExpect(content().string(not(containsString("jdbc"))))
+				.andExpect(content().string(not(containsString("sqlite"))))
+				.andExpect(content().string(not(containsString("moneysnap.db"))));
 	}
 
 	@Test
@@ -49,7 +47,10 @@ class MoneySnapServerApplicationTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.service").value("moneysnap-api"))
 				.andExpect(jsonPath("$.status").value("UP"))
-				.andExpect(jsonPath("$.components").doesNotExist());
+				.andExpect(jsonPath("$.components").doesNotExist())
+				.andExpect(content().string(not(containsString("jdbc"))))
+				.andExpect(content().string(not(containsString("sqlite"))))
+				.andExpect(content().string(not(containsString("moneysnap.db"))));
 	}
 
 	@Test

@@ -65,6 +65,21 @@ printf '# compose interpolation only; runtime secrets stay in runtime.env\n' > "
 chmod 600 "$compose_interpolation_env"
 gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/dev/null
 
+data_dir=${MONEYSNAP_DATA_DIR:-$install_root/data}
+install -d -m 700 "$data_dir"
+if [[ "$(id -u)" -eq 0 ]]; then
+  chown 21000:21000 "$data_dir"
+  chmod 700 "$data_dir"
+  for sqlite_file in "$data_dir"/moneysnap.db "$data_dir"/moneysnap.db-wal "$data_dir"/moneysnap.db-shm; do
+    if [[ -e "$sqlite_file" ]]; then
+      chown 21000:21000 "$sqlite_file"
+      chmod 600 "$sqlite_file"
+    fi
+  done
+else
+  chmod 700 "$data_dir" || true
+fi
+
 deploy_image() {
   local candidate_image=$1
   MONEYSNAP_IMAGE="$candidate_image" \

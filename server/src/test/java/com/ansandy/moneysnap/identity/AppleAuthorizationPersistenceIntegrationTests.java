@@ -31,10 +31,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,18 +39,15 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-@Testcontainers
 class AppleAuthorizationPersistenceIntegrationTests {
 
 	private static final Instant NOW = Instant.parse("2026-08-10T12:00:00Z");
+	private static final String SQLITE_URL = SqliteTestDatabase.fileUrl();
 	private static final String CLIENT_ID = "com.ansandy.moneysnap";
 	private static final String RAW_NONCE = "request-nonce";
 	private static final String NONCE_CLAIM = "727e77cae7f89d57cb097b3ddcf620b00abc397d1984003bf453f08324342110";
 	private static final URI TOKEN_URI = URI.create("https://appleid.apple.com/auth/token");
 
-	@Container
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-			DockerImageName.parse("postgres:18-alpine"));
 
 	private static KeyPair keyPair;
 	private static JdbcClient jdbc;
@@ -74,8 +68,7 @@ class AppleAuthorizationPersistenceIntegrationTests {
 
 	@BeforeEach
 	void setUp() {
-		jdbc.sql("TRUNCATE TABLE identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE")
-				.update();
+		SqliteTestDatabase.clear(jdbc);
 		appleHttp = RestClient.builder();
 		appleEndpoint = MockRestServiceServer.bindTo(appleHttp).build();
 		cipher = new AppleRefreshTokenCipher(Base64.getEncoder().encodeToString(new byte[32]));
@@ -164,9 +157,6 @@ class AppleAuthorizationPersistenceIntegrationTests {
 	}
 
 	private static DataSource dataSource() {
-		return new DriverManagerDataSource(
-				POSTGRES.getJdbcUrl(),
-				POSTGRES.getUsername(),
-				POSTGRES.getPassword());
+		return SqliteTestDatabase.dataSource(SQLITE_URL);
 	}
 }

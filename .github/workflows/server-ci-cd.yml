@@ -124,12 +124,6 @@ jobs:
 
       - name: Prepare runtime secret file
         env:
-          NEON_RUNTIME_DATABASE_URL: ${{ secrets.NEON_RUNTIME_DATABASE_URL }}
-          NEON_RUNTIME_DATABASE_USERNAME: ${{ secrets.NEON_RUNTIME_DATABASE_USERNAME }}
-          NEON_RUNTIME_DATABASE_PASSWORD: ${{ secrets.NEON_RUNTIME_DATABASE_PASSWORD }}
-          NEON_MIGRATION_DATABASE_URL: ${{ secrets.NEON_MIGRATION_DATABASE_URL }}
-          NEON_MIGRATION_DATABASE_USERNAME: ${{ secrets.NEON_MIGRATION_DATABASE_USERNAME }}
-          NEON_MIGRATION_DATABASE_PASSWORD: ${{ secrets.NEON_MIGRATION_DATABASE_PASSWORD }}
           APPLE_AUTH_ENABLED: ${{ secrets.APPLE_AUTH_ENABLED }}
           APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -144,12 +138,6 @@ jobs:
         run: |
           umask 077
           required_secrets=(
-            NEON_RUNTIME_DATABASE_URL
-            NEON_RUNTIME_DATABASE_USERNAME
-            NEON_RUNTIME_DATABASE_PASSWORD
-            NEON_MIGRATION_DATABASE_URL
-            NEON_MIGRATION_DATABASE_USERNAME
-            NEON_MIGRATION_DATABASE_PASSWORD
             APPLE_AUTH_ENABLED
             APPLE_CLIENT_ID
             APPLE_TEAM_ID
@@ -193,30 +181,10 @@ jobs:
             value="${value//\$/\$\$}"
             printf '%s' "$value"
           }
-          normalize_jdbc() {
-            local url
-            url="$(sanitize_env_value "$1")"
-            if [[ "$url" == postgresql://* ]]; then
-              url="jdbc:${url}"
-            fi
-            printf '%s' "$url"
-          }
-          runtime_url="$(normalize_jdbc "$NEON_RUNTIME_DATABASE_URL")"
-          migration_url="$(normalize_jdbc "$NEON_MIGRATION_DATABASE_URL")"
-          if [[ "$runtime_url" != jdbc:* || "$migration_url" != jdbc:* ]]; then
-            echo "Neon database URLs must start with jdbc: after normalization" >&2
-            exit 1
-          fi
           apple_private_key=${APPLE_PRIVATE_KEY_P8//$'\r'/}
           apple_private_key=${apple_private_key//$'\n'/\\n}
           apple_private_key="$(sanitize_env_value "$apple_private_key")"
           {
-            printf 'NEON_RUNTIME_DATABASE_URL=%s\n' "$runtime_url"
-            printf 'NEON_RUNTIME_DATABASE_USERNAME=%s\n' "$(sanitize_env_value "$NEON_RUNTIME_DATABASE_USERNAME")"
-            printf 'NEON_RUNTIME_DATABASE_PASSWORD=%s\n' "$(sanitize_env_value "$NEON_RUNTIME_DATABASE_PASSWORD")"
-            printf 'NEON_MIGRATION_DATABASE_URL=%s\n' "$migration_url"
-            printf 'NEON_MIGRATION_DATABASE_USERNAME=%s\n' "$(sanitize_env_value "$NEON_MIGRATION_DATABASE_USERNAME")"
-            printf 'NEON_MIGRATION_DATABASE_PASSWORD=%s\n' "$(sanitize_env_value "$NEON_MIGRATION_DATABASE_PASSWORD")"
             printf 'APPLE_AUTH_ENABLED=%s\n' "$(sanitize_env_value "$APPLE_AUTH_ENABLED")"
             printf 'APPLE_CLIENT_ID=%s\n' "$(sanitize_env_value "$APPLE_CLIENT_ID")"
             printf 'APPLE_TEAM_ID=%s\n' "$(sanitize_env_value "$APPLE_TEAM_ID")"

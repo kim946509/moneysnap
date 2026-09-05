@@ -17,22 +17,16 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
 class AccountDeletionServiceIntegrationTests {
 
 	private static final Instant NOW = Instant.parse("2026-08-10T13:00:00Z");
+	private static final String SQLITE_URL = SqliteTestDatabase.fileUrl();
 
-	@Container
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-			DockerImageName.parse("postgres:18-alpine"));
 
 	private static JdbcClient jdbc;
 	private IdentitySessionService sessions;
@@ -49,8 +43,7 @@ class AccountDeletionServiceIntegrationTests {
 
 	@BeforeEach
 	void setUp() {
-		jdbc.sql("TRUNCATE TABLE identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE")
-				.update();
+		SqliteTestDatabase.clear(jdbc);
 		DataSource dataSource = dataSource();
 		store = new JdbcIdentitySessionStore(
 				JdbcClient.create(dataSource),
@@ -157,10 +150,7 @@ class AccountDeletionServiceIntegrationTests {
 	}
 
 	private static DataSource dataSource() {
-		return new DriverManagerDataSource(
-				POSTGRES.getJdbcUrl(),
-				POSTGRES.getUsername(),
-				POSTGRES.getPassword());
+		return SqliteTestDatabase.dataSource(SQLITE_URL);
 	}
 
 	private static final class QueueTokenGenerator implements SessionTokenGenerator {

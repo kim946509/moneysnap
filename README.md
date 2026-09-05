@@ -19,10 +19,10 @@
   - Figma Home의 카드, 금액, 최근 소비, custom tab UI
   - 시각 회귀 기준: MAE `≤ 0.05`, mismatched pixel ratio `≤ 0.43`
 - Spring Boot와 iOS CI 활성화, Ubuntu Docker development CD 계약 구성 완료
-- Neon dev/prod와 private Cloudflare R2 dev/prod 분리 완료
+- origin SQLite 볼륨과 private Cloudflare R2 dev/prod 분리 완료
 - 다음 사용자 기능은 인증 정책을 확정한 뒤 시작
 
-현재 Home은 결정론적 fixture를 사용하는 읽기 전용 첫 vertical slice입니다. 인증, PostgreSQL 저장소, 실제 REST 조회·저장, 사진 업로드와 그룹 공유는 아직 구현되지 않았습니다. 단계별 상태는 [개발 계획](docs/DEVELOPMENT_PLAN.md)에서 확인할 수 있습니다.
+단계별 상태는 [개발 계획](docs/DEVELOPMENT_PLAN.md)에서 확인할 수 있습니다.
 
 ## 제품 원칙
 
@@ -38,7 +38,7 @@
 |---|---|
 | iOS | iOS 17+, Swift 6, SwiftUI, Swift Concurrency, Observation, PhotosUI, URLSession, SpriteKit |
 | API | Java 21, Spring Boot 4.1.0, Gradle 9.5.1, REST/JSON, OpenAPI 3.1 |
-| 데이터 | Neon PostgreSQL 18, Spring Data JPA, Flyway, Testcontainers |
+| 데이터 | origin SQLite, Flyway, Spring JDBC |
 | 미디어 | private Cloudflare R2 Standard, backend-authorized short-lived signed grant |
 | 개발 배포 | Cloudflare DNS → Nginx Proxy Manager → Ubuntu Docker Spring Boot |
 | 관측성 | Spring Boot Actuator, Prometheus, Grafana |
@@ -49,7 +49,7 @@ flowchart LR
     IOS["SwiftUI iOS App"] -->|REST JSON| CF["Cloudflare DNS"]
     CF --> NPM["Nginx Proxy Manager"]
     NPM --> API["Ubuntu Docker / Spring Boot"]
-    API --> DB[("Neon PostgreSQL")]
+    API --> DB[("Origin SQLite")]
     API --> R2[("Private Cloudflare R2")]
     API --> MON["Prometheus + Grafana"]
     FIGMA["Figma 393x852"] --> CI["GitHub macOS CI / TestFlight"]
@@ -64,7 +64,7 @@ flowchart LR
 ios/                 SwiftUI app, Xcode project, Swift tests, Figma visual references
 server/              Spring Boot modular monolith, Gradle, Docker image
 contracts/           versioned OpenAPI contract and canonical server/iOS JSON examples
-infra/               Neon, Cloudflare, Apple, Ubuntu deployment contracts
+infra/               Cloudflare, Apple, Ubuntu deployment contracts. Neon 인벤토리는 폐기
 docs/                product, policy, architecture, UI and CI/CD sources of truth
 .ai/                 work items, loops and project-local AI harness
 ```
@@ -73,7 +73,7 @@ docs/                product, policy, architecture, UI and CI/CD sources of trut
 
 ### 서버 테스트와 빌드
 
-Windows PowerShell 기준입니다. 테스트는 실제 Neon에 연결하지 않습니다.
+Windows PowerShell 기준입니다. 테스트는 임시 SQLite 파일을 쓰며 Neon이나 Docker Postgres에 연결하지 않습니다.
 
 ```powershell
 cd server
@@ -87,19 +87,14 @@ production JAR은 `server/build/libs/moneysnap-server.jar`로 생성됩니다.
 
 ### 서버 실행
 
-서버 실행에는 [server/.env.example](server/.env.example)의 여섯 환경변수가 모두 필요합니다.
-
-- `NEON_RUNTIME_DATABASE_URL`, `NEON_RUNTIME_DATABASE_USERNAME`, `NEON_RUNTIME_DATABASE_PASSWORD`
-- `NEON_MIGRATION_DATABASE_URL`, `NEON_MIGRATION_DATABASE_USERNAME`, `NEON_MIGRATION_DATABASE_PASSWORD`
-
-runtime 연결은 Neon pooled endpoint와 최소 권한 app role, Flyway 연결은 direct endpoint와 owner role을 사용합니다. 실제 값은 PowerShell 세션, GitHub environment 또는 저장소에서 제외된 local secret file로만 주입합니다.
+로컬 기본 DB는 `server/data/moneysnap.db`입니다. Apple·R2 secret은 [server/.env.example](server/.env.example)을 저장소 밖 환경변수로 주입합니다. SQLite URL을 바꾸려면 `MONEYSNAP_SQLITE_URL`만 사용합니다.
 
 ```powershell
 cd server
 .\gradlew.bat bootRun
 ```
 
-로컬 H2나 상시 Docker Compose PostgreSQL로 자동 대체하지 않습니다. PostgreSQL 통합 테스트가 필요한 기능에서만 Docker 기반 PostgreSQL 18 Testcontainers를 일회성으로 사용합니다.
+로컬 H2, Neon, 상시 Docker Compose PostgreSQL로 대체하지 않습니다.
 
 ### iOS 검증
 
@@ -151,7 +146,7 @@ powershell -ExecutionPolicy Bypass -File scripts\validate-cicd.ps1
 ## 보안
 
 - 실제 `.env`, `.env.*.local`, private key, certificate, provisioning profile과 credential JSON은 커밋하지 않습니다.
-- public pull request CI에는 Neon, R2, SSH 또는 Apple secret을 주입하지 않습니다.
+- public pull request CI에는 R2, SSH 또는 Apple secret을 주입하지 않습니다.
 - 사진은 private R2 bucket에 저장하고 iOS 앱에 R2 credential이나 영구 object URL을 넣지 않습니다.
 - public API hostname에는 management port와 actuator path를 노출하지 않습니다.
 - 저장소는 Secret Scanning과 Push Protection을 사용합니다.

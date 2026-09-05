@@ -86,13 +86,10 @@ Require-Match $workflow 'ssh\s+' 'Ubuntu remote deployment command'
 if ($workflow -match 'self-hosted|Windows|moneysnap-dev') {
     throw 'Server workflow still contains the retired Windows self-hosted deployment path'
 }
+if ($workflow -match 'NEON_') {
+    throw 'Server workflow still injects retired Neon secrets'
+}
 foreach ($secretName in @(
-    'NEON_RUNTIME_DATABASE_URL',
-    'NEON_RUNTIME_DATABASE_USERNAME',
-    'NEON_RUNTIME_DATABASE_PASSWORD',
-    'NEON_MIGRATION_DATABASE_URL',
-    'NEON_MIGRATION_DATABASE_USERNAME',
-    'NEON_MIGRATION_DATABASE_PASSWORD',
     'APPLE_AUTH_ENABLED',
     'APPLE_CLIENT_ID',
     'APPLE_TEAM_ID',
@@ -124,7 +121,6 @@ Require-Match -Content $workflow -Pattern 'xEF\\xBB\\xBF' -Description 'UTF-8 BO
 Require-Match -Content $workflow -Pattern 'ssh-keygen -y -f "\$HOME/.ssh/moneysnap-deploy"' -Description 'loadable SSH private key check'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" -Description 'Apple PEM carriage-return strip'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" -Description 'Apple PEM literal newline flatten'
-Require-Match -Content $workflow -Pattern 'normalize_jdbc' -Description 'Neon URL JDBC prefix normalization'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
@@ -198,6 +194,7 @@ Require-Match $iosVisual 'visual_failures' 'aggregate visual scenario failures'
 $dockerfile = Get-Content -LiteralPath $dockerfilePath -Raw
 Require-Match $dockerfile '^FROM\s+[^\s]+@sha256:[0-9a-f]{64}' 'digest-pinned Java runtime image'
 Require-Match $dockerfile '(?m)^USER\s+[^0\s]+' 'non-root container user'
+Require-Match $dockerfile 'adduser -D -u 21000' 'pinned non-root SQLite volume UID'
 Require-Match $dockerfile 'HEALTHCHECK' 'container healthcheck'
 
 $compose = Get-Content -LiteralPath $composePath -Raw
@@ -206,6 +203,8 @@ Require-Match $compose 'name:\s*main' 'existing monitoring network attachment'
 Require-Match $compose 'MANAGEMENT_SERVER_PORT:\s*"9091"' 'container-only management port'
 Require-Match $compose 'restart:\s*unless-stopped' 'restart policy'
 Require-Match $compose 'opt/moneysnap/runtime.env' 'runtime secret file is not compose interpolation .env'
+Require-Match $compose 'MONEYSNAP_SQLITE_URL:\s*jdbc:sqlite:file:/var/lib/moneysnap/moneysnap.db' 'origin SQLite JDBC URL'
+Require-Match $compose 'opt/moneysnap/data\}:/var/lib/moneysnap' 'writable SQLite host volume'
 
 $deploy = Get-Content -LiteralPath $deployPath -Raw
 Require-Match $deploy 'sha256sum\s+--check' 'image archive checksum verification'
@@ -214,6 +213,11 @@ Require-Match $deploy 'previous_image' 'previous image rollback boundary'
 Require-Match $deploy '\$docker_bin"\s+compose' 'Compose deployment'
 Require-Match $deploy '--env-file' 'compose interpolation env file is not the secret file'
 Require-Match $deploy 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
+Require-Match $deploy 'install -d -m 700 "\$data_dir"' 'SQLite host directory mode 700'
+Require-Match $deploy 'chown 21000:21000 "\$data_dir"' 'SQLite host directory owner matches container UID'
+Require-Match $deploy 'id -u.*" -eq 0' 'root deploy fails closed on SQLite permissions'
+Require-Match $deploy 'chmod 600 "\$sqlite_file"' 'SQLite database files mode 600'
+Require-Match $dockerfile 'umask 077' 'container umask creates owner-only SQLite files'
 
 $deploymentTest = Get-Content -LiteralPath $deploymentTestPath -Raw
 Require-Match $deploymentTest 'healthy deployment' 'healthy deployment behavior test'

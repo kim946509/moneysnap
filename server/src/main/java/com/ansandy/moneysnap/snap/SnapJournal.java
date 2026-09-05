@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.ansandy.moneysnap.shared.SqliteColumns;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -45,7 +47,7 @@ final class SnapJournal {
                 ORDER BY created_at DESC, id DESC
                 """)
                 .param("ownerId", ownerId)
-                .param("localDay", Date.valueOf(localDay))
+                .param("localDay", localDay.toString())
                 .query(this::mapReceipt)
                 .list();
         return TodaySnapshot.of(localDay, snaps);
@@ -89,12 +91,12 @@ final class SnapJournal {
         sql += " ORDER BY local_day DESC, created_at DESC, id DESC LIMIT :limit";
         var query = jdbc.sql(sql)
                 .param("ownerId", ownerId)
-                .param("fromDay", Date.valueOf(from))
-                .param("toDay", Date.valueOf(to))
+                .param("fromDay", from.toString())
+                .param("toDay", to.toString())
                 .param("limit", limit + 1);
         if (decoded != null) {
-            query = query.param("cursorDay", Date.valueOf(decoded.localDay()))
-                    .param("cursorCreatedAt", Timestamp.from(decoded.createdAt()))
+            query = query.param("cursorDay", decoded.localDay().toString())
+                    .param("cursorCreatedAt", SqliteColumns.instant(decoded.createdAt()))
                     .param("cursorId", decoded.id());
         }
         List<SnapRecordReceipt> rows = query.query(this::mapReceipt).list();
@@ -116,9 +118,9 @@ final class SnapJournal {
                     ORDER BY local_day DESC
                     """)
                     .param("ownerId", ownerId)
-                    .param("fromDay", Date.valueOf(from))
-                    .param("toDay", Date.valueOf(to))
-                    .query((row, rowNumber) -> row.getObject("local_day", LocalDate.class))
+                    .param("fromDay", from.toString())
+                    .param("toDay", to.toString())
+                    .query((row, rowNumber) -> SqliteColumns.localDate(row, "local_day"))
                     .list();
         }
         return new ArchivePage(rows, next, occupied);
@@ -143,7 +145,7 @@ final class SnapJournal {
                 .param("ownerId", ownerId)
                 .param("mutationId", command.clientMutationId())
                 .param("fingerprint", fingerprint)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
 
         if (claimed == 0) {
@@ -173,8 +175,8 @@ final class SnapJournal {
                 .param("ownerId", ownerId)
                 .param("category", command.category().code())
                 .param("amountWon", command.amount().value())
-                .param("localDay", Date.valueOf(command.localDay()))
-                .param("createdAt", Timestamp.from(now))
+                .param("localDay", command.localDay().toString())
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         if (command.imageRef() != null) {
             int linked = jdbc.sql("""
@@ -185,7 +187,7 @@ final class SnapJournal {
                     """)
                     .param("mediaId", command.imageRef())
                     .param("ownerId", ownerId)
-                    .param("now", Timestamp.from(now))
+                    .param("now", SqliteColumns.instant(now))
                     .update();
             if (linked != 1) {
                 throw new SnapNotAccessibleException();
@@ -211,14 +213,14 @@ final class SnapJournal {
                 SELECT request_fingerprint, snap_id, created_at
                 FROM snap_record_mutations
                 WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                FOR UPDATE
+
                 """)
                 .param("ownerId", ownerId)
                 .param("mutationId", mutationId)
                 .query((row, rowNumber) -> new MutationRecord(
                         row.getString("request_fingerprint"),
-                        row.getObject("snap_id", UUID.class),
-                        row.getTimestamp("created_at").toInstant()))
+                        SqliteColumns.uuid(row, "snap_id"),
+                        SqliteColumns.instant(row, "created_at")))
                 .optional();
     }
 
@@ -231,7 +233,7 @@ final class SnapJournal {
                     category, amount_won, local_day, snap_created_at, updated_at, version, created_at
                 ) VALUES (
                     :ownerId, :mutationId, :fingerprint, :snapId,
-                    :category, :amountWon, DATE '1970-01-01', :now, :now, 0, :now
+                    :category, :amountWon, '1970-01-01', :now, :now, 0, :now
                 )
                 ON CONFLICT (owner_id, client_mutation_id) DO NOTHING
                 """)
@@ -241,7 +243,7 @@ final class SnapJournal {
                 .param("snapId", snapId)
                 .param("category", command.category().code())
                 .param("amountWon", command.amount().value())
-                .param("now", Timestamp.from(now))
+                .param("now", SqliteColumns.instant(now))
                 .update();
 
         if (claimed == 0) {
@@ -264,7 +266,7 @@ final class SnapJournal {
                 """)
                 .param("category", command.category().code())
                 .param("amountWon", command.amount().value())
-                .param("updatedAt", Timestamp.from(now))
+                .param("updatedAt", SqliteColumns.instant(now))
                 .param("version", command.expectedVersion() + 1)
                 .param("id", snapId)
                 .param("ownerId", ownerId)
@@ -282,9 +284,9 @@ final class SnapJournal {
                 """)
                 .param("category", revised.category())
                 .param("amountWon", revised.amountWon())
-                .param("localDay", Date.valueOf(revised.localDay()))
-                .param("snapCreatedAt", Timestamp.from(revised.createdAt()))
-                .param("updatedAt", Timestamp.from(revised.updatedAt()))
+                .param("localDay", revised.localDay().toString())
+                .param("snapCreatedAt", SqliteColumns.instant(revised.createdAt()))
+                .param("updatedAt", SqliteColumns.instant(revised.updatedAt()))
                 .param("version", revised.version())
                 .param("ownerId", ownerId)
                 .param("mutationId", command.clientMutationId())
@@ -305,7 +307,7 @@ final class SnapJournal {
                 .param("mutationId", command.clientMutationId())
                 .param("fingerprint", fingerprint)
                 .param("snapId", command.snapId())
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
 
         if (claimed == 0) {
@@ -319,7 +321,7 @@ final class SnapJournal {
         UUID imageId = jdbc.sql("SELECT image_id FROM snaps WHERE id = :id AND owner_id = :ownerId")
                 .param("id", command.snapId())
                 .param("ownerId", ownerId)
-                .query(UUID.class)
+                .query(SqliteColumns::firstUuid)
                 .optional()
                 .orElse(null);
         int deleted = jdbc.sql("""
@@ -370,7 +372,7 @@ final class SnapJournal {
                 SELECT id, category, amount_won, local_day, created_at, updated_at, version, image_id
                 FROM snaps
                 WHERE id = :id AND owner_id = :ownerId
-                FOR UPDATE
+
                 """)
                 .param("id", snapId)
                 .param("ownerId", ownerId)
@@ -383,17 +385,17 @@ final class SnapJournal {
                 SELECT snap_id, category, amount_won, local_day, snap_created_at, updated_at, version
                 FROM snap_revise_mutations
                 WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                FOR UPDATE
+
                 """)
                 .param("ownerId", ownerId)
                 .param("mutationId", mutationId)
                 .query((row, rowNumber) -> new SnapDetail(
-                        row.getObject("snap_id", UUID.class),
+                        SqliteColumns.uuid(row, "snap_id"),
                         row.getString("category"),
                         row.getLong("amount_won"),
-                        row.getObject("local_day", LocalDate.class),
-                        row.getTimestamp("snap_created_at").toInstant(),
-                        row.getTimestamp("updated_at").toInstant(),
+                        SqliteColumns.localDate(row, "local_day"),
+                        SqliteColumns.instant(row, "snap_created_at"),
+                        SqliteColumns.instant(row, "updated_at"),
                         row.getInt("version"),
                         null))
                 .optional();
@@ -416,36 +418,36 @@ final class SnapJournal {
                 SELECT request_fingerprint, snap_id
                 FROM snap_delete_mutations
                 WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                FOR UPDATE
+
                 """)
                 .param("ownerId", ownerId)
                 .param("mutationId", mutationId)
                 .query((row, rowNumber) -> new DeleteMutation(
                         row.getString("request_fingerprint"),
-                        row.getObject("snap_id", UUID.class)))
+                        SqliteColumns.uuid(row, "snap_id")))
                 .optional();
     }
 
     private SnapRecordReceipt mapReceipt(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
         return new SnapRecordReceipt(
-                row.getObject("id", UUID.class),
+                SqliteColumns.uuid(row, "id"),
                 row.getString("category"),
                 row.getLong("amount_won"),
-                row.getObject("local_day", LocalDate.class),
-                row.getTimestamp("created_at").toInstant(),
-                row.getObject("image_id", UUID.class));
+                SqliteColumns.localDate(row, "local_day"),
+                SqliteColumns.instant(row, "created_at"),
+                SqliteColumns.uuid(row, "image_id"));
     }
 
     private SnapDetail mapDetail(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
         return new SnapDetail(
-                row.getObject("id", UUID.class),
+                SqliteColumns.uuid(row, "id"),
                 row.getString("category"),
                 row.getLong("amount_won"),
-                row.getObject("local_day", LocalDate.class),
-                row.getTimestamp("created_at").toInstant(),
-                row.getTimestamp("updated_at").toInstant(),
+                SqliteColumns.localDate(row, "local_day"),
+                SqliteColumns.instant(row, "created_at"),
+                SqliteColumns.instant(row, "updated_at"),
                 row.getInt("version"),
-                row.getObject("image_id", UUID.class));
+                SqliteColumns.uuid(row, "image_id"));
     }
 
     private record MutationRecord(String fingerprint, UUID snapId, Instant createdAt) {

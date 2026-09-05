@@ -1,6 +1,7 @@
 package com.ansandy.moneysnap.identity;
 
 import java.sql.Timestamp;
+import com.ansandy.moneysnap.shared.SqliteColumns;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,22 +28,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
 class IdentitySessionServiceIntegrationTests {
 
 	private static final Instant NOW = Instant.parse("2026-08-09T04:00:00Z");
-
-	@Container
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-			DockerImageName.parse("postgres:18-alpine"));
+	private static final String SQLITE_URL = SqliteTestDatabase.fileUrl();
 
 	private static JdbcClient jdbcClient;
 	private IdentitySessionService sessions;
@@ -57,8 +51,7 @@ class IdentitySessionServiceIntegrationTests {
 
 	@BeforeEach
 	void resetDatabase() {
-		jdbcClient.sql("TRUNCATE TABLE identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE")
-				.update();
+		SqliteTestDatabase.clear(jdbcClient);
 		QueueTokenGenerator tokens = new QueueTokenGenerator(
 				"access-a", "refresh-a", "access-b", "refresh-b",
 				"access-c", "refresh-c", "access-d", "refresh-d");
@@ -126,10 +119,10 @@ class IdentitySessionServiceIntegrationTests {
 				.param("id", UUID.randomUUID())
 				.param("sessionId", sessionId)
 				.param("tokenHash", new Sha256TokenHasher().hash("second-active-refresh"))
-				.param("expiresAt", Timestamp.from(NOW.plus(Duration.ofDays(180))))
-				.param("createdAt", Timestamp.from(NOW))
+				.param("expiresAt", SqliteColumns.instant(NOW.plus(Duration.ofDays(180))))
+				.param("createdAt", SqliteColumns.instant(NOW))
 				.update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				.isInstanceOf(org.springframework.dao.DataAccessException.class);
 	}
 
 	@Test
@@ -167,7 +160,7 @@ class IdentitySessionServiceIntegrationTests {
 		SessionTokens initial = rollbackSessions.signIn(new VerifiedAppleIdentity("apple-subject-rollback"));
 
 		assertThatThrownBy(() -> rollbackSessions.refresh(initial.refreshToken()))
-				.isInstanceOf(DataIntegrityViolationException.class);
+				.isInstanceOf(org.springframework.dao.DataAccessException.class);
 		assertThat(rollbackSessions.authenticate(initial.accessToken()).userId()).isNotNull();
 
 		SessionTokens rotated = rollbackSessions.refresh(initial.refreshToken());
@@ -254,7 +247,7 @@ class IdentitySessionServiceIntegrationTests {
 			rotateAccess.executeUpdate();
 
 			Future<?> logout = executor.submit(() -> sessions.logout(tokens.accessToken()));
-			waitForBlockedSessionUpdate();
+			waitForBlockedSessionUpdate(logout);
 			lockConnection.commit();
 			logout.get(5, TimeUnit.SECONDS);
 		}
@@ -268,12 +261,7 @@ class IdentitySessionServiceIntegrationTests {
 	}
 
 	private static DataSource dataSource() {
-		DriverManagerDataSource dataSource = new DriverManagerDataSource();
-		dataSource.setDriverClassName("org.postgresql.Driver");
-		dataSource.setUrl(POSTGRES.getJdbcUrl());
-		dataSource.setUsername(POSTGRES.getUsername());
-		dataSource.setPassword(POSTGRES.getPassword());
-		return dataSource;
+		return SqliteTestDatabase.dataSource(SQLITE_URL);
 	}
 
 	private static Clock fixedClock(Instant instant) {
@@ -295,20 +283,14 @@ class IdentitySessionServiceIntegrationTests {
 				.single();
 	}
 
-	private void waitForBlockedSessionUpdate() throws InterruptedException {
+	private void waitForBlockedSessionUpdate(Future<?> logout) throws InterruptedException {
 		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
 		while (System.nanoTime() < deadline) {
-			int blocked = jdbcClient.sql("""
-					SELECT count(*)
-					FROM pg_stat_activity
-					WHERE datname = current_database()
-					  AND wait_event_type = 'Lock'
-					  AND query ILIKE '%UPDATE identity_sessions%'
-					""")
-					.query(Integer.class)
-					.single();
-			if (blocked > 0) {
-				return;
+			if (!logout.isDone()) {
+				Thread.sleep(50);
+				if (!logout.isDone()) {
+					return;
+				}
 			}
 			Thread.sleep(10);
 		}
