@@ -22,6 +22,9 @@ case "${1:-}" in
     printf '%s\n' 'moneysnap-server:previous'
     exit 0
     ;;
+  logs)
+    exit 0
+    ;;
   compose)
     if [[ "${FAIL_NEW_IMAGE:-0}" == 1 && "${MONEYSNAP_IMAGE:-}" == "moneysnap-server:new" ]]; then
       exit 1

@@ -194,6 +194,7 @@ Require-Match $iosVisual 'visual_failures' 'aggregate visual scenario failures'
 $dockerfile = Get-Content -LiteralPath $dockerfilePath -Raw
 Require-Match $dockerfile '^FROM\s+[^\s]+@sha256:[0-9a-f]{64}' 'digest-pinned Java runtime image'
 Require-Match $dockerfile '(?m)^USER\s+[^0\s]+' 'non-root container user'
+Require-Match $dockerfile 'adduser -D -u 21000' 'pinned non-root SQLite volume UID'
 Require-Match $dockerfile 'HEALTHCHECK' 'container healthcheck'
 
 $compose = Get-Content -LiteralPath $composePath -Raw
@@ -213,6 +214,7 @@ Require-Match $deploy '\$docker_bin"\s+compose' 'Compose deployment'
 Require-Match $deploy '--env-file' 'compose interpolation env file is not the secret file'
 Require-Match $deploy 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
 Require-Match $deploy 'install -d -m 700 "\$data_dir"' 'SQLite host directory mode 700'
+Require-Match $deploy 'chown 21000:21000 "\$data_dir"' 'SQLite host directory owner matches container UID'
 Require-Match $deploy 'chmod 600 "\$data_dir"/moneysnap.db' 'SQLite database files mode 600'
 Require-Match $dockerfile 'umask 077' 'container umask creates owner-only SQLite files'
 
