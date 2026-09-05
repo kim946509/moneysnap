@@ -45,20 +45,43 @@ struct AppleCredentialButton: View {
 }
 
 enum AppleSignInNonce {
-    private static var serverNonce: String?
+    private static let box = Box()
 
     static func store(_ nonce: String) {
-        serverNonce = nonce
+        box.store(nonce)
     }
 
     static func take() -> String? {
-        let nonce = serverNonce
-        serverNonce = nil
-        return nonce
+        box.take()
     }
 
     static func clear() {
-        serverNonce = nil
+        box.clear()
+    }
+
+    private final class Box: @unchecked Sendable {
+        private let lock = NSLock()
+        private var serverNonce: String?
+
+        func store(_ nonce: String) {
+            lock.lock()
+            serverNonce = nonce
+            lock.unlock()
+        }
+
+        func take() -> String? {
+            lock.lock()
+            defer { lock.unlock() }
+            let nonce = serverNonce
+            serverNonce = nil
+            return nonce
+        }
+
+        func clear() {
+            lock.lock()
+            serverNonce = nil
+            lock.unlock()
+        }
     }
 }
 
