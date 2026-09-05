@@ -15,4 +15,4 @@ EXPOSE 8080 9091
 HEALTHCHECK --interval=10s --timeout=3s --start-period=90s --retries=6 \
     CMD curl --fail --silent --show-error http://127.0.0.1:9091/actuator/health >/dev/null || exit 1
 
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
+ENTRYPOINT ["/bin/sh", "-c", "umask 077; exec java -XX:MaxRAMPercentage=75.0 -jar /app/app.jar"]

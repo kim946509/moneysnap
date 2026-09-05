@@ -9,11 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
 @SpringBootTest(properties = {
@@ -34,7 +35,10 @@ class MoneySnapServerApplicationTests {
 		mockMvc.perform(get("/actuator/health"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("UP"))
-				.andExpect(jsonPath("$.components").doesNotExist());
+				.andExpect(jsonPath("$.components").doesNotExist())
+				.andExpect(content().string(not(containsString("jdbc"))))
+				.andExpect(content().string(not(containsString("sqlite"))))
+				.andExpect(content().string(not(containsString("moneysnap.db"))));
 	}
 
 	@Test
@@ -43,7 +47,10 @@ class MoneySnapServerApplicationTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.service").value("moneysnap-api"))
 				.andExpect(jsonPath("$.status").value("UP"))
-				.andExpect(jsonPath("$.components").doesNotExist());
+				.andExpect(jsonPath("$.components").doesNotExist())
+				.andExpect(content().string(not(containsString("jdbc"))))
+				.andExpect(content().string(not(containsString("sqlite"))))
+				.andExpect(content().string(not(containsString("moneysnap.db"))));
 	}
 
 	@Test

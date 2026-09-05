@@ -212,6 +212,9 @@ Require-Match $deploy 'previous_image' 'previous image rollback boundary'
 Require-Match $deploy '\$docker_bin"\s+compose' 'Compose deployment'
 Require-Match $deploy '--env-file' 'compose interpolation env file is not the secret file'
 Require-Match $deploy 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
+Require-Match $deploy 'install -d -m 700 "\$data_dir"' 'SQLite host directory mode 700'
+Require-Match $deploy 'chmod 600 "\$data_dir"/moneysnap.db' 'SQLite database files mode 600'
+Require-Match $dockerfile 'umask 077' 'container umask creates owner-only SQLite files'
 
 $deploymentTest = Get-Content -LiteralPath $deploymentTestPath -Raw
 Require-Match $deploymentTest 'healthy deployment' 'healthy deployment behavior test'

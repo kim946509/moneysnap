@@ -67,10 +67,12 @@ gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/d
 
 data_dir=${MONEYSNAP_DATA_DIR:-$install_root/data}
 install -d -m 700 "$data_dir"
-container_ids=$("$docker_bin" run --rm --entrypoint /bin/sh "$image" -c 'printf %s:%s "$(id -u)" "$(id -g)"' 2>/dev/null || true)
+container_ids=$("$docker_bin" run --rm --entrypoint /bin/sh "$image" -c 'umask 077; printf %s:%s "$(id -u)" "$(id -g)"' 2>/dev/null || true)
 if [[ "$container_ids" =~ ^[0-9]+:[0-9]+$ ]]; then
   chown "$container_ids" "$data_dir" || true
 fi
+chmod 700 "$data_dir" || true
+chmod 600 "$data_dir"/moneysnap.db "$data_dir"/moneysnap.db-wal "$data_dir"/moneysnap.db-shm 2>/dev/null || true
 
 deploy_image() {
   local candidate_image=$1
