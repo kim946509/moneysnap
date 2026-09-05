@@ -91,6 +91,30 @@ class AppleIdentityTokenVerifierTests {
 	}
 
 	@Test
+	void rejectsAClientIdentityTokenWhenNonceClaimIsAbsent() throws Exception {
+		assertUnauthorized(signedToken(
+				"https://appleid.apple.com",
+				"com.ansandy.moneysnap",
+				"apple-subject",
+				null,
+				Instant.parse("2099-01-01T00:00:00Z")), RAW_NONCE);
+	}
+
+	@Test
+	void acceptsAnExchangedIdentityTokenWhenNonceClaimIsAbsent() throws Exception {
+		AppleIdentityTokenVerifier verifier = verifier();
+
+		VerifiedAppleIdentity identity = verifier.verifyExchanged(signedToken(
+				"https://appleid.apple.com",
+				"com.ansandy.moneysnap",
+				"apple-subject",
+				null,
+				Instant.parse("2099-01-01T00:00:00Z")), RAW_NONCE);
+
+		assertThat(identity.subject()).isEqualTo("apple-subject");
+	}
+
+	@Test
 	void rejectsAClaimHashReplayedAsTheRawNonce() throws Exception {
 		assertUnauthorized(signedToken(
 				"https://appleid.apple.com",
@@ -143,16 +167,18 @@ class AppleIdentityTokenVerifierTests {
 			String subject,
 			String nonce,
 			Instant expiresAt) throws Exception {
+		JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+				.issuer(issuer)
+				.audience(audience)
+				.subject(subject)
+				.issueTime(Date.from(NOW.minusSeconds(10)))
+				.expirationTime(Date.from(expiresAt));
+		if (nonce != null) {
+			claims.claim("nonce", nonce);
+		}
 		SignedJWT token = new SignedJWT(
 				new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("apple-test-key").build(),
-				new JWTClaimsSet.Builder()
-						.issuer(issuer)
-						.audience(audience)
-						.subject(subject)
-						.issueTime(Date.from(NOW.minusSeconds(10)))
-						.expirationTime(Date.from(expiresAt))
-						.claim("nonce", nonce)
-						.build());
+				claims.build());
 		token.sign(new RSASSASigner((RSAPrivateKey) keyPair.getPrivate()));
 		return token.serialize();
 	}

@@ -44,7 +44,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 
 			UUID candidate = UUID.randomUUID();
 			jdbc.sql("INSERT INTO users (id, created_at) VALUES (:id, :createdAt)")
-					.param("id", candidate)
+					.param("id", SqliteColumns.uuidString(candidate))
 					.param("createdAt", SqliteColumns.instant(now))
 					.update();
 			int inserted = jdbc.sql("""
@@ -54,7 +54,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					VALUES (:userId, :subject, :encryptedRefreshToken, :now, :now)
 					ON CONFLICT (apple_subject) DO NOTHING
 					""")
-					.param("userId", candidate)
+					.param("userId", SqliteColumns.uuidString(candidate))
 					.param("subject", appleSubject)
 					.param("encryptedRefreshToken", encryptedAppleRefreshToken)
 					.param("now", SqliteColumns.instant(now))
@@ -66,7 +66,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			UUID actual = findUser(appleSubject).orElseThrow();
 			updateAppleRefreshToken(actual, encryptedAppleRefreshToken, now);
 			jdbc.sql("DELETE FROM users WHERE id = :id")
-					.param("id", candidate)
+					.param("id", SqliteColumns.uuidString(candidate))
 					.update();
 			return actual;
 		});
@@ -84,8 +84,8 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 						:refreshExpiresAt, :createdAt, :createdAt
 					)
 					""")
-					.param("id", session.sessionId())
-					.param("userId", session.userId())
+					.param("id", SqliteColumns.uuidString(session.sessionId()))
+					.param("userId", SqliteColumns.uuidString(session.userId()))
 					.param("accessHash", session.accessTokenHash())
 					.param("accessExpiresAt", SqliteColumns.instant(session.accessExpiresAt()))
 					.param("refreshExpiresAt", SqliteColumns.instant(session.refreshExpiresAt()))
@@ -192,7 +192,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					SET status = 'USED', used_at = :now
 					WHERE id = :id AND status = 'ACTIVE'
 					""")
-					.param("id", token.refreshId())
+					.param("id", SqliteColumns.uuidString(token.refreshId()))
 					.param("now", SqliteColumns.instant(now))
 					.update();
 			if (claimed != 1) {
@@ -207,7 +207,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					    last_used_at = :now
 					WHERE id = :sessionId AND revoked_at IS NULL
 					""")
-					.param("sessionId", token.sessionId())
+					.param("sessionId", SqliteColumns.uuidString(token.sessionId()))
 					.param("accessHash", nextAccessTokenHash)
 					.param("accessExpiresAt", SqliteColumns.instant(nextAccessExpiresAt))
 					.param("refreshExpiresAt", SqliteColumns.instant(nextRefreshExpiresAt))
@@ -233,7 +233,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				SET revoked_at = COALESCE(revoked_at, :now)
 				WHERE id = :sessionId
 				""")
-				.param("sessionId", sessionId)
+				.param("sessionId", SqliteColumns.uuidString(sessionId))
 				.param("now", SqliteColumns.instant(now))
 				.update();
 	}
@@ -245,7 +245,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				FROM apple_identities
 				WHERE user_id = :userId AND apple_subject = :appleSubject
 				""")
-				.param("userId", userId)
+				.param("userId", SqliteColumns.uuidString(userId))
 				.param("appleSubject", appleSubject)
 				.query(Integer.class)
 				.single() == 1;
@@ -257,7 +257,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			mediaCleanup.transferToTombstones(userId);
 		}
 		jdbc.sql("DELETE FROM users WHERE id = :userId")
-				.param("userId", userId)
+				.param("userId", SqliteColumns.uuidString(userId))
 				.update();
 	}
 
@@ -326,7 +326,7 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				    updated_at = :now
 				WHERE user_id = :userId
 				""")
-				.param("userId", userId)
+				.param("userId", SqliteColumns.uuidString(userId))
 				.param("encryptedRefreshToken", encryptedAppleRefreshToken)
 				.param("now", SqliteColumns.instant(now))
 				.update();
@@ -338,8 +338,8 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					id, session_id, token_hash, status, expires_at, created_at
 				) VALUES (:id, :sessionId, :tokenHash, 'ACTIVE', :expiresAt, :createdAt)
 				""")
-				.param("id", UUID.randomUUID())
-				.param("sessionId", sessionId)
+				.param("id", SqliteColumns.uuidString(UUID.randomUUID()))
+				.param("sessionId", SqliteColumns.uuidString(sessionId))
 				.param("tokenHash", tokenHash)
 				.param("expiresAt", SqliteColumns.instant(expiresAt))
 				.param("createdAt", SqliteColumns.instant(now))

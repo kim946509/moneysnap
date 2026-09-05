@@ -23,4 +23,13 @@ struct AppleNonceTests {
                 && challenge.appleRequestNonce != challenge.serverNonce
         )
     }
+
+    @Test
+    func handsTheRawNonceToTheServerFromInFlightCapture() {
+        AppleSignInNonce.clear()
+        AppleSignInNonce.store("raw-server-nonce")
+
+        #expect(AppleSignInNonce.take() == "raw-server-nonce")
+        #expect(AppleSignInNonce.take() == nil)
+    }
 }

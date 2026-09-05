@@ -7,16 +7,14 @@ struct AppleCredentialButton: View {
     let onCredential: (AppleSignInCredential) -> Void
     let onFailure: () -> Void
 
-    @State private var requestedNonce: String?
-
     var body: some View {
         SignInWithAppleButton(.continue) { request in
             do {
                 let challenge = try AppleNonce.challenge()
-                requestedNonce = challenge.serverNonce
+                AppleSignInNonce.store(challenge.serverNonce)
                 request.nonce = challenge.appleRequestNonce
             } catch {
-                requestedNonce = nil
+                AppleSignInNonce.clear()
                 onFailure()
             }
         } onCompletion: { result in
@@ -27,8 +25,9 @@ struct AppleCredentialButton: View {
                 let authorizationCodeData = credential.authorizationCode,
                 let identityToken = String(data: identityTokenData, encoding: .utf8),
                 let authorizationCode = String(data: authorizationCodeData, encoding: .utf8),
-                let requestedNonce
+                let requestedNonce = AppleSignInNonce.take()
             else {
+                AppleSignInNonce.clear()
                 onFailure()
                 return
             }
@@ -42,6 +41,47 @@ struct AppleCredentialButton: View {
         .frame(height: 54)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityLabel("Apple로 계속하기")
+    }
+}
+
+enum AppleSignInNonce {
+    private static let box = Box()
+
+    static func store(_ nonce: String) {
+        box.store(nonce)
+    }
+
+    static func take() -> String? {
+        box.take()
+    }
+
+    static func clear() {
+        box.clear()
+    }
+
+    private final class Box: @unchecked Sendable {
+        private let lock = NSLock()
+        private var serverNonce: String?
+
+        func store(_ nonce: String) {
+            lock.lock()
+            serverNonce = nonce
+            lock.unlock()
+        }
+
+        func take() -> String? {
+            lock.lock()
+            defer { lock.unlock() }
+            let nonce = serverNonce
+            serverNonce = nil
+            return nonce
+        }
+
+        func clear() {
+            lock.lock()
+            serverNonce = nil
+            lock.unlock()
+        }
     }
 }
 

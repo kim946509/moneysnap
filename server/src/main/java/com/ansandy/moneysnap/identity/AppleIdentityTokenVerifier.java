@@ -27,17 +27,26 @@ final class AppleIdentityTokenVerifier implements AppleIdentityVerifier {
 
 	@Override
 	public VerifiedAppleIdentity verify(String identityToken, String expectedNonce) {
+		return verify(identityToken, expectedNonce, true);
+	}
+
+	@Override
+	public VerifiedAppleIdentity verifyExchanged(String identityToken, String expectedNonce) {
+		return verify(identityToken, expectedNonce, false);
+	}
+
+	private VerifiedAppleIdentity verify(String identityToken, String expectedNonce, boolean requireNonce) {
 		try {
 			Jwt jwt = decoder.decode(requireText(identityToken));
 			Instant expiresAt = jwt.getExpiresAt();
 			List<String> audiences = jwt.getAudience();
 			String nonce = jwt.getClaimAsString("nonce");
-			if (!APPLE_ISSUER.equals(String.valueOf(jwt.getIssuer()))
+			if (!issuerMatches(jwt)
 					|| audiences == null
 					|| !audiences.contains(audience)
 					|| expiresAt == null
 					|| !expiresAt.isAfter(clock.instant())
-					|| !sameValue(new Sha256TokenHasher().hash(requireText(expectedNonce)), nonce)) {
+					|| !nonceMatches(expectedNonce, nonce, requireNonce)) {
 				throw unauthorized();
 			}
 			return new VerifiedAppleIdentity(requireText(jwt.getSubject()));
@@ -45,6 +54,21 @@ final class AppleIdentityTokenVerifier implements AppleIdentityVerifier {
 		catch (JwtException | IllegalArgumentException exception) {
 			throw unauthorized();
 		}
+	}
+
+	private static boolean issuerMatches(Jwt jwt) {
+		String claimIssuer = jwt.getClaimAsString("iss");
+		if (APPLE_ISSUER.equals(claimIssuer)) {
+			return true;
+		}
+		return jwt.getIssuer() != null && APPLE_ISSUER.equals(jwt.getIssuer().toString());
+	}
+
+	private static boolean nonceMatches(String expectedNonce, String actualNonce, boolean requireNonce) {
+		if (actualNonce == null || actualNonce.isBlank()) {
+			return !requireNonce;
+		}
+		return sameValue(new Sha256TokenHasher().hash(requireText(expectedNonce)), actualNonce);
 	}
 
 	private static boolean sameValue(String expected, String actual) {
