@@ -35,6 +35,7 @@ $requiredFiles = @(
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodayCanvasView.swift'),
     (Join-Path $iosRoot 'MoneySnapTests\TodayCanvasPlacementTests.swift'),
     (Join-Path $iosRoot 'MoneySnapTests\TodayCanvasDriftTests.swift'),
+    (Join-Path $iosRoot 'MoneySnapTests\SnapDetailModelTests.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Home\TodaySnapCardViews.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapRecordModels.swift'),
     (Join-Path $iosRoot 'MoneySnap\Features\Capture\SnapCaptureModel.swift'),

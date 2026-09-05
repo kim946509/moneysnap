@@ -4,24 +4,18 @@ import UIKit
 struct SnapDetailView: View {
     @State private var model: SnapDetailModel
     @State private var confirmsDelete = false
-    @State private var shareMessage: String?
+    @FocusState private var amountFocused: Bool
     let onChanged: (SnapDetail) -> Void
     let onDeleted: () -> Void
-    var groups: [MoneySnapGroup] = []
-    var onShare: (UUID) -> Void = { _ in }
 
     init(
         model: SnapDetailModel,
         onChanged: @escaping (SnapDetail) -> Void,
-        onDeleted: @escaping () -> Void,
-        groups: [MoneySnapGroup] = [],
-        onShare: @escaping (UUID) -> Void = { _ in }
+        onDeleted: @escaping () -> Void
     ) {
         _model = State(initialValue: model)
         self.onChanged = onChanged
         self.onDeleted = onDeleted
-        self.groups = groups
-        self.onShare = onShare
     }
 
     var body: some View {
@@ -45,12 +39,37 @@ struct SnapDetailView: View {
                 detailSurface(detail)
             }
         }
-        .navigationTitle("Snap 상세")
         .navigationBarTitleDisplayMode(.inline)
         .task { await model.load() }
-        .alert("공유", isPresented: Binding(get: { shareMessage != nil }, set: { if !$0 { shareMessage = nil } })) {
-            Button("확인", role: .cancel) { shareMessage = nil }
-        } message: { Text(shareMessage ?? "") }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                if case let .content(detail) = model.state {
+                    Text(detail.localDay)
+                        .font(.moneySnap(size: 15, weight: .semibold))
+                        .foregroundStyle(MoneySnapVisualSystem.ink)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                if case .content = model.state {
+                    Button {
+                        confirmsDelete = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .disabled(model.isDeleting)
+                    .accessibilityIdentifier("snap.detail.delete")
+                }
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") {
+                    amountFocused = false
+                    Task { await commitAmount() }
+                }
+                .accessibilityIdentifier("snap.detail.amount.done")
+            }
+        }
         .confirmationDialog("이 기록을 삭제할까요? 오늘 화면에서도 바로 사라집니다.", isPresented: $confirmsDelete, titleVisibility: .visible) {
             Button("삭제", role: .destructive) {
                 Task { if await model.delete() { onDeleted() } }
@@ -61,67 +80,121 @@ struct SnapDetailView: View {
 
     private func detailSurface(_ detail: SnapDetail) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                hero(detail)
-                amountEditor(detail)
-                metadataEditor(detail)
+            VStack(alignment: .leading, spacing: 22) {
+                photoCard(detail)
+                amountBlock
+                categoryChips(detail)
                 if let failure = model.failure { failureCard(failure) }
-                actions
-                if !groups.isEmpty { shareSection }
             }
-            .padding(20)
-            .padding(.bottom, 38)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 48)
         }
-        .background(MoneySnapVisualSystem.profileNeutralFill.opacity(0.38))
+        .background(MoneySnapVisualSystem.pageFill)
         .accessibilityIdentifier("screen.snap.detail")
     }
 
-    private func hero(_ detail: SnapDetail) -> some View {
+    private func photoCard(_ detail: SnapDetail) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 30)
-                .fill(MoneySnapVisualSystem.profileNeutralFill.opacity(0.9))
-                .rotationEffect(.degrees(4))
-                .padding(16)
-            RoundedRectangle(cornerRadius: 30)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(.white)
-                .shadow(color: .black.opacity(0.09), radius: 16, y: 9)
-                .rotationEffect(.degrees(-2.2))
-                .padding(10)
-            if let jpeg = model.previewJPEG, let image = UIImage(data: jpeg) {
-                Image(uiImage: image)
-                    .resizable().scaledToFill().frame(width: 224, height: 224)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
-                    .accessibilityIdentifier("snap.detail.photo")
-            } else {
-                DetailCategoryArtwork(category: detail.category)
-                    .frame(width: 224, height: 224)
+                .shadow(color: .black.opacity(0.10), radius: 22, y: 12)
+                .rotationEffect(.degrees(-2.4))
+                .offset(x: 6, y: 8)
+            VStack(spacing: 0) {
+                photo(detail)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 268)
+                    .clipped()
+                HStack {
+                    Text(detail.category.title)
+                        .font(.moneySnap(size: 13, weight: .semibold))
+                        .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                    Spacer()
+                    Text(detail.localDay)
+                        .font(.moneySnap(size: 13, weight: .medium))
+                        .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
+            .background(.white, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .shadow(color: .black.opacity(0.08), radius: 18, y: 10)
         }
-        .frame(maxWidth: .infinity).frame(height: 286)
+        .frame(maxWidth: .infinity)
+        .frame(height: 318)
         .accessibilityLabel("\(detail.category.title) Snap")
     }
 
-    private func amountEditor(_ detail: SnapDetail) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("소비 금액").font(.moneySnap(size: 13, weight: .medium)).foregroundStyle(MoneySnapVisualSystem.secondaryText)
-            TextField("금액", text: $model.draftAmount)
-                .keyboardType(.numberPad)
-                .font(.moneySnap(size: 42, weight: .black))
-                .foregroundStyle(MoneySnapVisualSystem.ink)
-                .accessibilityIdentifier("snap.detail.amount")
+    @ViewBuilder
+    private func photo(_ detail: SnapDetail) -> some View {
+        if let jpeg = model.previewJPEG, let image = UIImage(data: jpeg) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .accessibilityIdentifier("snap.detail.photo")
+        } else {
+            DetailCategoryArtwork(category: detail.category)
         }
-        .padding(18).background(.white, in: RoundedRectangle(cornerRadius: 22))
     }
 
-    private func metadataEditor(_ detail: SnapDetail) -> some View {
-        VStack(spacing: 12) {
-            DetailRow(icon: "calendar", label: "기록일") { Text(detail.localDay) }
-            DetailRow(icon: "square.grid.2x2", label: "카테고리") {
-                Picker("카테고리", selection: Binding(get: { model.draftCategory ?? detail.category }, set: { model.draftCategory = $0 })) {
-                    ForEach(SnapCategory.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                .labelsHidden().accessibilityIdentifier("snap.detail.category")
+    private var amountBlock: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("소비 금액")
+                .font(.moneySnap(size: 13, weight: .medium))
+                .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("₩")
+                    .font(.moneySnap(size: 28, weight: .bold))
+                    .foregroundStyle(MoneySnapVisualSystem.ink)
+                TextField("0", text: amountDigits)
+                    .keyboardType(.numberPad)
+                    .font(.moneySnap(size: 44, weight: .black))
+                    .foregroundStyle(MoneySnapVisualSystem.ink)
+                    .focused($amountFocused)
+                    .accessibilityIdentifier("snap.detail.amount")
+                    .onChange(of: amountFocused) { _, focused in
+                        if !focused { Task { await commitAmount() } }
+                    }
             }
+        }
+        .padding(.top, 4)
+    }
+
+    private var amountDigits: Binding<String> {
+        Binding(
+            get: { formattedWon(model.draftAmount) },
+            set: { model.draftAmount = $0.filter(\.isNumber) }
+        )
+    }
+
+    private func categoryChips(_ detail: SnapDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("카테고리")
+                .font(.moneySnap(size: 13, weight: .medium))
+                .foregroundStyle(MoneySnapVisualSystem.secondaryText)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), alignment: .leading)], alignment: .leading, spacing: 8) {
+                ForEach(SnapCategory.allCases, id: \.self) { category in
+                    let selected = (model.draftCategory ?? detail.category) == category
+                    Button {
+                        Task { await commitCategory(category) }
+                    } label: {
+                        Text(category.title)
+                            .font(.moneySnap(size: 14, weight: selected ? .bold : .medium))
+                            .foregroundStyle(selected ? .white : MoneySnapVisualSystem.ink)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 36)
+                            .background(
+                                selected ? MoneySnapVisualSystem.charcoal : MoneySnapVisualSystem.profileNeutralFill,
+                                in: Capsule()
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .accessibilityIdentifier("snap.detail.category")
         }
     }
 
@@ -132,29 +205,31 @@ struct SnapDetailView: View {
                 Button("최신 내용 다시 불러오기") { Task { await model.load() } }
             }
         }
-        .font(.moneySnap(size: 14, weight: .medium)).padding(16)
+        .font(.moneySnap(size: 14, weight: .medium))
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 18))
     }
 
-    private var actions: some View {
-        VStack(spacing: 10) {
-            Button("저장") { Task { if let updated = await model.save() { onChanged(updated) } } }
-                .disabled(model.isSaving).buttonStyle(DetailPrimaryButton()).accessibilityIdentifier("snap.detail.save")
-            Button("삭제", role: .destructive) { confirmsDelete = true }
-                .disabled(model.isDeleting).frame(maxWidth: .infinity, minHeight: 48)
-                .background(.white, in: RoundedRectangle(cornerRadius: 16)).accessibilityIdentifier("snap.detail.delete")
+    private func commitCategory(_ category: SnapCategory) async {
+        amountFocused = false
+        if let updated = await model.selectCategory(category) {
+            onChanged(updated)
         }
     }
 
-    private var shareSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("그룹에 공유").font(.moneySnap(size: 16, weight: .bold))
-            ForEach(groups) { group in
-                Button(group.name) { onShare(group.id); shareMessage = "\(group.name)에 공유했어요" }
-                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading).padding(.horizontal, 16)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 16))
-            }
+    private func commitAmount() async {
+        if let updated = await model.commitDraft() {
+            onChanged(updated)
         }
+    }
+
+    private func formattedWon(_ digits: String) -> String {
+        guard let value = Int64(digits), value > 0 else { return digits }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "ko_KR")
+        return formatter.string(from: NSNumber(value: value)) ?? digits
     }
 }
 
@@ -162,36 +237,10 @@ private struct DetailCategoryArtwork: View {
     let category: SnapCategory
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 24).fill(MoneySnapVisualSystem.profileNeutralFill)
-            Image(systemName: category.placeholderSymbol).font(.system(size: 64, weight: .medium)).foregroundStyle(MoneySnapVisualSystem.charcoal)
+            MoneySnapVisualSystem.profileNeutralFill
+            Image(systemName: category.placeholderSymbol)
+                .font(.system(size: 64, weight: .medium))
+                .foregroundStyle(MoneySnapVisualSystem.charcoal)
         }
-    }
-}
-
-private struct DetailRow<Content: View>: View {
-    let icon: String
-    let label: String
-    let content: Content
-
-    init(icon: String, label: String, @ViewBuilder content: () -> Content) {
-        self.icon = icon
-        self.label = label
-        self.content = content()
-    }
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon).frame(width: 42, height: 42).background(MoneySnapVisualSystem.profileNeutralFill, in: RoundedRectangle(cornerRadius: 13))
-            Text(label).font(.moneySnap(size: 13, weight: .medium)).foregroundStyle(MoneySnapVisualSystem.secondaryText)
-            Spacer(); content.font(.moneySnap(size: 16, weight: .bold))
-        }
-        .padding(14).background(.white, in: RoundedRectangle(cornerRadius: 18))
-    }
-}
-
-private struct DetailPrimaryButton: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label.frame(maxWidth: .infinity, minHeight: 50).foregroundStyle(.white)
-            .background(MoneySnapVisualSystem.charcoal.opacity(configuration.isPressed ? 0.8 : 1), in: RoundedRectangle(cornerRadius: 16))
     }
 }

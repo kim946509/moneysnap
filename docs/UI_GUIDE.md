@@ -12,9 +12,10 @@
 ### 2026-08-30 Home physics·Snap 상세 보완 기준
 
 - 사용자의 최신 명시적 결정에 따라 Home physics는 [Kit iOS Wallet & Balance](https://mobbin.com/screens/054cbfab-40ee-4029-bd1e-6a971f6298d2)의 440x956 동작 영상을 보완 기준으로 사용한다.
-- Snap 상세의 surface·stacked card 계층은 21st.dev의 [Spotlight Card](https://21st.dev/@easemize/components/spotlight-card)와 [Display Cards](https://21st.dev/@Codehagen/components/display-cards)를 참고하되, web hover·cursor·glow·grayscale 효과와 React/Tailwind 구현은 가져오지 않는다.
-- 위 보완 기준은 제품 범위와 정보 구조를 바꾸지 않는다. Home은 개인 Snap canvas이고, Snap 상세의 mutable field는 category·amount뿐이며 실제 수정·삭제 연결은 Stage 5가 소유한다.
-- 기존 Figma frame은 화면 구조와 393x852 검증 provenance를 계속 소유한다. 보완 기준과 충돌하는 Home 물리 동작·상세 surface 표현은 이 사용자 결정을 우선하고, 후속 Figma 동기화에서 같은 결정을 반영한다.
+- Snap 상세는 Mobbin iOS latest의 영수증·사진 포스트 패턴을 보완 기준으로 사용한다. 직접 참고한 화면은 [Starbucks Detailed Receipt](https://mobbin.com/screens/bb9e7f26-76a6-472a-a7da-1895652b1a63), [Shake Shack Detailed Receipt](https://mobbin.com/screens/4ddd0d32-e116-4b87-a7d1-e1b0a673808d), [Instagram Post Detail](https://mobbin.com/screens/8f14f8cf-10cd-4c90-9776-19cc199680a1), [BeReal Memory Detail](https://mobbin.com/screens/af344c5a-e02a-4405-8b90-0466f950113c)이다.
+- 상세는 사진 히어로와 큰 금액이 먼저 오고, 카테고리는 좌측 칩, 삭제는 툴바다. 설정 Form 저장 버튼과 상세 안 그룹 공유 목록은 두지 않는다. 카테고리·금액 변경은 확정 시 바로 반영한다.
+- 위 보완 기준은 제품 범위와 정보 구조를 바꾸지 않는다. Home은 개인 Snap canvas이고, Snap 상세의 mutable field는 category·amount뿐이다. 공유는 Home action이다.
+- 기존 Figma frame은 화면 구조와 393x852 검증 provenance를 계속 소유한다. 보완 기준과 충돌하는 상세 surface 표현은 이 사용자 결정을 우선하고, 후속 Figma 동기화에서 같은 결정을 반영한다.
 
 ## 시각 정합성 완료 조건
 
@@ -181,7 +182,7 @@ Icon: iOS/SF Symbol 또는 02 Components의 아이콘 인스턴스 사용
 - 시스템 `List`나 가계부형 숫자표로 보이지 않게 하고, Home 최근 행과 같은 사진·카테고리·금액 행을 쓴다.
 
 ### Snap Detail
-- Snap 상세는 확인, 가격 수정, 카테고리 수정, 삭제만 담당한다.
+- Snap 상세는 확인, 가격 수정, 카테고리 수정, 삭제만 담당한다. 저장 버튼 없이 변경을 확정하고, 삭제는 툴바에 둔다.
 - 사진 교체, 공유 그룹 변경, 금액 공개 설정 변경은 Snap 상세에 넣지 않는다.
 - 수정 액션은 별도 복잡한 폼보다 작은 바텀시트나 인라인 선택으로 처리한다.
 - 삭제는 명확한 위험 액션으로 두되, 화면의 중심 액션처럼 보이게 만들지 않는다.
