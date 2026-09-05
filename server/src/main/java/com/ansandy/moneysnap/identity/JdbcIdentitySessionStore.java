@@ -151,14 +151,18 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 				return RefreshRotation.INVALID;
 			}
 
-			jdbc.sql("""
+			int claimed = jdbc.sql("""
 					UPDATE identity_refresh_tokens
 					SET status = 'USED', used_at = :now
-					WHERE id = :id
+					WHERE id = :id AND status = 'ACTIVE'
 					""")
 					.param("id", token.refreshId())
 					.param("now", SqliteColumns.instant(now))
 					.update();
+			if (claimed != 1) {
+				revokeSession(token.sessionId(), now);
+				return RefreshRotation.REUSED;
+			}
 			jdbc.sql("""
 					UPDATE identity_sessions
 					SET access_token_hash = :accessHash,

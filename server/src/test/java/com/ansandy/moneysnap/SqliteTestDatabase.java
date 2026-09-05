@@ -7,8 +7,9 @@ import java.nio.file.Path;
 import javax.sql.DataSource;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
+import org.sqlite.SQLiteConfig;
+import org.sqlite.SQLiteDataSource;
 
 public final class SqliteTestDatabase {
 
@@ -57,8 +58,11 @@ public final class SqliteTestDatabase {
 	}
 
 	public static DataSource dataSource(String url) {
-		DriverManagerDataSource dataSource = new DriverManagerDataSource();
-		dataSource.setDriverClassName("org.sqlite.JDBC");
+		SQLiteConfig config = new SQLiteConfig();
+		config.setBusyTimeout(5_000);
+		config.enforceForeignKeys(true);
+		config.setJournalMode(SQLiteConfig.JournalMode.WAL);
+		SQLiteDataSource dataSource = new SQLiteDataSource(config);
 		dataSource.setUrl(url);
 		return dataSource;
 	}
