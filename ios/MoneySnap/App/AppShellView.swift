@@ -55,16 +55,6 @@ struct AppShellView: View {
                                             todayViewModel.remove(id)
                                             tabRouter.router(for: tab).path.removeAll()
                                             Task { await todayViewModel.refresh() }
-                                        },
-                                        groups: shareGroups,
-                                        onShare: { groupID in
-                                            Task {
-                                                try? await groupClient.share(
-                                                    snapID: id,
-                                                    groupID: groupID,
-                                                    mutationID: UUID().uuidString.lowercased()
-                                                )
-                                            }
                                         }
                                     )
                                 }

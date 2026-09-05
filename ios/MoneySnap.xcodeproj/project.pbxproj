@@ -70,6 +70,7 @@
 		B00000000000000000000061 /* TodayCanvasDrift.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000066 /* TodayCanvasDrift.swift */; };
 		B00000000000000000000062 /* TodayCanvasDriftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000067 /* TodayCanvasDriftTests.swift */; };
 		B00000000000000000000068 /* TodaySnapPhysics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000068 /* TodaySnapPhysics.swift */; };
+		B00000000000000000000069 /* SnapDetailModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000069 /* SnapDetailModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -158,6 +159,7 @@
 		F00000000000000000000066 /* TodayCanvasDrift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasDrift.swift; sourceTree = "<group>"; };
 		F00000000000000000000067 /* TodayCanvasDriftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayCanvasDriftTests.swift; sourceTree = "<group>"; };
 		F00000000000000000000068 /* TodaySnapPhysics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySnapPhysics.swift; sourceTree = "<group>"; };
+		F00000000000000000000069 /* SnapDetailModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapDetailModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -271,6 +273,7 @@
 				F00000000000000000000063 /* TodayCanvasPlacementTests.swift */,
 				F00000000000000000000065 /* HelpTopicTests.swift */,
 				F00000000000000000000067 /* TodayCanvasDriftTests.swift */,
+				F00000000000000000000069 /* SnapDetailModelTests.swift */,
 				F00000000000000000000032 /* identity */,
 				F00000000000000000000041 /* snaps */,
 			);
@@ -584,6 +587,7 @@
 				B00000000000000000000058 /* TodayCanvasPlacementTests.swift in Sources */,
 				B00000000000000000000062 /* TodayCanvasDriftTests.swift in Sources */,
 				B00000000000000000000060 /* HelpTopicTests.swift in Sources */,
+				B00000000000000000000069 /* SnapDetailModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

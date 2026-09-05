@@ -56,10 +56,20 @@ final class SnapDetailModel {
         }
     }
 
+    func selectCategory(_ category: SnapCategory) async -> SnapDetail? {
+        draftCategory = category
+        return await commitDraft()
+    }
+
+    func commitDraft() async -> SnapDetail? {
+        await save()
+    }
+
     func save() async -> SnapDetail? {
         guard !isSaving, let category = draftCategory,
-              let amount = Int64(draftAmount),
+              let amount = Int64(draftAmount), amount >= 1,
               case let .content(current) = state else { return nil }
+        guard category != current.category || amount != current.amountWon else { return current }
         let command = frozenRevise ?? SnapReviseCommand(
             clientMutationId: mutationID().uuidString.lowercased(),
             expectedVersion: current.version,
