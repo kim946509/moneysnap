@@ -102,6 +102,19 @@ class AppleAuthorizationPersistenceIntegrationTests {
 	}
 
 	@Test
+	void authorizesWhenTheExchangedIdentityTokenOmitsNonce() throws Exception {
+		expectAppleExchange("apple-subject", "raw-apple-refresh-token", false);
+
+		VerifiedAppleAuthorization authorization = adapter().authorize(new AppleAuthorizationRequest(
+				signedIdentityToken("apple-subject", true),
+				"single-use-code",
+				RAW_NONCE));
+
+		assertThat(authorization.identity().subject()).isEqualTo("apple-subject");
+		appleEndpoint.verify();
+	}
+
+	@Test
 	void rejectsDifferentSubjectsAcrossTheAppleExchange() throws Exception {
 		expectAppleExchange("different-subject", "raw-apple-refresh-token");
 
@@ -127,27 +140,37 @@ class AppleAuthorizationPersistenceIntegrationTests {
 	}
 
 	private void expectAppleExchange(String subject, String refreshToken) throws Exception {
+		expectAppleExchange(subject, refreshToken, true);
+	}
+
+	private void expectAppleExchange(String subject, String refreshToken, boolean includeNonce) throws Exception {
 		appleEndpoint.expect(once(), requestTo(TOKEN_URI))
 				.andRespond(withSuccess("""
 						{
 						  "id_token": "%s",
 						  "refresh_token": "%s"
 						}
-						""".formatted(signedIdentityToken(subject), refreshToken),
+						""".formatted(signedIdentityToken(subject, includeNonce), refreshToken),
 						MediaType.APPLICATION_JSON));
 	}
 
 	private static String signedIdentityToken(String subject) throws Exception {
+		return signedIdentityToken(subject, true);
+	}
+
+	private static String signedIdentityToken(String subject, boolean includeNonce) throws Exception {
+		JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+				.issuer("https://appleid.apple.com")
+				.audience(CLIENT_ID)
+				.subject(subject)
+				.issueTime(Date.from(NOW.minusSeconds(10)))
+				.expirationTime(Date.from(Instant.parse("2099-01-01T00:00:00Z")));
+		if (includeNonce) {
+			claims.claim("nonce", NONCE_CLAIM);
+		}
 		SignedJWT token = new SignedJWT(
 				new JWSHeader.Builder(JWSAlgorithm.RS256).keyID("apple-test-key").build(),
-				new JWTClaimsSet.Builder()
-						.issuer("https://appleid.apple.com")
-						.audience(CLIENT_ID)
-						.subject(subject)
-						.issueTime(Date.from(NOW.minusSeconds(10)))
-						.expirationTime(Date.from(Instant.parse("2099-01-01T00:00:00Z")))
-						.claim("nonce", NONCE_CLAIM)
-						.build());
+				claims.build());
 		token.sign(new RSASSASigner((RSAPrivateKey) keyPair.getPrivate()));
 		return token.serialize();
 	}

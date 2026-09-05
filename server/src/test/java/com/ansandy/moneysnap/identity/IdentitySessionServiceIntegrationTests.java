@@ -73,6 +73,20 @@ class IdentitySessionServiceIntegrationTests {
 	}
 
 	@Test
+	void storesNewUserIdsAsSqliteText() {
+		sessions.signIn(new VerifiedAppleIdentity("apple-subject-text-id"));
+
+		String storedType = jdbcClient.sql("SELECT typeof(id) FROM users")
+				.query(String.class)
+				.single();
+		String storedId = jdbcClient.sql("SELECT id FROM users")
+				.query(String.class)
+				.single();
+		assertThat(storedType).isEqualTo("text");
+		assertThat(UUID.fromString(storedId)).isNotNull();
+	}
+
+	@Test
 	void signInUsesTheConfiguredSessionLifetimes() {
 		SessionTokens tokens = sessions.signIn(new VerifiedAppleIdentity("apple-subject-ttl"));
 

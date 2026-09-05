@@ -14,6 +14,10 @@ public final class SqliteColumns {
 	private SqliteColumns() {
 	}
 
+	public static String uuidString(UUID value) {
+		return value == null ? null : value.toString();
+	}
+
 	public static UUID uuid(ResultSet row, String column) throws SQLException {
 		return parseUuid(row.getString(column));
 	}
