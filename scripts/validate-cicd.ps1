@@ -205,6 +205,8 @@ Require-Match $compose 'restart:\s*unless-stopped' 'restart policy'
 Require-Match $compose 'opt/moneysnap/runtime.env' 'runtime secret file is not compose interpolation .env'
 Require-Match $compose 'MONEYSNAP_SQLITE_URL:\s*jdbc:sqlite:file:/var/lib/moneysnap/moneysnap.db' 'origin SQLite JDBC URL'
 Require-Match $compose 'opt/moneysnap/data\}:/var/lib/moneysnap' 'writable SQLite host volume'
+Require-Match $compose 'org\.sqlite\.tmpdir=/var/lib/moneysnap' 'SQLite native library extracts onto the data volume'
+Require-Match $compose '/tmp:size=64m,mode=1777,exec' 'tmpfs allows native library load'
 
 $deploy = Get-Content -LiteralPath $deployPath -Raw
 Require-Match $deploy 'sha256sum\s+--check' 'image archive checksum verification'
