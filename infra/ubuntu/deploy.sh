@@ -67,7 +67,7 @@ gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/d
 
 data_dir=${MONEYSNAP_DATA_DIR:-$install_root/data}
 install -d -m 700 "$data_dir"
-chown 21000:21000 "$data_dir" || true
+chown 21000:21000 "$data_dir" >/dev/null 2>&1 || true
 chmod 700 "$data_dir" || true
 chmod 600 "$data_dir"/moneysnap.db "$data_dir"/moneysnap.db-wal "$data_dir"/moneysnap.db-shm 2>/dev/null || true
 
