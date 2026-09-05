@@ -67,9 +67,18 @@ gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/d
 
 data_dir=${MONEYSNAP_DATA_DIR:-$install_root/data}
 install -d -m 700 "$data_dir"
-chown 21000:21000 "$data_dir" >/dev/null 2>&1 || true
-chmod 700 "$data_dir" || true
-chmod 600 "$data_dir"/moneysnap.db "$data_dir"/moneysnap.db-wal "$data_dir"/moneysnap.db-shm 2>/dev/null || true
+if [[ "$(id -u)" -eq 0 ]]; then
+  chown 21000:21000 "$data_dir"
+  chmod 700 "$data_dir"
+  for sqlite_file in "$data_dir"/moneysnap.db "$data_dir"/moneysnap.db-wal "$data_dir"/moneysnap.db-shm; do
+    if [[ -e "$sqlite_file" ]]; then
+      chown 21000:21000 "$sqlite_file"
+      chmod 600 "$sqlite_file"
+    fi
+  done
+else
+  chmod 700 "$data_dir" || true
+fi
 
 deploy_image() {
   local candidate_image=$1

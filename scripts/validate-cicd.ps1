@@ -215,7 +215,8 @@ Require-Match $deploy '--env-file' 'compose interpolation env file is not the se
 Require-Match $deploy 'keeping parseable runtime.env' 'rollback keeps the parseable runtime env'
 Require-Match $deploy 'install -d -m 700 "\$data_dir"' 'SQLite host directory mode 700'
 Require-Match $deploy 'chown 21000:21000 "\$data_dir"' 'SQLite host directory owner matches container UID'
-Require-Match $deploy 'chmod 600 "\$data_dir"/moneysnap.db' 'SQLite database files mode 600'
+Require-Match $deploy 'id -u.*" -eq 0' 'root deploy fails closed on SQLite permissions'
+Require-Match $deploy 'chmod 600 "\$sqlite_file"' 'SQLite database files mode 600'
 Require-Match $dockerfile 'umask 077' 'container umask creates owner-only SQLite files'
 
 $deploymentTest = Get-Content -LiteralPath $deploymentTestPath -Raw
