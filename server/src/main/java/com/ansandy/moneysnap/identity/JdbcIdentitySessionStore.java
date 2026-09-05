@@ -1,11 +1,13 @@
 package com.ansandy.moneysnap.identity;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -122,7 +124,41 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 			String nextRefreshTokenHash,
 			Instant nextRefreshExpiresAt,
 			Instant now) {
-		return transactions.execute(status -> {
+		DataAccessException lastContention = null;
+		for (int attempt = 0; attempt < 16; attempt++) {
+			try {
+				return transactions.execute(status -> rotateRefreshOnce(
+						currentRefreshTokenHash,
+						nextAccessTokenHash,
+						nextAccessExpiresAt,
+						nextRefreshTokenHash,
+						nextRefreshExpiresAt,
+						now));
+			}
+			catch (DataAccessException exception) {
+				if (!isRetryableSqliteLock(exception)) {
+					throw exception;
+				}
+				lastContention = exception;
+				try {
+					Thread.sleep(25L * (attempt + 1));
+				}
+				catch (InterruptedException interrupted) {
+					Thread.currentThread().interrupt();
+					throw exception;
+				}
+			}
+		}
+		throw lastContention;
+	}
+
+	private RefreshRotation rotateRefreshOnce(
+			String currentRefreshTokenHash,
+			String nextAccessTokenHash,
+			Instant nextAccessExpiresAt,
+			String nextRefreshTokenHash,
+			Instant nextRefreshExpiresAt,
+			Instant now) {
 			Optional<RefreshRow> current = jdbc.sql("""
 					SELECT r.id AS refresh_id, r.session_id, r.status, r.expires_at,
 					       s.revoked_at
@@ -179,7 +215,15 @@ final class JdbcIdentitySessionStore implements IdentitySessionStore {
 					.update();
 			insertRefreshToken(token.sessionId(), nextRefreshTokenHash, nextRefreshExpiresAt, now);
 			return RefreshRotation.SUCCESS;
-		});
+	}
+
+	private static boolean isRetryableSqliteLock(DataAccessException exception) {
+		Throwable cause = exception.getMostSpecificCause();
+		if (cause instanceof SQLException sql) {
+			int code = sql.getErrorCode();
+			return code == 5 || code == 6;
+		}
+		return false;
 	}
 
 	@Override
