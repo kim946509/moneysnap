@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | 1. Today Snap 홈 읽기 기반 | 오늘의 Snap과 총 소비를 한눈에 본다 | 금액·카테고리·일별 합계 도메인 규칙 | Figma `9:2` 홈, fixture client, 로딩 상태 | 서버 단위 테스트, iOS 통합 테스트, 393x852 diff | complete (`WORK-010`) |
 | 2. 인증 기반 | 자신의 기록만 안전하게 다룬다 | Apple credential 검증, rotating session, 로그아웃·탈퇴 | 로그인·Keychain 세션 복구·계정 관리 | 권한·token reuse·탈퇴 테스트, Home/My visual evidence | complete (`WORK-013`~`WORK-018`), native 59 tests·Home/My visual 통과 |
-| 3. 개인 Snap 저장 | 사진 없이도 카테고리·금액을 저장한다 | idempotent record command, Flyway schema, Clock·tzdb localDay | no-photo 단계 입력, 저장 완료·Home 즉시 반영 | 금액·localDay·멱등성 Testcontainers 통합 테스트, 앱 흐름 테스트, 승인된 component diff | policy fixed (`WORK-019`), depends on 인증·하네스 (`WORK-017`·`WORK-018`·`WORK-020`·`WORK-022`) |
+| 3. 개인 Snap 저장 | 사진 없이도 카테고리·금액을 저장한다 | idempotent record command, Flyway schema, Clock·tzdb localDay | no-photo 단계 입력, 저장 완료·Home 즉시 반영 | 금액·localDay·멱등성 SQLite 통합 테스트, 앱 흐름 테스트, 승인된 component diff | policy fixed (`WORK-019`), depends on 인증·하네스 (`WORK-017`·`WORK-018`·`WORK-020`·`WORK-022`) |
 | 4. 오늘 기록 조회 | 저장한 Snap이 Home에 반영된다 | owner/date 조회 API | URLSession adapter, 새로고침·오류·빈 상태 | 서버 API 통합 테스트, 실제 contract 통합 테스트 | depends on 3 |
 | 5. 수정·삭제 | 내 기록을 고치거나 지운다 | revise/delete command와 소유권 검사 | 상세, 수정, 삭제 확인 | 권한·멱등성·회귀 테스트, 화면 diff | depends on 4 |
 | 6. 사진 업로드 | 선택 사진을 private 저장소에 안전하게 보관한다 | 10분 upload intent, 24h quota·7GB reservation, complete 검증·cleanup, bounded fallback | 카메라 1장·앨범 최대 3장, JPEG 1600px/2MiB/EXIF 제거, 사진별 순차 저장 | exact PUT held-out R2 contract, overflow·checksum·cleanup·권한 테스트 | policy fixed (`WORK-019`), depends on 2, 3 |

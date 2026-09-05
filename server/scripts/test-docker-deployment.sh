@@ -39,7 +39,7 @@ make_fixture() {
   printf 'image-archive' | gzip > "$fixture/image.tar.gz"
   (cd "$fixture" && sha256sum image.tar.gz > image.tar.gz.sha256)
   printf 'services: {}\n' > "$fixture/compose.yaml"
-  printf 'NEON_RUNTIME_DATABASE_URL=jdbc:postgresql://example.invalid/db\n' > "$fixture/runtime.env"
+  printf 'APPLE_AUTH_ENABLED=false\n' > "$fixture/runtime.env"
 }
 
 healthy_fixture="$test_root/healthy"
@@ -82,6 +82,6 @@ fi
 
 grep -q 'compose .* image=moneysnap-server:previous' "$docker_log"
 grep -q 'services: previous' "$rollback_fixture/install/compose.yaml"
-grep -q 'NEON_RUNTIME_DATABASE_URL=jdbc:postgresql://example.invalid/db' "$rollback_fixture/install/runtime.env"
+grep -q 'PREVIOUS_SECRET=preserved' "$rollback_fixture/install/runtime.env"
 [[ $(cat "$rollback_fixture/install/current-release") == previous-release ]]
 echo 'rollback after failed health gate: OK'

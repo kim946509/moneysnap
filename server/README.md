@@ -4,7 +4,7 @@ Java 21과 Spring Boot 4.1.0으로 만든 modular monolith API scaffold다.
 
 ## 실행
 
-개발 실행 전 `.env.example`의 key를 저장소 밖 환경변수로 주입한다. 기본 실행은 PostgreSQL 연결이 없으면 실패하며 로컬 H2로 자동 대체하지 않는다.
+개발 실행 전 `.env.example`의 key를 저장소 밖 환경변수로 주입한다. 기본 DB는 `./data/moneysnap.db` SQLite 파일이며 Neon/H2로 자동 대체하지 않는다.
 
 ```powershell
 .\gradlew.bat bootRun
@@ -21,16 +21,13 @@ Java 21과 Spring Boot 4.1.0으로 만든 modular monolith API scaffold다.
 
 production artifact 이름은 `build/libs/moneysnap-server.jar`로 고정한다.
 
-현재 bootstrap test는 외부 Neon이나 Docker를 사용하지 않는다. PostgreSQL constraint·Flyway·transaction이 필요한 feature integration test에서만 `TestcontainersConfiguration`의 PostgreSQL 18 container를 가져온다.
+통합 테스트는 임시 SQLite 파일을 사용하며 Docker Postgres와 Neon에 접속하지 않는다.
 
 ## 환경 계약
 
-- runtime: `NEON_RUNTIME_DATABASE_*`에 Neon pooled endpoint와 `moneysnap_app`
-- Flyway: 별도 `NEON_MIGRATION_DATABASE_*`에 Neon direct endpoint와 owner role
-- test: feature integration test에서만 PostgreSQL 18 Testcontainers
-- secret: `.env.*.local`, CI 또는 배포 secret에만 저장
-
-runtime 또는 migration 변수 하나라도 빠지면 production startup은 실패한다. Flyway가 runtime datasource로 묵시적으로 fallback하지 않도록 두 연결을 `application.properties`에서 각각 명시한다.
+- runtime/Flyway: `MONEYSNAP_SQLITE_URL`, 기본 `./data/moneysnap.db`
+- origin 배포: `/var/lib/moneysnap/moneysnap.db` (host `/opt/moneysnap/data`)
+- secret: `.env.*.local`, CI 또는 배포 secret에만 저장. DB 파일 자체는 볼륨이다.
 
 ## CI/CD
 

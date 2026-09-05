@@ -9,10 +9,13 @@ services:
       SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_SERVER_ADDRESS: 0.0.0.0
       MANAGEMENT_SERVER_PORT: "9091"
+      MONEYSNAP_SQLITE_URL: jdbc:sqlite:file:/var/lib/moneysnap/moneysnap.db?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
     ports:
       - "192.168.1.102:9090:8080"
     expose:
       - "9091"
+    volumes:
+      - ${MONEYSNAP_DATA_DIR:-/opt/moneysnap/data}:/var/lib/moneysnap
     networks:
       - monitoring
     read_only: true

@@ -9,6 +9,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.ansandy.moneysnap.shared.SqliteColumns;
 
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,10 +23,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -34,16 +32,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
 @AutoConfigureMockMvc
 @SpringBootTest
 class TodaySnapHttpIntegrationTests {
 
     private static final Instant NOW = Instant.parse("2026-08-13T15:30:00Z");
 
-    @Container
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-            DockerImageName.parse("postgres:18-alpine"));
 
     @Autowired
     private MockMvc mockMvc;
@@ -56,19 +50,13 @@ class TodaySnapHttpIntegrationTests {
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.flyway.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.flyway.user", POSTGRES::getUsername);
-        registry.add("spring.flyway.password", POSTGRES::getPassword);
+        SqliteTestDatabase.register(registry);
     }
 
     @BeforeEach
     void resetDatabase() {
         given(clock.instant()).willReturn(NOW);
-        jdbc.sql("TRUNCATE TABLE snap_delete_mutations, snap_revise_mutations, snap_record_mutations, snaps, "
-                + "identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE").update();
+        SqliteTestDatabase.clear(jdbc);
     }
 
     @Test
@@ -162,7 +150,7 @@ class TodaySnapHttpIntegrationTests {
     @Test
     void tiesEqualCreatedAtByDescendingSnapId() throws Exception {
         String accessToken = signIn("tie-owner");
-        UUID ownerId = jdbc.sql("SELECT id FROM users").query(UUID.class).single();
+        UUID ownerId = jdbc.sql("SELECT id FROM users").query(SqliteColumns::firstUuid).single();
         UUID smaller = UUID.fromString("00000000-0000-4000-8000-000000000001");
         UUID larger = UUID.fromString("ffffffff-ffff-4fff-8fff-ffffffffffff");
         insertSnap(smaller, ownerId, "food", 100);
@@ -178,13 +166,13 @@ class TodaySnapHttpIntegrationTests {
     private void insertSnap(UUID id, UUID ownerId, String category, long amountWon) {
         jdbc.sql("""
                 INSERT INTO snaps (id, owner_id, category, amount_won, local_day, created_at, updated_at, version)
-                VALUES (:id, :ownerId, :category, :amountWon, DATE '2026-08-14', :createdAt, :createdAt, 1)
+                VALUES (:id, :ownerId, :category, :amountWon, '2026-08-14', :createdAt, :createdAt, 1)
                 """)
                 .param("id", id)
                 .param("ownerId", ownerId)
                 .param("category", category)
                 .param("amountWon", amountWon)
-                .param("createdAt", Timestamp.from(NOW))
+                .param("createdAt", SqliteColumns.instant(NOW))
                 .update();
     }
 
@@ -193,11 +181,11 @@ class TodaySnapHttpIntegrationTests {
         UUID userId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
         jdbc.sql("INSERT INTO users (id, created_at) VALUES (:id, :now)")
-                .param("id", userId).param("now", Timestamp.from(NOW)).update();
+                .param("id", userId).param("now", SqliteColumns.instant(NOW)).update();
         jdbc.sql("INSERT INTO apple_identities (user_id, apple_subject, created_at, updated_at) "
                         + "VALUES (:userId, :subject, :now, :now)")
                 .param("userId", userId).param("subject", subject)
-                .param("now", Timestamp.from(NOW)).update();
+                .param("now", SqliteColumns.instant(NOW)).update();
         jdbc.sql("""
                 INSERT INTO identity_sessions (
                     id, user_id, access_token_hash, access_expires_at,
@@ -205,9 +193,9 @@ class TodaySnapHttpIntegrationTests {
                 ) VALUES (:id, :userId, :hash, :accessExpiresAt, :refreshExpiresAt, :now, :now)
                 """)
                 .param("id", sessionId).param("userId", userId).param("hash", sha256(accessToken))
-                .param("accessExpiresAt", Timestamp.from(NOW.plusSeconds(30 * 86_400)))
-                .param("refreshExpiresAt", Timestamp.from(NOW.plusSeconds(86_400)))
-                .param("now", Timestamp.from(NOW)).update();
+                .param("accessExpiresAt", SqliteColumns.instant(NOW.plusSeconds(30 * 86_400)))
+                .param("refreshExpiresAt", SqliteColumns.instant(NOW.plusSeconds(86_400)))
+                .param("now", SqliteColumns.instant(NOW)).update();
         return accessToken;
     }
 

@@ -16,6 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.ansandy.moneysnap.shared.SqliteColumns;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -81,7 +83,7 @@ final class GroupSharing {
                     UPDATE group_invites SET revoked_at = :now
                     WHERE group_id = :groupId AND revoked_at IS NULL
                     """)
-                    .param("now", Timestamp.from(now))
+                    .param("now", SqliteColumns.instant(now))
                     .param("groupId", groupId)
                     .update();
         });
@@ -108,7 +110,7 @@ final class GroupSharing {
                 """)
                 .param("groupId", groupId)
                 .query((row, rowNumber) -> new GroupMember(
-                        row.getObject("user_id", UUID.class),
+                        SqliteColumns.uuid(row, "user_id"),
                         row.getString("display_name"),
                         avatarFor(row.getString("display_name")),
                         row.getString("role")))
@@ -206,7 +208,7 @@ final class GroupSharing {
                 .param("ownerId", ownerId)
                 .param("mutationId", command.clientMutationId())
                 .param("fingerprint", fingerprint)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         if (claimed == 0) {
             CreateMutation existing = findCreateMutation(ownerId, command.clientMutationId()).orElseThrow();
@@ -224,7 +226,7 @@ final class GroupSharing {
                 .param("ownerId", ownerId)
                 .param("name", command.name().value())
                 .param("visible", command.amountVisible())
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         jdbc.sql("""
                 INSERT INTO group_memberships (group_id, user_id, role, created_at)
@@ -232,7 +234,7 @@ final class GroupSharing {
                 """)
                 .param("groupId", groupId)
                 .param("userId", ownerId)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         jdbc.sql("""
                 UPDATE group_create_mutations SET group_id = :groupId
@@ -259,7 +261,7 @@ final class GroupSharing {
                 .param("mutationId", command.clientMutationId())
                 .param("fingerprint", fingerprint)
                 .param("groupId", groupId)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         if (claimed == 0) {
             DeleteMutation existing = findDeleteMutation(actorId, command.clientMutationId()).orElseThrow();
@@ -290,7 +292,7 @@ final class GroupSharing {
                 .param("ownerId", actorId)
                 .param("mutationId", command.clientMutationId())
                 .param("fingerprint", fingerprint)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         if (claimed == 0) {
             ShareMutation existing = findShareMutation(actorId, command.clientMutationId()).orElseThrow();
@@ -314,7 +316,7 @@ final class GroupSharing {
                 """)
                 .param("snapId", command.snapId())
                 .param("groupId", command.groupId())
-                .query(UUID.class)
+                .query(SqliteColumns::firstUuid)
                 .optional()
                 .orElse(null);
         UUID shareId = existingShare == null ? UUID.randomUUID() : existingShare;
@@ -326,7 +328,7 @@ final class GroupSharing {
                     .param("id", shareId)
                     .param("snapId", command.snapId())
                     .param("groupId", command.groupId())
-                    .param("sharedAt", Timestamp.from(now))
+                    .param("sharedAt", SqliteColumns.instant(now))
                     .update();
         }
         jdbc.sql("""
@@ -346,10 +348,10 @@ final class GroupSharing {
                 """)
                 .param("id", shareId)
                 .query((row, rowNumber) -> new ShareRecord(
-                        row.getObject("id", UUID.class),
-                        row.getObject("snap_id", UUID.class),
-                        row.getObject("group_id", UUID.class),
-                        row.getTimestamp("shared_at").toInstant()))
+                        SqliteColumns.uuid(row, "id"),
+                        SqliteColumns.uuid(row, "snap_id"),
+                        SqliteColumns.uuid(row, "group_id"),
+                        SqliteColumns.instant(row, "shared_at")))
                 .optional();
     }
 
@@ -358,13 +360,13 @@ final class GroupSharing {
                 SELECT request_fingerprint, share_id
                 FROM snap_share_mutations
                 WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                FOR UPDATE
+
                 """)
                 .param("ownerId", ownerId)
                 .param("mutationId", mutationId)
                 .query((row, rowNumber) -> new ShareMutation(
                         row.getString("request_fingerprint"),
-                        row.getObject("share_id", UUID.class)))
+                        SqliteColumns.uuid(row, "share_id")))
                 .optional();
     }
 
@@ -375,7 +377,7 @@ final class GroupSharing {
                 UPDATE group_invites SET revoked_at = :now
                 WHERE group_id = :groupId AND revoked_at IS NULL
                 """)
-                .param("now", Timestamp.from(now))
+                .param("now", SqliteColumns.instant(now))
                 .param("groupId", groupId)
                 .update();
         byte[] secret = new byte[16];
@@ -390,8 +392,8 @@ final class GroupSharing {
                 .param("id", inviteId)
                 .param("groupId", groupId)
                 .param("hash", sha256(raw))
-                .param("issuedAt", Timestamp.from(now))
-                .param("expiresAt", Timestamp.from(expiresAt))
+                .param("issuedAt", SqliteColumns.instant(now))
+                .param("expiresAt", SqliteColumns.instant(expiresAt))
                 .update();
         return new IssuedInvite(raw, expiresAt);
     }
@@ -412,20 +414,19 @@ final class GroupSharing {
                 .param("ownerId", actorId)
                 .param("mutationId", clientMutationId)
                 .param("fingerprint", fingerprint)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         if (claimed == 0) {
             JoinMutation existing = jdbc.sql("""
                     SELECT request_fingerprint, group_id
                     FROM group_join_mutations
                     WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                    FOR UPDATE
                     """)
                     .param("ownerId", actorId)
                     .param("mutationId", clientMutationId)
                     .query((row, rowNumber) -> new JoinMutation(
                             row.getString("request_fingerprint"),
-                            row.getObject("group_id", UUID.class)))
+                            SqliteColumns.uuid(row, "group_id")))
                     .optional()
                     .orElseThrow();
             if (!existing.fingerprint().equals(fingerprint)) {
@@ -459,7 +460,7 @@ final class GroupSharing {
                 """)
                 .param("groupId", invite.groupId())
                 .param("userId", actorId)
-                .param("createdAt", Timestamp.from(now))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         jdbc.sql("""
                 UPDATE group_join_mutations SET group_id = :groupId
@@ -483,11 +484,11 @@ final class GroupSharing {
                 WHERE token_hash = :hash AND revoked_at IS NULL AND expires_at > :now
                 """)
                 .param("hash", sha256(rawCode))
-                .param("now", Timestamp.from(now))
+                .param("now", SqliteColumns.instant(now))
                 .query((row, rowNumber) -> new InviteRow(
-                        row.getObject("id", UUID.class),
-                        row.getObject("group_id", UUID.class),
-                        row.getTimestamp("expires_at").toInstant()))
+                        SqliteColumns.uuid(row, "id"),
+                        SqliteColumns.uuid(row, "group_id"),
+                        SqliteColumns.instant(row, "expires_at")))
                 .optional();
     }
 
@@ -508,7 +509,7 @@ final class GroupSharing {
                 """)
                 .param("groupId", groupId)
                 .query((row, rowNumber) -> new GroupMember(
-                        row.getObject("user_id", UUID.class),
+                        SqliteColumns.uuid(row, "user_id"),
                         row.getString("display_name"),
                         avatarFor(row.getString("display_name")),
                         row.getString("role")))
@@ -523,7 +524,7 @@ final class GroupSharing {
                     """)
                     .param("groupId", groupId)
                     .param("ownerId", member.userId())
-                    .param("day", Date.valueOf(day))
+                    .param("day", day.toString())
                     .query(Integer.class)
                     .single();
             Long total = jdbc.sql("""
@@ -534,7 +535,7 @@ final class GroupSharing {
                     """)
                     .param("groupId", groupId)
                     .param("ownerId", member.userId())
-                    .param("day", Date.valueOf(day))
+                    .param("day", day.toString())
                     .query(Long.class)
                     .single();
             RepresentativeSnap representative = jdbc.sql("""
@@ -547,13 +548,13 @@ final class GroupSharing {
                     """)
                     .param("groupId", groupId)
                     .param("ownerId", member.userId())
-                    .param("day", Date.valueOf(day))
+                    .param("day", day.toString())
                     .query((row, rowNumber) -> new RepresentativeSnap(
-                            row.getObject("id", UUID.class),
+                            SqliteColumns.uuid(row, "id"),
                             row.getString("category"),
                             row.getLong("amount_won"),
-                            row.getTimestamp("shared_at").toInstant(),
-                            row.getObject("image_id", UUID.class)))
+                            SqliteColumns.instant(row, "shared_at"),
+                            SqliteColumns.uuid(row, "image_id")))
                     .optional()
                     .orElse(null);
             rows.add(new MemberTodayRow(
@@ -613,13 +614,13 @@ final class GroupSharing {
                 SELECT request_fingerprint, group_id
                 FROM group_create_mutations
                 WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                FOR UPDATE
+
                 """)
                 .param("ownerId", ownerId)
                 .param("mutationId", mutationId)
                 .query((row, rowNumber) -> new CreateMutation(
                         row.getString("request_fingerprint"),
-                        row.getObject("group_id", UUID.class)))
+                        SqliteColumns.uuid(row, "group_id")))
                 .optional();
     }
 
@@ -628,23 +629,23 @@ final class GroupSharing {
                 SELECT request_fingerprint, group_id
                 FROM group_delete_mutations
                 WHERE owner_id = :ownerId AND client_mutation_id = :mutationId
-                FOR UPDATE
+
                 """)
                 .param("ownerId", ownerId)
                 .param("mutationId", mutationId)
                 .query((row, rowNumber) -> new DeleteMutation(
                         row.getString("request_fingerprint"),
-                        row.getObject("group_id", UUID.class)))
+                        SqliteColumns.uuid(row, "group_id")))
                 .optional();
     }
 
     private GroupRecord mapGroup(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
         return new GroupRecord(
-                row.getObject("id", UUID.class),
+                SqliteColumns.uuid(row, "id"),
                 row.getString("name"),
                 row.getBoolean("amount_visible"),
                 row.getString("role"),
-                row.getTimestamp("created_at").toInstant());
+                SqliteColumns.instant(row, "created_at"));
     }
 
     private record CreateMutation(String fingerprint, UUID groupId) {

@@ -24,21 +24,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers
 class AppleAccountEventServiceIntegrationTests {
 
 	private static final Instant NOW = Instant.parse("2026-08-10T14:00:00Z");
+	private static final String SQLITE_URL = SqliteTestDatabase.fileUrl();
 
-	@Container
-	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-			DockerImageName.parse("postgres:18-alpine"));
 
 	private static JdbcClient jdbc;
 	private IdentitySessionService sessions;
@@ -53,8 +47,7 @@ class AppleAccountEventServiceIntegrationTests {
 
 	@BeforeEach
 	void setUp() {
-		jdbc.sql("TRUNCATE TABLE apple_account_event_receipts, identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE")
-				.update();
+		SqliteTestDatabase.clear(jdbc);
 		DataSource dataSource = dataSource();
 		JdbcIdentitySessionStore store = new JdbcIdentitySessionStore(
 				JdbcClient.create(dataSource),
@@ -202,10 +195,7 @@ class AppleAccountEventServiceIntegrationTests {
 	}
 
 	private static DataSource dataSource() {
-		return new DriverManagerDataSource(
-				POSTGRES.getJdbcUrl(),
-				POSTGRES.getUsername(),
-				POSTGRES.getPassword());
+		return SqliteTestDatabase.dataSource(SQLITE_URL);
 	}
 
 	private static Clock fixedClock() {

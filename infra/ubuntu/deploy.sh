@@ -65,6 +65,13 @@ printf '# compose interpolation only; runtime secrets stay in runtime.env\n' > "
 chmod 600 "$compose_interpolation_env"
 gzip --decompress --stdout "$archive_dir/$archive_name" | "$docker_bin" load >/dev/null
 
+data_dir=${MONEYSNAP_DATA_DIR:-$install_root/data}
+install -d -m 700 "$data_dir"
+container_ids=$("$docker_bin" run --rm --entrypoint /bin/sh "$image" -c 'printf %s:%s "$(id -u)" "$(id -g)"' 2>/dev/null || true)
+if [[ "$container_ids" =~ ^[0-9]+:[0-9]+$ ]]; then
+  chown "$container_ids" "$data_dir" || true
+fi
+
 deploy_image() {
   local candidate_image=$1
   MONEYSNAP_IMAGE="$candidate_image" \

@@ -2,7 +2,9 @@ FROM eclipse-temurin:21-jre-alpine@sha256:3f08b13888f595cc49edabea7250ba69499ba2
 
 RUN apk add --no-cache curl \
     && addgroup -S moneysnap \
-    && adduser -S -G moneysnap -h /app moneysnap
+    && adduser -S -G moneysnap -h /app moneysnap \
+    && mkdir -p /var/lib/moneysnap \
+    && chown moneysnap:moneysnap /var/lib/moneysnap
 
 WORKDIR /app
 COPY --chown=moneysnap:moneysnap build/libs/moneysnap-server.jar /app/app.jar

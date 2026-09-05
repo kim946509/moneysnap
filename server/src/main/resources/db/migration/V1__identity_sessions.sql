@@ -1,42 +1,42 @@
 CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    created_at TIMESTAMPTZ NOT NULL
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL
 );
 
 CREATE TABLE apple_identities (
-    user_id UUID PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
-    apple_subject VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL
+    user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    apple_subject TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 
 CREATE TABLE identity_sessions (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    access_token_hash CHAR(64) NOT NULL UNIQUE,
-    access_expires_at TIMESTAMPTZ NOT NULL,
-    refresh_expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    last_used_at TIMESTAMPTZ NOT NULL,
-    revoked_at TIMESTAMPTZ,
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    access_token_hash TEXT NOT NULL UNIQUE,
+    access_expires_at TEXT NOT NULL,
+    refresh_expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    last_used_at TEXT NOT NULL,
+    revoked_at TEXT,
     CONSTRAINT identity_sessions_access_hash_lower_hex
-        CHECK (access_token_hash ~ '^[0-9a-f]{64}$')
+        CHECK (length(access_token_hash) = 64)
 );
 
 CREATE INDEX identity_sessions_user_id_idx ON identity_sessions (user_id);
 
 CREATE TABLE identity_refresh_tokens (
-    id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES identity_sessions (id) ON DELETE CASCADE,
-    token_hash CHAR(64) NOT NULL UNIQUE,
-    status VARCHAR(16) NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    used_at TIMESTAMPTZ,
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES identity_sessions (id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    used_at TEXT,
     CONSTRAINT identity_refresh_tokens_status
         CHECK (status IN ('ACTIVE', 'USED')),
     CONSTRAINT identity_refresh_tokens_hash_lower_hex
-        CHECK (token_hash ~ '^[0-9a-f]{64}$'),
+        CHECK (length(token_hash) = 64),
     CONSTRAINT identity_refresh_tokens_used_at
         CHECK ((status = 'ACTIVE' AND used_at IS NULL) OR (status = 'USED' AND used_at IS NOT NULL))
 );

@@ -19,13 +19,7 @@ import static org.hamcrest.Matchers.containsString;
 @SpringBootTest(properties = {
 		"spring.autoconfigure.exclude="
 				+ "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
-				+ "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration",
-		"NEON_RUNTIME_DATABASE_URL=jdbc:postgresql://runtime.invalid/moneysnap",
-		"NEON_RUNTIME_DATABASE_USERNAME=runtime-test",
-		"NEON_RUNTIME_DATABASE_PASSWORD=runtime-test-password",
-		"NEON_MIGRATION_DATABASE_URL=jdbc:postgresql://migration.invalid/moneysnap",
-		"NEON_MIGRATION_DATABASE_USERNAME=migration-test",
-		"NEON_MIGRATION_DATABASE_PASSWORD=migration-test-password"
+				+ "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
 class MoneySnapServerApplicationTests {
 

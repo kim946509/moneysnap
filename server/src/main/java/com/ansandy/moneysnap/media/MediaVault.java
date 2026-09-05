@@ -1,14 +1,16 @@
 package com.ansandy.moneysnap.media;
 
 import java.security.MessageDigest;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
+import com.ansandy.moneysnap.shared.SqliteColumns;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -100,7 +102,7 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
         UUID imageId = jdbc.sql("SELECT image_id FROM snaps WHERE id = :id AND owner_id = :ownerId")
                 .param("id", snapId)
                 .param("ownerId", ownerId)
-                .query(UUID.class)
+                .query(SqliteColumns::firstUuid)
                 .optional()
                 .orElse(null);
         if (imageId == null) {
@@ -119,17 +121,30 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
     @Override
     public void transferToTombstones(UUID userId) {
         Instant now = clock.instant();
-        jdbc.sql("""
-                INSERT INTO media_cleanup_tombstones (
-                    id, object_key, declared_bytes, status, attempt_count, created_at
-                )
-                SELECT gen_random_uuid(), object_key, declared_bytes, 'PENDING', 0, :now
-                FROM media_objects
-                WHERE owner_id = :userId
-                """)
-                .param("now", Timestamp.from(now))
-                .param("userId", userId)
-                .update();
+        transactions.executeWithoutResult(status -> {
+            List<TombstoneSource> sources = jdbc.sql("""
+                    SELECT object_key, declared_bytes
+                    FROM media_objects
+                    WHERE owner_id = :userId
+                    """)
+                    .param("userId", userId)
+                    .query((row, rowNumber) -> new TombstoneSource(
+                            row.getString("object_key"),
+                            row.getInt("declared_bytes")))
+                    .list();
+            for (TombstoneSource source : sources) {
+                jdbc.sql("""
+                        INSERT INTO media_cleanup_tombstones (
+                            id, object_key, declared_bytes, status, attempt_count, created_at
+                        ) VALUES (:id, :objectKey, :declaredBytes, 'PENDING', 0, :now)
+                        """)
+                        .param("id", UUID.randomUUID())
+                        .param("objectKey", source.objectKey())
+                        .param("declaredBytes", source.declaredBytes())
+                        .param("now", SqliteColumns.instant(now))
+                        .update();
+            }
+        });
     }
 
     void claimForSnap(UUID ownerId, UUID mediaId, UUID snapId) {
@@ -142,7 +157,7 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
                     """)
                     .param("id", mediaId)
                     .param("ownerId", ownerId)
-                    .param("now", Timestamp.from(clock.instant()))
+                    .param("now", SqliteColumns.instant(clock.instant()))
                     .update();
             if (updated != 1) {
                 throw new MediaNotAccessibleException();
@@ -166,8 +181,8 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
                   )
                 """)
                 .param("ownerId", ownerId)
-                .param("windowStart", Timestamp.from(windowStart))
-                .param("now", Timestamp.from(now))
+                .param("windowStart", SqliteColumns.instant(windowStart))
+                .param("now", SqliteColumns.instant(now))
                 .query(Integer.class)
                 .single();
         if (rolling >= ROLLING_LIMIT) {
@@ -178,7 +193,7 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
                 WHERE status IN ('PENDING', 'ACTIVE_UNLINKED', 'LINKED')
                   AND (status <> 'PENDING' OR expires_at > :now)
                 """)
-                .param("now", Timestamp.from(now))
+                .param("now", SqliteColumns.instant(now))
                 .query(Long.class)
                 .single();
         if (used + declaredBytes > STORAGE_LIMIT) {
@@ -201,8 +216,8 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
                 .param("objectKey", key)
                 .param("bytes", declaredBytes)
                 .param("checksum", checksum)
-                .param("expiresAt", Timestamp.from(expiresAt))
-                .param("createdAt", Timestamp.from(now))
+                .param("expiresAt", SqliteColumns.instant(expiresAt))
+                .param("createdAt", SqliteColumns.instant(now))
                 .update();
         return new MediaIntent(id, "bounded-stream", "/api/v1/media/" + id + "/upload", expiresAt);
     }
@@ -230,8 +245,8 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
                 SET status = 'ACTIVE_UNLINKED', completed_at = :now, orphan_expires_at = :orphan
                 WHERE id = :id
                 """)
-                .param("now", Timestamp.from(now))
-                .param("orphan", Timestamp.from(now.plus(Duration.ofHours(24))))
+                .param("now", SqliteColumns.instant(now))
+                .param("orphan", SqliteColumns.instant(now.plus(Duration.ofHours(24))))
                 .param("id", mediaId)
                 .update();
         return new MediaRef(mediaId);
@@ -271,13 +286,13 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
 
     private MediaRow mapRow(java.sql.ResultSet row, int rowNumber) throws java.sql.SQLException {
         return new MediaRow(
-                row.getObject("id", UUID.class),
-                row.getObject("owner_id", UUID.class),
+                SqliteColumns.uuid(row, "id"),
+                SqliteColumns.uuid(row, "owner_id"),
                 row.getString("object_key"),
                 row.getInt("declared_bytes"),
                 row.getString("checksum_sha256"),
                 row.getString("status"),
-                row.getTimestamp("expires_at") == null ? Instant.MAX : row.getTimestamp("expires_at").toInstant());
+                SqliteColumns.instant(row, "expires_at") == null ? Instant.MAX : SqliteColumns.instant(row, "expires_at"));
     }
 
     private void markFailed(UUID mediaId) {
@@ -303,6 +318,9 @@ final class MediaVault implements com.ansandy.moneysnap.shared.AccountMediaClean
             String checksum,
             String status,
             Instant expiresAt) {
+    }
+
+    private record TombstoneSource(String objectKey, int declaredBytes) {
     }
 }
 

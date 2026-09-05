@@ -86,13 +86,10 @@ Require-Match $workflow 'ssh\s+' 'Ubuntu remote deployment command'
 if ($workflow -match 'self-hosted|Windows|moneysnap-dev') {
     throw 'Server workflow still contains the retired Windows self-hosted deployment path'
 }
+if ($workflow -match 'NEON_') {
+    throw 'Server workflow still injects retired Neon secrets'
+}
 foreach ($secretName in @(
-    'NEON_RUNTIME_DATABASE_URL',
-    'NEON_RUNTIME_DATABASE_USERNAME',
-    'NEON_RUNTIME_DATABASE_PASSWORD',
-    'NEON_MIGRATION_DATABASE_URL',
-    'NEON_MIGRATION_DATABASE_USERNAME',
-    'NEON_MIGRATION_DATABASE_PASSWORD',
     'APPLE_AUTH_ENABLED',
     'APPLE_CLIENT_ID',
     'APPLE_TEAM_ID',
@@ -124,7 +121,6 @@ Require-Match -Content $workflow -Pattern 'xEF\\xBB\\xBF' -Description 'UTF-8 BO
 Require-Match -Content $workflow -Pattern 'ssh-keygen -y -f "\$HOME/.ssh/moneysnap-deploy"' -Description 'loadable SSH private key check'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{APPLE_PRIVATE_KEY_P8//\$'\\r'/\}" -Description 'Apple PEM carriage-return strip'
 Require-Match -Content $workflow -Pattern "apple_private_key=\$\{apple_private_key//\$'\\n'/\\\\n\}" -Description 'Apple PEM literal newline flatten'
-Require-Match -Content $workflow -Pattern 'normalize_jdbc' -Description 'Neon URL JDBC prefix normalization'
 foreach ($secretName in @(
     'SERVER_HOST',
     'SERVER_SSH_PORT',
@@ -206,6 +202,8 @@ Require-Match $compose 'name:\s*main' 'existing monitoring network attachment'
 Require-Match $compose 'MANAGEMENT_SERVER_PORT:\s*"9091"' 'container-only management port'
 Require-Match $compose 'restart:\s*unless-stopped' 'restart policy'
 Require-Match $compose 'opt/moneysnap/runtime.env' 'runtime secret file is not compose interpolation .env'
+Require-Match $compose 'MONEYSNAP_SQLITE_URL:\s*jdbc:sqlite:file:/var/lib/moneysnap/moneysnap.db' 'origin SQLite JDBC URL'
+Require-Match $compose 'opt/moneysnap/data\}:/var/lib/moneysnap' 'writable SQLite host volume'
 
 $deploy = Get-Content -LiteralPath $deployPath -Raw
 Require-Match $deploy 'sha256sum\s+--check' 'image archive checksum verification'

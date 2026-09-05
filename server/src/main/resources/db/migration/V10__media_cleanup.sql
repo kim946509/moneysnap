@@ -1,14 +1,14 @@
 ALTER TABLE media_objects ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE media_objects ADD COLUMN next_attempt_at TIMESTAMPTZ;
+ALTER TABLE media_objects ADD COLUMN next_attempt_at TEXT;
 
 CREATE TABLE media_cleanup_tombstones (
-    id UUID PRIMARY KEY,
-    object_key VARCHAR(256) NOT NULL,
+    id TEXT PRIMARY KEY,
+    object_key TEXT NOT NULL,
     declared_bytes INTEGER NOT NULL,
-    status VARCHAR(32) NOT NULL,
+    status TEXT NOT NULL,
     attempt_count INTEGER NOT NULL DEFAULT 0,
-    next_attempt_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL,
+    next_attempt_at TEXT,
+    created_at TEXT NOT NULL,
     CONSTRAINT media_cleanup_tombstones_status CHECK (
         status IN ('PENDING', 'CLAIMED', 'DONE', 'TERMINAL')
     )

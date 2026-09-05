@@ -77,8 +77,11 @@ env/
 
 # Local databases and secrets
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
+server/data/
 *.pem
 *.key
 *.cert

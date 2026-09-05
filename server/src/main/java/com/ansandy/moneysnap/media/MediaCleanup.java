@@ -1,12 +1,13 @@
 package com.ansandy.moneysnap.media;
 
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
+import com.ansandy.moneysnap.shared.SqliteColumns;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -46,8 +47,8 @@ final class MediaCleanup {
                 )
                 AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
                 """)
-                .param("now", Timestamp.from(now))
-                .query(UUID.class)
+                .param("now", SqliteColumns.instant(now))
+                .query(SqliteColumns::firstUuid)
                 .list();
         for (UUID id : eligible) {
             jdbc.sql("""
@@ -56,7 +57,7 @@ final class MediaCleanup {
                     WHERE id = :id
                       AND status IN ('PENDING', 'FAILED', 'ACTIVE_UNLINKED')
                     """)
-                    .param("next", Timestamp.from(now.plus(Duration.ofMinutes(1))))
+                    .param("next", SqliteColumns.instant(now.plus(Duration.ofMinutes(1))))
                     .param("id", id)
                     .update();
         }
@@ -69,7 +70,7 @@ final class MediaCleanup {
                 WHERE status = 'CLEANUP_CLAIMED'
                 """)
                 .query((row, rowNumber) -> new CleanupTarget(
-                        row.getObject("id", UUID.class),
+                        SqliteColumns.uuid(row, "id"),
                         row.getString("object_key"),
                         row.getInt("attempt_count"),
                         false))
@@ -87,7 +88,7 @@ final class MediaCleanup {
                         .update();
             } else {
                 jdbc.sql("UPDATE media_objects SET next_attempt_at = :next WHERE id = :id")
-                        .param("next", Timestamp.from(now.plus(Duration.ofMinutes(1))))
+                        .param("next", SqliteColumns.instant(now.plus(Duration.ofMinutes(1))))
                         .param("id", target.id())
                         .update();
             }
@@ -102,9 +103,9 @@ final class MediaCleanup {
                 WHERE status IN ('PENDING', 'CLAIMED')
                   AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
                 """)
-                .param("now", Timestamp.from(now))
+                .param("now", SqliteColumns.instant(now))
                 .query((row, rowNumber) -> new CleanupTarget(
-                        row.getObject("id", UUID.class),
+                        SqliteColumns.uuid(row, "id"),
                         row.getString("object_key"),
                         row.getInt("attempt_count"),
                         true))
@@ -129,7 +130,7 @@ final class MediaCleanup {
                         .update();
             } else {
                 jdbc.sql("UPDATE media_cleanup_tombstones SET next_attempt_at = :next WHERE id = :id")
-                        .param("next", Timestamp.from(now.plus(Duration.ofMinutes(1))))
+                        .param("next", SqliteColumns.instant(now.plus(Duration.ofMinutes(1))))
                         .param("id", target.id())
                         .update();
             }

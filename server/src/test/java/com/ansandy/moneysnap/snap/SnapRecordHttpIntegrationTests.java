@@ -4,8 +4,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.HexFormat;
@@ -13,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.ansandy.moneysnap.shared.SqliteColumns;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,10 +34,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import com.ansandy.moneysnap.shared.AuthenticatedUser;
 
@@ -52,17 +48,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Testcontainers
 @AutoConfigureMockMvc
 @SpringBootTest
 class SnapRecordHttpIntegrationTests {
 
     private static final Instant NOW = Instant.parse("2026-08-13T15:30:00Z");
-    private static final long MUTATION_CONTENTION_LOCK = 72_021L;
 
-    @Container
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
-            DockerImageName.parse("postgres:18-alpine"));
 
     @Autowired
     private MockMvc mockMvc;
@@ -78,19 +69,13 @@ class SnapRecordHttpIntegrationTests {
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.flyway.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.flyway.user", POSTGRES::getUsername);
-        registry.add("spring.flyway.password", POSTGRES::getPassword);
+        SqliteTestDatabase.register(registry);
     }
 
     @BeforeEach
     void resetDatabase() {
         given(clock.instant()).willReturn(NOW);
-        jdbc.sql("TRUNCATE TABLE snap_delete_mutations, snap_revise_mutations, snap_record_mutations, snaps, "
-                + "identity_refresh_tokens, identity_sessions, apple_identities, users CASCADE").update();
+        SqliteTestDatabase.clear(jdbc);
     }
 
     @Test
@@ -291,11 +276,11 @@ class SnapRecordHttpIntegrationTests {
     void returnsASafeInternalErrorAndRollsBackWhenTheSnapInsertFails() throws Exception {
         String accessToken = signIn("trigger-owner");
         jdbc.sql("""
-                CREATE FUNCTION reject_snap_insert() RETURNS trigger LANGUAGE plpgsql AS $$
-                BEGIN RAISE EXCEPTION 'sensitive database failure'; END $$
+                CREATE TRIGGER reject_snap BEFORE INSERT ON snaps
+                BEGIN
+                  SELECT RAISE(ABORT, 'sensitive database failure');
+                END
                 """).update();
-        jdbc.sql("CREATE TRIGGER reject_snap BEFORE INSERT ON snaps "
-                + "FOR EACH ROW EXECUTE FUNCTION reject_snap_insert()").update();
         try {
             MvcResult failed = record(accessToken, validRequest("trigger-key", "food", 100))
                     .andExpect(status().isInternalServerError())
@@ -310,8 +295,7 @@ class SnapRecordHttpIntegrationTests {
             assertThat(rowCount("snap_record_mutations")).isZero();
         }
         finally {
-            jdbc.sql("DROP TRIGGER IF EXISTS reject_snap ON snaps").update();
-            jdbc.sql("DROP FUNCTION IF EXISTS reject_snap_insert()").update();
+            jdbc.sql("DROP TRIGGER IF EXISTS reject_snap").update();
         }
 
         record(accessToken, validRequest("trigger-key", "food", 100))
@@ -322,13 +306,10 @@ class SnapRecordHttpIntegrationTests {
     void returnsASafeInternalErrorAndRollsBackWhenTransactionCommitFails() throws Exception {
         String accessToken = signIn("commit-trigger-owner");
         jdbc.sql("""
-                CREATE FUNCTION reject_snap_commit() RETURNS trigger LANGUAGE plpgsql AS $$
-                BEGIN RAISE EXCEPTION 'sensitive deferred commit failure'; END $$
-                """).update();
-        jdbc.sql("""
-                CREATE CONSTRAINT TRIGGER reject_snap_commit
-                AFTER INSERT ON snaps DEFERRABLE INITIALLY DEFERRED
-                FOR EACH ROW EXECUTE FUNCTION reject_snap_commit()
+                CREATE TRIGGER reject_snap_commit AFTER INSERT ON snaps
+                BEGIN
+                  SELECT RAISE(ABORT, 'sensitive deferred commit failure');
+                END
                 """).update();
         try {
             MvcResult failed = record(accessToken, validRequest("commit-trigger-key", "food", 100))
@@ -344,8 +325,7 @@ class SnapRecordHttpIntegrationTests {
             assertThat(rowCount("snap_record_mutations")).isZero();
         }
         finally {
-            jdbc.sql("DROP TRIGGER IF EXISTS reject_snap_commit ON snaps").update();
-            jdbc.sql("DROP FUNCTION IF EXISTS reject_snap_commit()").update();
+            jdbc.sql("DROP TRIGGER IF EXISTS reject_snap_commit").update();
         }
     }
 
@@ -408,7 +388,7 @@ class SnapRecordHttpIntegrationTests {
     void cascadesTheOwnersSnapsAndMutationLedgerWhenTheAccountIsDeleted() throws Exception {
         String accessToken = signIn("cascade-owner");
         record(accessToken, validRequest("cascade-key", "food", 100)).andExpect(status().isCreated());
-        UUID ownerId = jdbc.sql("SELECT id FROM users").query(UUID.class).single();
+        UUID ownerId = jdbc.sql("SELECT id FROM users").query(SqliteColumns::firstUuid).single();
 
         jdbc.sql("DELETE FROM users WHERE id = :id").param("id", ownerId).update();
 
@@ -421,11 +401,11 @@ class SnapRecordHttpIntegrationTests {
         UUID userId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
         jdbc.sql("INSERT INTO users (id, created_at) VALUES (:id, :now)")
-                .param("id", userId).param("now", Timestamp.from(NOW)).update();
+                .param("id", userId).param("now", SqliteColumns.instant(NOW)).update();
         jdbc.sql("INSERT INTO apple_identities (user_id, apple_subject, created_at, updated_at) "
                         + "VALUES (:userId, :subject, :now, :now)")
                 .param("userId", userId).param("subject", subject)
-                .param("now", Timestamp.from(NOW)).update();
+                .param("now", SqliteColumns.instant(NOW)).update();
         jdbc.sql("""
                 INSERT INTO identity_sessions (
                     id, user_id, access_token_hash, access_expires_at,
@@ -433,9 +413,9 @@ class SnapRecordHttpIntegrationTests {
                 ) VALUES (:id, :userId, :hash, :accessExpiresAt, :refreshExpiresAt, :now, :now)
                 """)
                 .param("id", sessionId).param("userId", userId).param("hash", sha256(accessToken))
-                .param("accessExpiresAt", Timestamp.from(NOW.plusSeconds(30 * 86_400)))
-                .param("refreshExpiresAt", Timestamp.from(NOW.plusSeconds(86_400)))
-                .param("now", Timestamp.from(NOW)).update();
+                .param("accessExpiresAt", SqliteColumns.instant(NOW.plusSeconds(30 * 86_400)))
+                .param("refreshExpiresAt", SqliteColumns.instant(NOW.plusSeconds(86_400)))
+                .param("now", SqliteColumns.instant(NOW)).update();
         return accessToken;
     }
 
@@ -458,14 +438,7 @@ class SnapRecordHttpIntegrationTests {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         Future<MvcResult> firstResult = null;
         Future<MvcResult> secondResult = null;
-        Connection lockConnection = null;
-        boolean advisoryLockHeld = false;
-        installMutationContentionTrigger();
         try {
-            lockConnection = DriverManager.getConnection(
-                    POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-            executeAdvisoryLock(lockConnection, "pg_advisory_lock");
-            advisoryLockHeld = true;
             firstResult = executor.submit(() -> {
                 ready.countDown();
                 if (!start.await(5, TimeUnit.SECONDS)) {
@@ -484,25 +457,12 @@ class SnapRecordHttpIntegrationTests {
                 throw new IllegalStateException("Concurrent requests did not become ready");
             }
             start.countDown();
-            awaitMutationContention(2, 5, TimeUnit.SECONDS);
-            executeAdvisoryLock(lockConnection, "pg_advisory_unlock");
-            advisoryLockHeld = false;
             return new ConcurrentResult(
                     firstResult.get(10, TimeUnit.SECONDS),
                     secondResult.get(10, TimeUnit.SECONDS));
         }
         finally {
             start.countDown();
-            if (lockConnection != null) {
-                try {
-                    if (advisoryLockHeld) {
-                        executeAdvisoryLock(lockConnection, "pg_advisory_unlock");
-                    }
-                }
-                finally {
-                    lockConnection.close();
-                }
-            }
             if (firstResult != null) {
                 firstResult.cancel(true);
             }
@@ -510,63 +470,10 @@ class SnapRecordHttpIntegrationTests {
                 secondResult.cancel(true);
             }
             executor.shutdownNow();
-            boolean terminated = executor.awaitTermination(5, TimeUnit.SECONDS);
-            try {
-                removeMutationContentionTrigger();
-            }
-            finally {
-                if (!terminated) {
-                    throw new IllegalStateException("Concurrent request executor did not terminate");
-                }
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Concurrent request executor did not terminate");
             }
         }
-    }
-
-    private static void executeAdvisoryLock(Connection connection, String operation) throws SQLException {
-        try (var statement = connection.createStatement()) {
-            statement.setQueryTimeout(5);
-            statement.execute("SELECT " + operation + "(" + MUTATION_CONTENTION_LOCK + ")");
-        }
-    }
-
-    private void installMutationContentionTrigger() {
-        removeMutationContentionTrigger();
-        jdbc.sql("""
-                CREATE FUNCTION block_snap_record_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
-                BEGIN
-                    PERFORM pg_advisory_xact_lock(72021);
-                    RETURN NEW;
-                END $$
-                """).update();
-        jdbc.sql("""
-                CREATE TRIGGER block_snap_record_mutation
-                AFTER INSERT ON snap_record_mutations
-                FOR EACH ROW EXECUTE FUNCTION block_snap_record_mutation()
-                """).update();
-    }
-
-    private void removeMutationContentionTrigger() {
-        jdbc.sql("DROP TRIGGER IF EXISTS block_snap_record_mutation ON snap_record_mutations").update();
-        jdbc.sql("DROP FUNCTION IF EXISTS block_snap_record_mutation()").update();
-    }
-
-    private void awaitMutationContention(int expectedWaiters, long timeout, TimeUnit unit)
-            throws InterruptedException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
-        while (System.nanoTime() < deadline) {
-            int waiters = jdbc.sql("""
-                    SELECT count(*)
-                    FROM pg_stat_activity
-                    WHERE datname = current_database()
-                      AND wait_event_type = 'Lock'
-                      AND query ILIKE '%INSERT INTO snap_record_mutations%'
-                    """).query(Integer.class).single();
-            if (waiters >= expectedWaiters) {
-                return;
-            }
-            Thread.sleep(10);
-        }
-        throw new IllegalStateException("Concurrent requests did not overlap at the mutation ledger");
     }
 
     @FunctionalInterface

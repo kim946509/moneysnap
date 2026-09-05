@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE error-codes PUBLIC "-//Spring//DTD Database Error Codes//EN"
+		"https://www.springframework.org/dtd/spring-jdbc-error-codes.dtd">
+<error-codes>
+	<bean class="org.springframework.jdbc.support.SQLErrorCodes">
+		<property name="databaseProductName" value="SQLite"/>
+		<property name="dataIntegrityViolationCodes">
+			<value>19</value>
+		</property>
+	</bean>
+</error-codes>
