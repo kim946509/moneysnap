@@ -24,7 +24,7 @@ final class AppleAuthorizationAdapter implements AppleAuthorizationGateway {
 				request.identityToken(),
 				request.nonce());
 		AppleTokenExchange exchange = tokenExchanger.exchange(request.authorizationCode());
-		VerifiedAppleIdentity exchangedIdentity = identityVerifier.verify(
+		VerifiedAppleIdentity exchangedIdentity = identityVerifier.verifyExchanged(
 				exchange.identityToken(),
 				request.nonce());
 		if (!clientIdentity.subject().equals(exchangedIdentity.subject())) {
@@ -46,6 +46,10 @@ interface AppleAuthorizationGateway {
 interface AppleIdentityVerifier {
 
 	VerifiedAppleIdentity verify(String identityToken, String expectedNonce);
+
+	default VerifiedAppleIdentity verifyExchanged(String identityToken, String expectedNonce) {
+		return verify(identityToken, expectedNonce);
+	}
 }
 
 @FunctionalInterface

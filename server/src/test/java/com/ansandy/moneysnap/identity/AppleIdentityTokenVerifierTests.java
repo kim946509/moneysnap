@@ -91,10 +91,20 @@ class AppleIdentityTokenVerifierTests {
 	}
 
 	@Test
-	void acceptsAValidAppleIdentityTokenWhenNonceClaimIsAbsent() throws Exception {
+	void rejectsAClientIdentityTokenWhenNonceClaimIsAbsent() throws Exception {
+		assertUnauthorized(signedToken(
+				"https://appleid.apple.com",
+				"com.ansandy.moneysnap",
+				"apple-subject",
+				null,
+				Instant.parse("2099-01-01T00:00:00Z")), RAW_NONCE);
+	}
+
+	@Test
+	void acceptsAnExchangedIdentityTokenWhenNonceClaimIsAbsent() throws Exception {
 		AppleIdentityTokenVerifier verifier = verifier();
 
-		VerifiedAppleIdentity identity = verifier.verify(signedToken(
+		VerifiedAppleIdentity identity = verifier.verifyExchanged(signedToken(
 				"https://appleid.apple.com",
 				"com.ansandy.moneysnap",
 				"apple-subject",

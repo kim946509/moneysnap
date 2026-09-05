@@ -13,7 +13,7 @@ Neon 데이터를 이전하지 않은 origin SQLite에서도 Sign in with Apple�
 
 ## In scope
 
-- Apple identity token에 nonce claim이 없으면(토큰 교환 id_token) 서명이 유효한 한 로그인을 거절하지 않는다
+- 원본 client identity token은 nonce를 필수로 검증한다. 토큰 교환 `id_token`에 nonce claim이 없을 때만, client token nonce가 이미 맞으면 로그인을 거절하지 않는다
 - iOS Sign in with Apple nonce를 View `@State`가 아니라 in-flight capture에 둔다
 - 사용자 id를 SQLite TEXT UUID로 저장한다
 - development CD로 서버를 재배포한다
