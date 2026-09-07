@@ -1,16 +1,21 @@
 package com.ansandy.moneysnap.identity;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 final class AppleTokenClient implements AppleTokenExchanger {
+
+	private static final ParameterizedTypeReference<Map<String, Object>> JSON_OBJECT =
+			new ParameterizedTypeReference<>() {
+			};
 
 	private final RestClient restClient;
 	private final URI tokenUri;
@@ -36,20 +41,24 @@ final class AppleTokenClient implements AppleTokenExchanger {
 		form.add("code", requireText(authorizationCode));
 		form.add("grant_type", "authorization_code");
 		try {
-			AppleTokenResponse response = restClient.post()
+			Map<String, Object> response = restClient.post()
 					.uri(tokenUri)
 					.contentType(MediaType.APPLICATION_FORM_URLENCODED)
 					.body(form)
 					.retrieve()
-					.body(AppleTokenResponse.class);
+					.body(JSON_OBJECT);
 			if (response == null) {
 				throw unauthorized();
 			}
-			return new AppleTokenExchange(response.identityToken(), response.refreshToken());
+			return new AppleTokenExchange(text(response.get("id_token")), text(response.get("refresh_token")));
 		}
 		catch (RestClientException exception) {
 			throw unauthorized();
 		}
+	}
+
+	private static String text(Object value) {
+		return value == null ? null : value.toString();
 	}
 
 	private static String requireText(String value) {
@@ -61,11 +70,6 @@ final class AppleTokenClient implements AppleTokenExchanger {
 
 	private static IdentitySessionException unauthorized() {
 		return new IdentitySessionException(IdentitySessionFailure.UNAUTHORIZED);
-	}
-
-	private record AppleTokenResponse(
-			@JsonProperty("id_token") String identityToken,
-			@JsonProperty("refresh_token") String refreshToken) {
 	}
 }
 
