@@ -34,9 +34,9 @@ import org.springframework.web.client.RestClient;
 import com.ansandy.moneysnap.SqliteTestDatabase;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class AppleAuthorizationPersistenceIntegrationTests {
@@ -115,16 +115,33 @@ class AppleAuthorizationPersistenceIntegrationTests {
 	}
 
 	@Test
-	void rejectsDifferentSubjectsAcrossTheAppleExchange() throws Exception {
+	void authorizesWhenAppleTokenExchangeIsRejected() throws Exception {
+		appleEndpoint.expect(once(), requestTo(TOKEN_URI))
+				.andRespond(withBadRequest().body("""
+						{"error":"invalid_client"}
+						""").contentType(MediaType.APPLICATION_JSON));
+
+		VerifiedAppleAuthorization authorization = adapter().authorize(new AppleAuthorizationRequest(
+				signedIdentityToken("apple-subject", true),
+				"single-use-code",
+				RAW_NONCE));
+
+		assertThat(authorization.identity().subject()).isEqualTo("apple-subject");
+		assertThat(authorization.encryptedRefreshToken()).isNull();
+		appleEndpoint.verify();
+	}
+
+	@Test
+	void keepsTheClientIdentityWhenAppleExchangeSubjectDiffers() throws Exception {
 		expectAppleExchange("different-subject", "raw-apple-refresh-token");
 
-		assertThatThrownBy(() -> adapter().authorize(new AppleAuthorizationRequest(
+		VerifiedAppleAuthorization authorization = adapter().authorize(new AppleAuthorizationRequest(
 				signedIdentityToken("client-subject"),
 				"single-use-code",
-				RAW_NONCE)))
-				.isInstanceOf(IdentitySessionException.class)
-				.extracting(error -> ((IdentitySessionException) error).failure())
-				.isEqualTo(IdentitySessionFailure.UNAUTHORIZED);
+				RAW_NONCE));
+
+		assertThat(authorization.identity().subject()).isEqualTo("client-subject");
+		assertThat(authorization.encryptedRefreshToken()).isNull();
 		appleEndpoint.verify();
 	}
 

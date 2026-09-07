@@ -12,6 +12,7 @@ struct AppleCredentialButton: View {
             do {
                 let challenge = try AppleNonce.challenge()
                 AppleSignInNonce.store(challenge.serverNonce)
+                request.requestedScopes = [.fullName, .email]
                 request.nonce = challenge.appleRequestNonce
             } catch {
                 AppleSignInNonce.clear()

@@ -23,16 +23,21 @@ final class AppleAuthorizationAdapter implements AppleAuthorizationGateway {
 		VerifiedAppleIdentity clientIdentity = identityVerifier.verify(
 				request.identityToken(),
 				request.nonce());
-		AppleTokenExchange exchange = tokenExchanger.exchange(request.authorizationCode());
-		VerifiedAppleIdentity exchangedIdentity = identityVerifier.verifyExchanged(
-				exchange.identityToken(),
-				request.nonce());
-		if (!clientIdentity.subject().equals(exchangedIdentity.subject())) {
-			throw new IdentitySessionException(IdentitySessionFailure.UNAUTHORIZED);
+		try {
+			AppleTokenExchange exchange = tokenExchanger.exchange(request.authorizationCode());
+			VerifiedAppleIdentity exchangedIdentity = identityVerifier.verifyExchanged(
+					exchange.identityToken(),
+					request.nonce());
+			if (clientIdentity.subject().equals(exchangedIdentity.subject())) {
+				return new VerifiedAppleAuthorization(
+						clientIdentity,
+						refreshTokenCipher.encrypt(exchange.refreshToken()));
+			}
 		}
-		return new VerifiedAppleAuthorization(
-				clientIdentity,
-				refreshTokenCipher.encrypt(exchange.refreshToken()));
+		catch (IdentitySessionException ignored) {
+			return new VerifiedAppleAuthorization(clientIdentity, null);
+		}
+		return new VerifiedAppleAuthorization(clientIdentity, null);
 	}
 }
 
@@ -79,8 +84,5 @@ record VerifiedAppleAuthorization(
 
 	VerifiedAppleAuthorization {
 		Objects.requireNonNull(identity);
-		if (encryptedRefreshToken == null || encryptedRefreshToken.isBlank()) {
-			throw new IdentitySessionException(IdentitySessionFailure.UNAUTHORIZED);
-		}
 	}
 }
