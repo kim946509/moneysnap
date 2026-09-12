@@ -1,8 +1,13 @@
 import Foundation
+import OSLog
 
 actor URLSessionAuthenticationAPI: AuthenticationAPI {
     private let baseURL: URL
     private let session: URLSession
+    private let logger = Logger(
+        subsystem: "com.ansandy.moneysnap",
+        category: "authentication.api"
+    )
 
     init(baseURL: URL, session: URLSession = .shared) {
         self.baseURL = baseURL
@@ -112,21 +117,27 @@ actor URLSessionAuthenticationAPI: AuthenticationAPI {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            logger.error("Authentication request failed before receiving a response with code \((error as NSError).code, privacy: .public)")
             throw AuthenticationClientError.temporarilyUnavailable
         }
         guard let httpResponse = response as? HTTPURLResponse else {
+            logger.error("Authentication request returned a non-HTTP response")
             throw AuthenticationClientError.invalidResponse
         }
         if httpResponse.statusCode == 401 {
             if let error = try? JSONDecoder().decode(ErrorResponse.self, from: data),
                error.code == .appleReauthenticationRejected {
+                logger.error("Authentication request rejected for Apple reauthentication: \(error.code.rawValue, privacy: .public)")
                 throw AuthenticationClientError.reauthenticationRejected
             }
+            logger.error("Authentication request rejected with HTTP 401")
             throw AuthenticationClientError.sessionRejected
         }
         guard httpResponse.statusCode == expectedStatus else {
+            logger.error("Authentication request returned unexpected HTTP status \(httpResponse.statusCode, privacy: .public); expected \(expectedStatus, privacy: .public)")
             throw AuthenticationClientError.temporarilyUnavailable
         }
+        logger.debug("Authentication request succeeded with HTTP \(httpResponse.statusCode, privacy: .public)")
         return data
     }
 

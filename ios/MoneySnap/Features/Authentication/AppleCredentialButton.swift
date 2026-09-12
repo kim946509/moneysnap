@@ -1,11 +1,17 @@
 import AuthenticationServices
 import CryptoKit
+import OSLog
 import Security
 import SwiftUI
 
 struct AppleCredentialButton: View {
     let onCredential: (AppleSignInCredential) -> Void
     let onFailure: () -> Void
+
+    private static let logger = Logger(
+        subsystem: "com.ansandy.moneysnap",
+        category: "authentication.apple"
+    )
 
     var body: some View {
         SignInWithAppleButton(.continue) { request in
@@ -19,8 +25,25 @@ struct AppleCredentialButton: View {
                 onFailure()
             }
         } onCompletion: { result in
+            guard case let .success(authorization) = result else {
+                if case let .failure(error) = result {
+                    if let authorizationError = error as? ASAuthorizationError {
+                        Self.logger.error(
+                            "Apple authorization failed with code \(authorizationError.code.rawValue, privacy: .public)"
+                        )
+                    } else {
+                        Self.logger.error(
+                            "Apple authorization failed with code \((error as NSError).code, privacy: .public)"
+                        )
+                    }
+                } else {
+                    Self.logger.error("Apple authorization returned an unknown result")
+                }
+                AppleSignInNonce.clear()
+                onFailure()
+                return
+            }
             guard
-                case let .success(authorization) = result,
                 let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
                 let identityTokenData = credential.identityToken,
                 let authorizationCodeData = credential.authorizationCode,
@@ -28,10 +51,12 @@ struct AppleCredentialButton: View {
                 let authorizationCode = String(data: authorizationCodeData, encoding: .utf8),
                 let requestedNonce = AppleSignInNonce.take()
             else {
+                Self.logger.error("Apple authorization returned incomplete credential data")
                 AppleSignInNonce.clear()
                 onFailure()
                 return
             }
+            Self.logger.debug("Apple authorization returned identity token, code, and nonce")
             onCredential(AppleSignInCredential(
                 identityToken: identityToken,
                 authorizationCode: authorizationCode,
